@@ -24,7 +24,6 @@ var calculationLogic = function(state,action){
     return state;
 };
 
-
 var combinedReducers = yalla.combineReducers({
     value : calculatorReducer,
     operation : calculationLogic
