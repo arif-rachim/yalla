@@ -1,0 +1,18 @@
+{
+  "name": "yallajs",
+  "version" : "0.0.1",
+  "homepage": "https://yallajs.github.com",
+  "authors": [
+    "arif <a.arif.r@gmail.com>"
+  ],
+  "description": "Stateless Component",
+  "main": "yalla.js",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
