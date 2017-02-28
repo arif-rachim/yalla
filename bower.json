@@ -6,7 +6,7 @@
     "arif <a.arif.r@gmail.com>"
   ],
   "description": "Stateless Component",
-  "main": "yalla.js",
+  "main": "yalla",
   "license": "MIT",
   "ignore": [
     "**/.*",

@@ -8,7 +8,6 @@
  }
  )
  */
-
 var yalla = (function () {
 
     var Event = function () {
