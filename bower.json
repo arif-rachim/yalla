@@ -5,7 +5,7 @@
   "authors": [
     "arif <a.arif.r@gmail.com>"
   ],
-  "description": "Stateless Component",
+  "description": "Stateless Component with State Management Framework",
   "main": "yalla",
   "license": "MIT",
   "ignore": [
