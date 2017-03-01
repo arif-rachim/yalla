@@ -90,7 +90,7 @@ var yalla = (function () {
     yalla.clone = clone;
     yalla.baselib = "libs";
     yalla.globalContext = {};
-    var DATA_PROP = '__incrementalDOMData';
+    var DATA_PROP = '$domData';
 
     yalla.loader = (function (context) {
         context._promisesToResolve = {};
@@ -1020,6 +1020,7 @@ var yalla = (function () {
 
     yalla.idom.notifications.nodesCreated = function (nodes) {
         nodes.forEach(function(node){
+            node[DATA_PROP].attrs.$node = node;
             if(node.onload){
                 node.onload(node);
             }
@@ -1028,6 +1029,7 @@ var yalla = (function () {
 
     yalla.idom.notifications.nodesDeleted = function (nodes) {
         nodes.forEach(function(node){
+            delete node[DATA_PROP].attrs.$node;
             if(node.onunload){
                 node.onunload(node);
             }
