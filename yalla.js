@@ -9,7 +9,6 @@
  params.$refs to get the reference
  }
  )
-
  */
 var yalla = (function () {
 
