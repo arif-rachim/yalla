@@ -10,6 +10,7 @@
  params.get$id(id) // function to getId based on parameter
  }
  )
+
  */
 var yalla = (function () {
 
