@@ -5,6 +5,9 @@
  {
  $subView : // for placing subView element,
  $children : // for placing children as An Element
+ $id : // for placing params.set$id
+ params.set$id(id) // function to setId to parameter
+ params.get$id(id) // function to getId based on parameter
  }
  )
  */
@@ -90,6 +93,7 @@ var yalla = (function () {
     yalla.clone = clone;
     yalla.baselib = "libs";
     yalla.globalContext = {};
+
     var DATA_PROP = '$domData';
 
     yalla.loader = (function (context) {
@@ -184,15 +188,8 @@ var yalla = (function () {
         if(typeof dependencyObject === 'function' && dependencyObject.name === '$render'){
             var $render = dependencyObject;
             var elementName = path.replace(/\//g, '.');
-            return function (attributes) {
+            function YallaComponent(attributes) {
                 attributes = attributes || {};
-                var elementAttribute = yalla.getElementAttribute(attributes);
-                // lets copy private property to this guy !
-                for (var key in elementAttribute) {
-                    if (key.indexOf('_') === 0) {
-                        attributes[key] = elementAttribute[key];
-                    }
-                }
                 var elements = $render(attributes);
                 var prop = elements[1];
                 if (typeof prop !== 'object' || prop.constructor === Array) {
@@ -203,6 +200,9 @@ var yalla = (function () {
                 prop.id = attributes.id;
                 return elements;
             }
+            YallaComponent.prototype.elementName = elementName;
+            YallaComponent.prototype.path = path;
+            return YallaComponent;
         }else{
             return dependencyObject;
         }
@@ -671,8 +671,9 @@ var yalla = (function () {
         };
 
         var applyAttr = function (el, name, value) {
-            if (name.indexOf('_') === 0)
+            if (name.indexOf('_') === 0 || name.indexOf('$') === 0){
                 return;
+            }
             if (value == null) {
                 el.removeAttribute(name);
             } else {
@@ -896,24 +897,6 @@ var yalla = (function () {
         return exports;
     })();
 
-    yalla.getElementAttribute = function (param) {
-        var id = undefined;
-        if (typeof param === 'string') {
-            id = param;
-        }
-        if (typeof param === 'object' && param.id) {
-            id = param.id
-        }
-        if (id) {
-            var domElement = document.getElementById(id);
-            if (domElement) {
-                var attrs = domElement[DATA_PROP].attrs;
-                return attrs;
-            }
-        }
-        return param;
-    };
-
     yalla.toDom = (function () {
         var elementOpenStart = yalla.idom.elementOpenStart;
         var elementOpenEnd = yalla.idom.elementOpenEnd;
@@ -957,16 +940,6 @@ var yalla = (function () {
                 s4() + '-' + s4() + s4() + s4();
         }
 
-        function copyPrivateAttribute(param) {
-            var attrs = yalla.getElementAttribute(param);
-            for (var prop in attrs) {
-                if (attrs.hasOwnProperty(prop) && prop.indexOf('_') === 0) {
-                    param[prop] = attrs[prop];
-                }
-            }
-            return param;
-        }
-
         function parse(markup) {
             var head = markup[0];
             if (head === false || head === undefined) {
@@ -983,7 +956,34 @@ var yalla = (function () {
             if (isComponent) {
                 attrsObj = hasAttrs ? attrsObj : {};
                 attrsObj.$children = markup.slice(firstChildPos, markup.length);
-                parse(head(copyPrivateAttribute(attrsObj)));
+                attrsObj.$elementName = head.prototype.elementName;
+
+                attrsObj.set$id = function (id){
+                    return function(node){
+                        if(attrsObj['$id-'+id]){
+                            throw new Error('Duplicate $id '+attrsObj.$elementName+'#'+id);
+                        }
+                        attrsObj['$id-'+id] = node;
+                    }
+                }
+                attrsObj.get$id = function(id){
+                    return attrsObj['$id-'+id];
+                }
+
+                var jsonmlData = head(attrsObj);
+                // we need to inject the $id into the component
+                if(attrsObj.$id && attrsObj.$id.length > 0){
+                    // this is crazy checking, developer wont create single dom using component
+                    // but heck sometimes they can go crazy
+                    if(jsonmlData.length === 1){
+                        jsonmlData.push({});
+                    }
+                    if(typeof jsonmlData[1] === 'object' && jsonmlData[1].constructor.name === 'Array'){
+                        jsonmlData.splice(1,0,{});
+                    }
+                    jsonmlData[1].$id = attrsObj.$id;
+                }
+                parse(jsonmlData);
             } else if (isView) {
                 parse(head.$view(head));
             } else {
@@ -1014,13 +1014,17 @@ var yalla = (function () {
                 elementClose(tagName);
             }
         }
-
         return parse
     })();
 
+
     yalla.idom.notifications.nodesCreated = function (nodes) {
         nodes.forEach(function(node){
-            node[DATA_PROP].attrs.$node = node;
+            var nodeAttrs = node[DATA_PROP].attrs;
+            nodeAttrs.$node = node;
+            if(nodeAttrs.$id && nodeAttrs.$id != 'root'){
+                nodeAttrs.$id(node);
+            }
             if(node.onload){
                 node.onload(node);
             }
@@ -1071,7 +1075,8 @@ var yalla = (function () {
                         params.$children = [];
                         if (index == array.length - 1) {
                             yalla.uiRoot = params;
-                            yalla.uiRoot.id = 'root';
+                            yalla.uiRoot.$id = 'root';
+                            yalla.uiRoot.$compoundId = 'root';
                             yalla.markAsDirty();
                         }
                         resolve(params);
@@ -1079,7 +1084,6 @@ var yalla = (function () {
                 });
             });
         }, Promise.resolve(false));
-        // @TODO FIRING ON URL CHANGE !!
     }
 
     yalla.markAsDirty = yalla.debounce(function () {
@@ -1121,7 +1125,7 @@ var yalla = (function () {
                 middleware = _state;
                 state = {};
             }
-        };
+        }
 
         function Store(){
             this._subscribers = this._subscribers || [];
