@@ -5,9 +5,8 @@
  {
  $subView : // for placing subView element,
  $children : // for placing children as An Element
- $id : // for placing params.set$id
- params.set$id(id) // function to setId to parameter
- params.get$id(id) // function to getId based on parameter
+ $ref : // for setting ref use params.$setRef
+ params.$refs to get the reference
  }
  )
 
@@ -959,21 +958,20 @@ var yalla = (function () {
                 attrsObj.$children = markup.slice(firstChildPos, markup.length);
                 attrsObj.$elementName = head.prototype.elementName;
 
-                attrsObj.set$id = function (id){
+                attrsObj.$setRef = function (id){
                     return function(node){
-                        if(attrsObj['$id-'+id]){
-                            throw new Error('Duplicate $id '+attrsObj.$elementName+'#'+id);
+                        attrsObj.$refs = attrsObj.$refs || {};
+                        var refs = attrsObj.$refs;
+                        if(refs[id]){
+                            throw new Error('Duplicate $ref '+attrsObj.$elementName+'#'+id);
                         }
-                        attrsObj['$id-'+id] = node;
+                        refs[id] = node;
                     }
-                }
-                attrsObj.get$id = function(id){
-                    return attrsObj['$id-'+id];
-                }
+                };
 
                 var jsonmlData = head(attrsObj);
-                // we need to inject the $id into the component
-                if(attrsObj.$id && attrsObj.$id.length > 0){
+                // we need to inject the $ref into the component
+                if(attrsObj.$ref && attrsObj.$ref.length > 0){
                     // this is crazy checking, developer wont create single dom using component
                     // but heck sometimes they can go crazy
                     if(jsonmlData.length === 1){
@@ -982,7 +980,7 @@ var yalla = (function () {
                     if(typeof jsonmlData[1] === 'object' && jsonmlData[1].constructor.name === 'Array'){
                         jsonmlData.splice(1,0,{});
                     }
-                    jsonmlData[1].$id = attrsObj.$id;
+                    jsonmlData[1].$ref = attrsObj.$ref;
                 }
                 parse(jsonmlData);
             } else if (isView) {
@@ -1023,8 +1021,8 @@ var yalla = (function () {
         nodes.forEach(function(node){
             var nodeAttrs = node[DATA_PROP].attrs;
             nodeAttrs.$node = node;
-            if(nodeAttrs.$id && nodeAttrs.$id != 'root'){
-                nodeAttrs.$id(node);
+            if(nodeAttrs.$ref && nodeAttrs.$ref != 'root' && typeof nodeAttrs.$ref == 'function'){
+                nodeAttrs.$ref(node);
             }
             if(node.onload){
                 node.onload(node);
@@ -1075,9 +1073,22 @@ var yalla = (function () {
                         params.$subView = subView;
                         params.$children = [];
                         if (index == array.length - 1) {
+                            debugger;
                             yalla.uiRoot = params;
-                            yalla.uiRoot.$id = 'root';
+                            yalla.uiRoot.$ref = 'root';
                             yalla.uiRoot.$compoundId = 'root';
+
+                            yalla.uiRoot.$setRef = function (id){
+                                return function(node){
+                                    yalla.uiRoot.$refs = yalla.uiRoot.$refs || {};
+                                    var refs = yalla.uiRoot.$refs;
+                                    if(refs[id]){
+                                        throw new Error('Duplicate $ref '+yalla.uiRoot.$elementName+'#'+id);
+                                    }
+                                    refs[id] = node;
+                                }
+                            };
+
                             yalla.markAsDirty();
                         }
                         resolve(params);
@@ -1093,9 +1104,11 @@ var yalla = (function () {
         var attributes = yalla.uiRoot;
         var output = [];
         if (arguments.length === 2) {
+            debugger;
             dom = arguments[0];
             output = arguments[1];
         } else {
+            debugger;
             output = renderer(attributes);
         }
         yalla.idom.patch(dom, yalla.toDom, output);
