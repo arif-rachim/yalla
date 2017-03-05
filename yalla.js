@@ -11,6 +11,8 @@
  )
 
  */
+
+
 var yalla = (function () {
 
     var Event = function () {
@@ -185,7 +187,7 @@ var yalla = (function () {
 
     yalla.inject = function (path) {
         var dependencyObject = this.globalContext[path];
-        if(typeof dependencyObject === 'function' && dependencyObject.name === '$render'){
+        if(typeof dependencyObject === 'function'){
             var $render = dependencyObject;
             var elementName = path.replace(/\//g, '.');
             function YallaComponent(attributes) {
@@ -969,6 +971,9 @@ var yalla = (function () {
                 attrsObj = hasAttrs ? attrsObj : {};
                 attrsObj.$children = markup.slice(firstChildPos, markup.length);
                 attrsObj.$elementName = head.prototype.elementName;
+                if(!head.prototype.elementName){
+                    throw new Error('Something wrong elementName does not exist in the '+head);
+                }
                 // here we need to add the parse
                 attrsObj.ref = function(name){
                     var elementName = attrsObj.$elementName;
@@ -1257,46 +1262,5 @@ var yalla = (function () {
         }
     };
 
-    //
-    // yalla.reference = function(referenceName){
-    //     function Reference(referenceName){
-    //         this.referenceName = referenceName;
-    //     }
-    //
-    //     function getOwnerOfThisReference(parentElement, referenceName) {
-    //         if(parentElement==null){
-    //             return null;
-    //         }
-    //         if(parentElement.$referenceName && parentElement.$referenceName == referenceName){
-    //             return parentElement;
-    //         }
-    //         return getOwnerOfThisReference(parentElement.parentElement,referenceName);
-    //     };
-    //
-    //     Reference.prototype.link = function(linkName){
-    //         var self = this;
-    //         return function(node){
-    //             var owner = getOwnerOfThisReference(node.parentElement,self.referenceName);
-    //             if(owner){
-    //                 node.$owner = owner;
-    //
-    //                 owner.$children = owner.$children || {};
-    //                 owner.$children[linkName] = node;
-    //             }
-    //         };
-    //     };
-    //
-    //     Reference.prototype.from = function(e){
-    //         var element = e;
-    //         if('target' in e){
-    //             element = e.target;
-    //         }
-    //         var owner = getOwnerOfThisReference(element.parentElement,this.referenceName);
-    //         return owner.$children;
-    //     }
-    //
-    //
-    //     return new Reference(referenceName);
-    // };
     return yalla;
 })();
