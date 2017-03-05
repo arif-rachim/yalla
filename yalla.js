@@ -5,10 +5,11 @@
  {
  $subView : // for placing subView element,
  $children : // for placing children as An Element
- $ref : // for setting ref use params.$setRef
- params.$refs to get the reference
+ $ref : // place for setting the reference key params.ref(key)
+ params.refs(event) : // place for getting the reference from event object
  }
  )
+
  */
 var yalla = (function () {
 
@@ -896,6 +897,16 @@ var yalla = (function () {
         return exports;
     })();
 
+    function getParentElement(parentElement, elementName) {
+        if(parentElement == null){
+            return null;
+        }
+        if(parentElement[DATA_PROP].attrs.element == elementName){
+            return parentElement;
+        }
+        return getParentElement(parentElement.parentElement,elementName);
+    }
+
     yalla.toDom = (function () {
         var elementOpenStart = yalla.idom.elementOpenStart;
         var elementOpenEnd = yalla.idom.elementOpenEnd;
@@ -939,6 +950,8 @@ var yalla = (function () {
                 s4() + '-' + s4() + s4() + s4();
         }
 
+
+
         function parse(markup) {
             var head = markup[0];
             if (head === false || head === undefined) {
@@ -956,26 +969,31 @@ var yalla = (function () {
                 attrsObj = hasAttrs ? attrsObj : {};
                 attrsObj.$children = markup.slice(firstChildPos, markup.length);
                 attrsObj.$elementName = head.prototype.elementName;
-
-                attrsObj.$setRef = function (id){
+                // here we need to add the parse
+                attrsObj.ref = function(name){
+                    var elementName = attrsObj.$elementName;
                     return function(node){
-                        attrsObj.$refs = attrsObj.$refs || {};
-                        var refs = attrsObj.$refs;
-                        if(refs[id]){
-                            throw new Error('Duplicate $ref '+attrsObj.$elementName+'#'+id);
+                        var parentElement = getParentElement(node.parentElement,elementName);
+                        if(parentElement){
+                            parentElement.$refs = parentElement.$refs || {};
+                            parentElement.$refs[name] = node;
+                            node.$documentOwner = parentElement;
                         }
-                        refs[id] = node;
                     }
-                };
-
+                }
+                attrsObj.refs = function(e){
+                    var dom = e;
+                    dom = 'target' in e ? e.target : dom;
+                    var parentElement = getParentElement(dom.parentElement,attrsObj.$elementName);
+                    if(parentElement){
+                        parentElement.$refs = parentElement.$refs || {};
+                        return parentElement.$refs;
+                    }
+                    throw new Error('Unable to find the element '+attrsObj.$elementName+ ' from '+e.elementName);
+                }
                 var jsonmlData = head(attrsObj);
-                // we need to inject the $ref into the component
-                if(attrsObj.$ref && attrsObj.$ref.length > 0){
-                    // this is crazy checking, developer wont create single dom using component
-                    // but heck sometimes they can go crazy
-                    if(jsonmlData.length === 1){
-                        jsonmlData.push({});
-                    }
+                if(attrsObj.$ref){
+                    jsonmlData = jsonmlData.length == 1 ? jsonmlData.push({}) : jsonmlData;
                     if(typeof jsonmlData[1] === 'object' && jsonmlData[1].constructor.name === 'Array'){
                         jsonmlData.splice(1,0,{});
                     }
@@ -1017,16 +1035,18 @@ var yalla = (function () {
 
 
     yalla.idom.notifications.nodesCreated = function (nodes) {
+
         nodes.forEach(function(node){
             var nodeAttrs = node[DATA_PROP].attrs;
             nodeAttrs.$node = node;
-            if(nodeAttrs.$ref && nodeAttrs.$ref != 'root' && typeof nodeAttrs.$ref == 'function'){
+            if(nodeAttrs.$ref && typeof nodeAttrs.$ref === 'function'){
                 nodeAttrs.$ref(node);
             }
             if(node.onload){
                 node.onload(node);
             }
         });
+
     };
 
     yalla.idom.notifications.nodesDeleted = function (nodes) {
@@ -1070,23 +1090,37 @@ var yalla = (function () {
                     yalla.loader(pathUi).then(function () {
                         params.$view = yalla.inject(pathUi);
                         params.$subView = subView;
+                        params.$elementName = pathUi.split('/').join('.');
                         params.$children = [];
-                        if (index == array.length - 1) {
-                            debugger;
-                            yalla.uiRoot = params;
-                            yalla.uiRoot.$ref = 'root';
-                            yalla.uiRoot.$compoundId = 'root';
+                        // here we need to add the parse
+                        params.ref = function(name){
+                            var elementName = params.$elementName;
+                            return function(node){
 
-                            yalla.uiRoot.$setRef = function (id){
-                                return function(node){
-                                    yalla.uiRoot.$refs = yalla.uiRoot.$refs || {};
-                                    var refs = yalla.uiRoot.$refs;
-                                    if(refs[id]){
-                                        throw new Error('Duplicate $ref '+yalla.uiRoot.$elementName+'#'+id);
-                                    }
-                                    refs[id] = node;
+                                var parentElement = getParentElement(node.parentElement,elementName);
+                                if(parentElement){
+                                    parentElement.$refs = parentElement.$refs || {};
+                                    parentElement.$refs[name] = node;
+                                    node.$documentOwner = parentElement;
                                 }
-                            };
+                            }
+                        }
+                        params.refs = function(e){
+                            var dom = e;
+                            dom = 'target' in e ? e.target : dom;
+                            var parentElement = getParentElement(dom.parentElement,params.$elementName);
+                            if(parentElement){
+                                parentElement.$refs = parentElement.$refs || {};
+                                return parentElement.$refs;
+                            }
+                            throw new Error('Unable to find the element '+params.$elementName+ ' from '+e.elementName);
+                        }
+
+                        if (index == array.length - 1) {
+                            yalla.uiRoot = params;
+
+
+
 
                             yalla.markAsDirty();
                         }
@@ -1103,11 +1137,9 @@ var yalla = (function () {
         var attributes = yalla.uiRoot;
         var output = [];
         if (arguments.length === 2) {
-            debugger;
             dom = arguments[0];
             output = arguments[1];
         } else {
-            debugger;
             output = renderer(attributes);
         }
         yalla.idom.patch(dom, yalla.toDom, output);
@@ -1225,5 +1257,46 @@ var yalla = (function () {
         }
     };
 
+    //
+    // yalla.reference = function(referenceName){
+    //     function Reference(referenceName){
+    //         this.referenceName = referenceName;
+    //     }
+    //
+    //     function getOwnerOfThisReference(parentElement, referenceName) {
+    //         if(parentElement==null){
+    //             return null;
+    //         }
+    //         if(parentElement.$referenceName && parentElement.$referenceName == referenceName){
+    //             return parentElement;
+    //         }
+    //         return getOwnerOfThisReference(parentElement.parentElement,referenceName);
+    //     };
+    //
+    //     Reference.prototype.link = function(linkName){
+    //         var self = this;
+    //         return function(node){
+    //             var owner = getOwnerOfThisReference(node.parentElement,self.referenceName);
+    //             if(owner){
+    //                 node.$owner = owner;
+    //
+    //                 owner.$children = owner.$children || {};
+    //                 owner.$children[linkName] = node;
+    //             }
+    //         };
+    //     };
+    //
+    //     Reference.prototype.from = function(e){
+    //         var element = e;
+    //         if('target' in e){
+    //             element = e.target;
+    //         }
+    //         var owner = getOwnerOfThisReference(element.parentElement,this.referenceName);
+    //         return owner.$children;
+    //     }
+    //
+    //
+    //     return new Reference(referenceName);
+    // };
     return yalla;
 })();
