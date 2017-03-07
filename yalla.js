@@ -5,13 +5,10 @@
  {
  $subView : // for placing subView element,
  $children : // for placing children as An Element
- $ref : // place for setting the reference key params.ref(key)
- params.refs(event) : // place for getting the reference from event object
+ $store(reducer,initialState,middleware) : // mechanism to create componentStore
  }
  )
-
  */
-
 
 var yalla = (function () {
 
@@ -116,17 +113,17 @@ var yalla = (function () {
             }
 
 
-            function executeScript(responseText,path) {
+            function executeScript(responseText, path) {
                 var evalString = "";
-                if(responseText.indexOf('$render') > 0){
+                if (responseText.indexOf('$render') > 0) {
                     evalString = "(function($inject)" +
-                        "{\n//"+path +"\n"+
+                        "{\n//" + path + "\n" +
                         "\n\n" + responseText + ";\n\n" +
                         "return $render;})" +
                         "(yalla.inject.bind(yalla));";
-                }else{
+                } else {
                     evalString = "(function($inject)" +
-                        "{\n//"+path +"\nvar $export = {};"+
+                        "{\n//" + path + "\nvar $export = {};" +
                         "\n\n" + responseText + ";\n\n" +
                         "return $export;})" +
                         "(yalla.inject.bind(yalla));";
@@ -144,14 +141,14 @@ var yalla = (function () {
                             Promise.all(dependency.map(function (dependency) {
                                 return yalla.loader(dependency);
                             })).then(function () {
-                                resolve(executeScript(xmlhttp.responseText,path));
+                                resolve(executeScript(xmlhttp.responseText, path));
                             }).catch(function (err) {
                                 reject(err);
                             });
                         } else {
-                            try{
-                                resolve(executeScript(xmlhttp.responseText,path));
-                            }catch(err){
+                            try {
+                                resolve(executeScript(xmlhttp.responseText, path));
+                            } catch (err) {
                                 reject(err);
                             }
                         }
@@ -187,12 +184,14 @@ var yalla = (function () {
 
     yalla.inject = function (path) {
         var dependencyObject = this.globalContext[path];
-        if(typeof dependencyObject === 'function'){
+        if (typeof dependencyObject === 'function') {
             var $render = dependencyObject;
             var elementName = path.replace(/\//g, '.');
+
             function YallaComponent(attributes) {
                 attributes = attributes || {};
                 var elements = $render(attributes);
+                //debugger;
                 var prop = elements[1];
                 if (typeof prop !== 'object' || prop.constructor === Array) {
                     prop = {};
@@ -200,12 +199,15 @@ var yalla = (function () {
                 }
                 prop.element = elementName;
                 prop.id = attributes.id;
+                prop.$storeTobeAttachedToDom = attributes.$storeTobeAttachedToDom;
+
                 return elements;
             }
+
             YallaComponent.prototype.elementName = elementName;
             YallaComponent.prototype.path = path;
             return YallaComponent;
-        }else{
+        } else {
             return dependencyObject;
         }
 
@@ -596,8 +598,10 @@ var yalla = (function () {
         var getNextNode = function () {
             if (currentNode) {
                 return currentNode.nextSibling;
-            } else {
+            } else if (currentParent) {
                 return currentParent.firstChild;
+            } else {
+                return document.getElementsByTagName('body')[0];
             }
         };
 
@@ -673,9 +677,6 @@ var yalla = (function () {
         };
 
         var applyAttr = function (el, name, value) {
-            if (name.indexOf('_') === 0 || name.indexOf('$') === 0){
-                return;
-            }
             if (value == null) {
                 el.removeAttribute(name);
             } else {
@@ -810,7 +811,6 @@ var yalla = (function () {
                     newAttrs[_attr2] = undefined;
                 }
             }
-
             return node;
         };
 
@@ -900,13 +900,13 @@ var yalla = (function () {
     })();
 
     function getParentElement(parentElement, elementName) {
-        if(parentElement == null){
+        if (parentElement == null) {
             return null;
         }
-        if(parentElement[DATA_PROP].attrs.element == elementName){
+        if (parentElement[DATA_PROP].attrs.element == elementName) {
             return parentElement;
         }
-        return getParentElement(parentElement.parentElement,elementName);
+        return getParentElement(parentElement.parentElement, elementName);
     }
 
     yalla.toDom = (function () {
@@ -914,6 +914,7 @@ var yalla = (function () {
         var elementOpenEnd = yalla.idom.elementOpenEnd;
         var elementClose = yalla.idom.elementClose;
         var currentElement = yalla.idom.currentElement;
+        var currentPointer = yalla.idom.currentPointer;
         var skip = yalla.idom.skip;
         var attr = yalla.idom.attr;
         var text = yalla.idom.text;
@@ -941,19 +942,6 @@ var yalla = (function () {
             }
         }
 
-        function guid() {
-            function s4() {
-                return Math.floor((1 + Math.random()) * 0x10000)
-                    .toString(16)
-                    .substring(1);
-            }
-
-            return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-                s4() + '-' + s4() + s4() + s4();
-        }
-
-
-
         function parse(markup) {
             var head = markup[0];
             if (head === false || head === undefined) {
@@ -968,42 +956,43 @@ var yalla = (function () {
             var isComponent = typeof head === 'function';
             var isView = typeof head === 'object' && '$view' in head;
             if (isComponent) {
+
                 attrsObj = hasAttrs ? attrsObj : {};
-                attrsObj.$children = markup.slice(firstChildPos, markup.length);
+                attrsObj.$view = head;
+                attrsObj.$subView = false;
                 attrsObj.$elementName = head.prototype.elementName;
-                if(!head.prototype.elementName){
-                    throw new Error('Something wrong elementName does not exist in the '+head);
+                attrsObj.$children = markup.slice(firstChildPos, markup.length);
+
+                if (!head.prototype.elementName) {
+                    throw new Error('Something wrong elementName does not exist in the ' + head);
                 }
-                // here we need to add the parse
-                attrsObj.ref = function(name){
-                    var elementName = attrsObj.$elementName;
-                    return function(node){
-                        var parentElement = getParentElement(node.parentElement,elementName);
-                        if(parentElement){
-                            parentElement.$refs = parentElement.$refs || {};
-                            parentElement.$refs[name] = node;
-                            node.$documentOwner = parentElement;
-                        }
+
+                // lets assign the node here!
+                var currentNode = currentPointer();
+                if (currentNode && currentNode[DATA_PROP].attrs.element == attrsObj.$elementName) {
+                    attrsObj.$node = attrsObj.$node || currentNode;
+                }
+
+                // ok after node is assigned lets create the $store function here
+                attrsObj.$store = function (reducer, state, middleware) {
+                    if (attrsObj.$node) {
+                        return attrsObj.$node.$store;
+                    } else {
+                        attrsObj.$storeTobeAttachedToDom = yalla.createStore(reducer, state, middleware);
+                        return attrsObj.$storeTobeAttachedToDom;
                     }
-                }
-                attrsObj.refs = function(e){
-                    var dom = e;
-                    dom = 'target' in e ? e.target : dom;
-                    var parentElement = getParentElement(dom.parentElement,attrsObj.$elementName);
-                    if(parentElement){
-                        parentElement.$refs = parentElement.$refs || {};
-                        return parentElement.$refs;
-                    }
-                    throw new Error('Unable to find the element '+attrsObj.$elementName+ ' from '+e.elementName);
-                }
+                };
+
                 var jsonmlData = head(attrsObj);
-                if(attrsObj.$ref){
-                    jsonmlData = jsonmlData.length == 1 ? jsonmlData.push({}) : jsonmlData;
-                    if(typeof jsonmlData[1] === 'object' && jsonmlData[1].constructor.name === 'Array'){
-                        jsonmlData.splice(1,0,{});
-                    }
-                    jsonmlData[1].$ref = attrsObj.$ref;
+                jsonmlData = jsonmlData.length == 1 ? jsonmlData.push({}) : jsonmlData;
+                if (typeof jsonmlData[1] === 'object' && jsonmlData[1].constructor.name === 'Array') {
+                    jsonmlData.splice(1, 0, {});
                 }
+                var elementAttributes = jsonmlData[1];
+                // ok now its time to delegate all of this to the constructor
+                elementAttributes.$storeTobeAttachedToDom = attrsObj.$storeTobeAttachedToDom;
+                elementAttributes.$view = attrsObj.$view;
+
                 parse(jsonmlData);
             } else if (isView) {
                 parse(head.$view(head));
@@ -1035,29 +1024,36 @@ var yalla = (function () {
                 elementClose(tagName);
             }
         }
+
         return parse
     })();
 
 
     yalla.idom.notifications.nodesCreated = function (nodes) {
 
-        nodes.forEach(function(node){
+        nodes.forEach(function (node) {
             var nodeAttrs = node[DATA_PROP].attrs;
             nodeAttrs.$node = node;
-            if(nodeAttrs.$ref && typeof nodeAttrs.$ref === 'function'){
-                nodeAttrs.$ref(node);
-            }
-            if(node.onload){
-                node.onload(node);
+            if (nodeAttrs.$storeTobeAttachedToDom) {
+                node.$store = nodeAttrs.$storeTobeAttachedToDom;
+                node.$store.subscribe(function () {
+                    yalla.markAsDirty();
+                });
             }
         });
+
+        nodes.splice().reverse().forEach(function (node) {
+            if (node.onload) {
+                node.onload(node);
+            }
+        })
 
     };
 
     yalla.idom.notifications.nodesDeleted = function (nodes) {
-        nodes.forEach(function(node){
+        nodes.forEach(function (node) {
             delete node[DATA_PROP].attrs.$node;
-            if(node.onunload){
+            if (node.onunload) {
                 node.onunload(node);
             }
         });
@@ -1097,36 +1093,13 @@ var yalla = (function () {
                         params.$subView = subView;
                         params.$elementName = pathUi.split('/').join('.');
                         params.$children = [];
-                        // here we need to add the parse
-                        params.ref = function(name){
-                            var elementName = params.$elementName;
-                            return function(node){
-
-                                var parentElement = getParentElement(node.parentElement,elementName);
-                                if(parentElement){
-                                    parentElement.$refs = parentElement.$refs || {};
-                                    parentElement.$refs[name] = node;
-                                    node.$documentOwner = parentElement;
-                                }
-                            }
-                        }
-                        params.refs = function(e){
-                            var dom = e;
-                            dom = 'target' in e ? e.target : dom;
-                            var parentElement = getParentElement(dom.parentElement,params.$elementName);
-                            if(parentElement){
-                                parentElement.$refs = parentElement.$refs || {};
-                                return parentElement.$refs;
-                            }
-                            throw new Error('Unable to find the element '+params.$elementName+ ' from '+e.elementName);
-                        }
+                        params.$store = function (reducer, state, middleware) {
+                            params.$storeTobeAttachedToDom = params.$storeTobeAttachedToDom || yalla.createStore(reducer, state, middleware);
+                            return params.$storeTobeAttachedToDom;
+                        };
 
                         if (index == array.length - 1) {
                             yalla.uiRoot = params;
-
-
-
-
                             yalla.markAsDirty();
                         }
                         resolve(params);
@@ -1167,64 +1140,64 @@ var yalla = (function () {
         alert('Browser not supported');
     }
 
-    yalla.createStore = function(reducer,_state,_middleware){
+    yalla.createStore = function (reducer, _state, _middleware) {
         var middleware = _middleware;
         var state = _state;
-        if(_state){
-            if(typeof _state === 'function'){
+        if (_state) {
+            if (typeof _state === 'function') {
                 middleware = _state;
                 state = {};
             }
         }
 
-        function Store(){
+        function Store() {
             this._subscribers = this._subscribers || [];
         }
 
         Store.prototype.reducer = reducer;
         Store.prototype.state = state;
 
-        Store.prototype.dispatch = function(action){
-            if(action==null){
+        Store.prototype.dispatch = function (action) {
+            if (action == null) {
                 console.log('Theres is no action in this store ');
                 return;
             }
-            if(!('type' in action)){
-                console.log('There is not type in action, we are not doing anything to this action ',action);
+            if (!('type' in action)) {
+                console.log('There is not type in action, we are not doing anything to this action ', action);
                 return;
             }
-            if(this.reducer){
-                this.state = this.reducer(this.state,action);
+            if (this.reducer) {
+                this.state = this.reducer(this.state, action);
                 this.updateSubscribers();
             }
         };
 
-        Store.prototype.updateSubscribers = function(){
+        Store.prototype.updateSubscribers = function () {
             for (var i = 0; i < this._subscribers.length; i++) {
                 this._subscribers[i].apply(this);
             }
         };
 
-        Store.prototype.subscribe = function(fct){
+        Store.prototype.subscribe = function (fct) {
             this._subscribers.push(fct);
         };
-        Store.prototype.unSubscribe = function(fct){
-            this._subscribers.splice(this._subscribers.indexOf(fct),1);
+        Store.prototype.unSubscribe = function (fct) {
+            this._subscribers.splice(this._subscribers.indexOf(fct), 1);
         };
-        Store.prototype.getState = function(){
+        Store.prototype.getState = function () {
             return this.state;
         }
         return new Store();
     };
 
-    yalla.combineReducers = function(stateReducers){
-        return function (state,action){
+    yalla.combineReducers = function (stateReducers) {
+        return function (state, action) {
             var resultState = yalla.clone(state);
-            for(var key in stateReducers){
-                if(stateReducers.hasOwnProperty(key)){
+            for (var key in stateReducers) {
+                if (stateReducers.hasOwnProperty(key)) {
                     var reducer = stateReducers[key];
                     var stateVal = state[key];
-                    var newState = reducer(stateVal,action);
+                    var newState = reducer(stateVal, action);
                     resultState[key] = newState;
                 }
             }
@@ -1232,27 +1205,27 @@ var yalla = (function () {
         }
     };
 
-    yalla.applyMiddleware = function(middlewares){
+    yalla.applyMiddleware = function (middlewares) {
         // the first next will be create store !!
-        return function(createStoreFunction){
-            return function(reducer,initialState){
-                var store = createStoreFunction(reducer,initialState);
+        return function (createStoreFunction) {
+            return function (reducer, initialState) {
+                var store = createStoreFunction(reducer, initialState);
                 var dispatch = store.dispatch.bind(store);
                 var getState = store.getState.bind(store);
                 var chain = [];
 
                 var middlewareStore = {
-                    getState : store.getState.bind(store),
-                    dispatch : function(action){
+                    getState: store.getState.bind(store),
+                    dispatch: function (action) {
                         dispatch(action);
                     }
                 };
 
-                chain = middlewares.map(function(middleware){
+                chain = middlewares.map(function (middleware) {
                     return middleware(middlewareStore);
                 });
                 chain.push(store.dispatch.bind(store));
-                dispatch = chain.reduceRight(function(composed,f){
+                dispatch = chain.reduceRight(function (composed, f) {
                     return f(composed);
                 });
 
@@ -1264,3 +1237,28 @@ var yalla = (function () {
 
     return yalla;
 })();
+
+function scriptStart() {
+    if (document.readyState == 'complete') {
+        var list = document.getElementsByTagName('script');
+        for (var i = 0; i < list.length; i++) {
+            var script = list[i];
+            if (script.getAttribute('src').indexOf('yalla.js') >= 0) {
+                var main = script.getAttribute('data-main');
+                var base = script.getAttribute('data-base');
+                yalla.start(main, document.getElementsByName('body')[0], base);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function startYalla() {
+    if (!scriptStart()) {
+        setTimeout(function () {
+            startYalla();
+        }, 0);
+    }
+}
+startYalla();
