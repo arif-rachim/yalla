@@ -12,29 +12,6 @@
 
 var yalla = (function () {
 
-    var Event = function () {
-    };
-
-    Event.prototype = {
-        addEventListener: function (event, fct) {
-            this._events = this._events || {};
-            this._events[event] = this._events[event] || [];
-            this._events[event].push(fct);
-        },
-        removeEventListener: function (event, fct) {
-            this._events = this._events || {};
-            if (event in this._events === false)    return;
-            this._events[event].splice(this._events[event].indexOf(fct), 1);
-        },
-        dispatchEvent: function (event /* , args... */) {
-            this._events = this._events || {};
-            if (event in this._events === false)    return;
-            for (var i = 0; i < this._events[event].length; i++) {
-                this._events[event][i].apply(this, Array.prototype.slice.call(arguments, 1));
-            }
-        }
-    };
-
     var mixin = function (destObject, sourceClass) {
         var props = Object.keys(sourceClass.prototype);
         for (var i = 0; i < props.length; i++) {
@@ -51,7 +28,7 @@ var yalla = (function () {
 
     var merge = function (obj, outAttributes) {
         for (var property in outAttributes) {
-            if (property.indexOf('_') !== 0 && outAttributes.hasOwnProperty(property)) {
+            if (outAttributes.hasOwnProperty(property)) {
                 if (obj[property] !== outAttributes[property]) {
                     obj[property] = outAttributes[property];
                 }
@@ -85,7 +62,7 @@ var yalla = (function () {
         throw new Error("Unable to copy obj! Its type isn't supported.");
     };
 
-    var yalla = mixin({}, Event);
+    var yalla = {};
 
     yalla.mixin = mixin;
     yalla.merge = merge;
@@ -191,7 +168,6 @@ var yalla = (function () {
             function YallaComponent(attributes) {
                 attributes = attributes || {};
                 var elements = $render(attributes);
-                //debugger;
                 var prop = elements[1];
                 if (typeof prop !== 'object' || prop.constructor === Array) {
                     prop = {};
@@ -329,13 +305,11 @@ var yalla = (function () {
 
         var notifications = {
             nodesCreated: null,
-
             nodesDeleted: null
         };
 
         function Context() {
             this.created = notifications.nodesCreated && [];
-
             this.deleted = notifications.nodesDeleted && [];
         }
 
@@ -355,7 +329,6 @@ var yalla = (function () {
             if (this.created && this.created.length > 0) {
                 notifications.nodesCreated(this.created);
             }
-
             if (this.deleted && this.deleted.length > 0) {
                 notifications.nodesDeleted(this.deleted);
             }
@@ -369,12 +342,10 @@ var yalla = (function () {
         var getAncestry = function (node, root) {
             var ancestry = [];
             var cur = node;
-
             while (cur !== root) {
                 ancestry.push(cur);
                 cur = cur.parentNode;
             }
-
             return ancestry;
         };
 
@@ -397,18 +368,15 @@ var yalla = (function () {
 
         var getFocusedPath = function (node, root) {
             var activeElement = getActiveElement(node);
-
             if (!activeElement || !node.contains(activeElement)) {
                 return [];
             }
-
             return getAncestry(activeElement, root);
         };
 
         var moveBefore = function (parentNode, node, referenceNode) {
             var insertReferenceNode = node.nextSibling;
             var cur = referenceNode;
-
             while (cur !== node) {
                 var next = cur.nextSibling;
                 parentNode.insertBefore(cur, insertReferenceNode);
@@ -505,7 +473,6 @@ var yalla = (function () {
             if (currentNode && matches(currentNode, nodeName, key)) {
                 return;
             }
-
             var parentData = getData(currentParent);
             var currentNodeData = currentNode && getData(currentNode);
             var keyMap = parentData.keyMap;
@@ -553,7 +520,6 @@ var yalla = (function () {
         var removeChild = function (node, child, keyMap) {
             node.removeChild(child);
             context.markDeleted(child);
-
             var key = getData(child).key;
             if (key) {
                 delete keyMap[key];
@@ -611,7 +577,6 @@ var yalla = (function () {
 
         var exitNode = function () {
             clearUnvisitedDOM();
-
             currentNode = currentParent;
             currentParent = currentParent.parentNode;
         };
@@ -627,7 +592,6 @@ var yalla = (function () {
         var coreElementClose = function () {
             if ('production' !== 'production') {
             }
-
             exitNode();
             return (currentNode
             );
@@ -899,16 +863,6 @@ var yalla = (function () {
         return exports;
     })();
 
-    function getParentElement(parentElement, elementName) {
-        if (parentElement == null) {
-            return null;
-        }
-        if (parentElement[DATA_PROP].attrs.element == elementName) {
-            return parentElement;
-        }
-        return getParentElement(parentElement.parentElement, elementName);
-    }
-
     yalla.toDom = (function () {
         var elementOpenStart = yalla.idom.elementOpenStart;
         var elementOpenEnd = yalla.idom.elementOpenEnd;
@@ -956,7 +910,6 @@ var yalla = (function () {
             var isComponent = typeof head === 'function';
             var isView = typeof head === 'object' && '$view' in head;
             if (isComponent) {
-
                 attrsObj = hasAttrs ? attrsObj : {};
                 attrsObj.$view = head;
                 attrsObj.$subView = false;
@@ -984,10 +937,12 @@ var yalla = (function () {
                 };
 
                 var jsonmlData = head(attrsObj);
+
                 jsonmlData = jsonmlData.length == 1 ? jsonmlData.push({}) : jsonmlData;
                 if (typeof jsonmlData[1] === 'object' && jsonmlData[1].constructor.name === 'Array') {
                     jsonmlData.splice(1, 0, {});
                 }
+
                 var elementAttributes = jsonmlData[1];
                 // ok now its time to delegate all of this to the constructor
                 elementAttributes.$storeTobeAttachedToDom = attrsObj.$storeTobeAttachedToDom;
@@ -995,6 +950,7 @@ var yalla = (function () {
 
                 parse(jsonmlData);
             } else if (isView) {
+                debugger;
                 parse(head.$view(head));
             } else {
                 var tagName = openTag(head, keyAttr);
@@ -1030,7 +986,6 @@ var yalla = (function () {
 
 
     yalla.idom.notifications.nodesCreated = function (nodes) {
-
         nodes.forEach(function (node) {
             var nodeAttrs = node[DATA_PROP].attrs;
             nodeAttrs.$node = node;
