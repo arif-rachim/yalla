@@ -980,7 +980,6 @@ var yalla = (function () {
                 elementClose(tagName);
             }
         }
-
         return parse
     })();
 
@@ -1064,7 +1063,7 @@ var yalla = (function () {
         }, Promise.resolve(false));
     }
 
-    yalla.markAsDirty = yalla.debounce(function () {
+    yalla.markAsDirty = function () {
         var dom = yalla.rootElement;
         var renderer = yalla.uiRoot.$view;
         var attributes = yalla.uiRoot;
@@ -1076,7 +1075,7 @@ var yalla = (function () {
             output = renderer(attributes);
         }
         yalla.idom.patch(dom, yalla.toDom, output);
-    }, 10);
+    }
 
     yalla.start = function (startFile, el, baseLib) {
         yalla.baselib = baseLib || yalla.baseLib;
@@ -1114,12 +1113,10 @@ var yalla = (function () {
 
         Store.prototype.dispatch = function (action) {
             if (action == null) {
-                console.log('Theres is no action in this store ');
-                return;
+                throw new Error('You are calling dispatch but did not pass action to it');
             }
             if (!('type' in action)) {
-                console.log('There is not type in action, we are not doing anything to this action ', action);
-                return;
+                throw new Error('You are calling dispatch but did not pass type to it');
             }
             if (this.reducer) {
                 this.state = this.reducer(this.state, action);
@@ -1201,8 +1198,11 @@ function scriptStart() {
             if (script.getAttribute('src').indexOf('yalla.js') >= 0) {
                 var main = script.getAttribute('data-main');
                 var base = script.getAttribute('data-base');
-                yalla.start(main, document.getElementsByName('body')[0], base);
-                return true;
+                if(main && base){
+                    yalla.start(main, document.getElementsByName('body')[0], base);
+                    return true;
+                }
+                throw new Error('Please specify data-main and data-base in the script tag');
             }
         }
     }

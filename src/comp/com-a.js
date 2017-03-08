@@ -14,16 +14,22 @@ function $render(props){
             name : 'valA',
             value : e.target.value
         });
+        store.dispatch({
+            type : 'add'
+        });
     }}],['input',{type:'text',value:valB,onkeyup:function(e){
         store.dispatch({
             type : 'set',
             name : 'valB',
             value : e.target.value
         });
+        store.dispatch({
+            type : 'add'
+        });
     }}],['button',{value:'add',onclick:function(e){
         store.dispatch({
             type : 'add'
-        })
+        });
     }},'Add'],['input',{type:'text',value:valC}],[props.$subView]]
 }
 
