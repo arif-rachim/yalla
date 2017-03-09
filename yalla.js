@@ -1087,8 +1087,7 @@ var yalla = (function () {
 
     if ("onhashchange" in window) {
         window.onhashchange = function () {
-            var address = window.location.hash.substring(1, window.location.hash.length).split("/");
-            renderChain(address);
+            location.reload();
         }
     } else {
         alert('Browser not supported');
