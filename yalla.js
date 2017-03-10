@@ -176,7 +176,6 @@ var yalla = (function () {
                 prop.element = elementName;
                 prop.id = attributes.id;
                 prop.$storeTobeAttachedToDom = attributes.$storeTobeAttachedToDom;
-
                 return elements;
             }
 
@@ -947,10 +946,8 @@ var yalla = (function () {
                 // ok now its time to delegate all of this to the constructor
                 elementAttributes.$storeTobeAttachedToDom = attrsObj.$storeTobeAttachedToDom;
                 elementAttributes.$view = attrsObj.$view;
-
                 parse(jsonmlData);
             } else if (isView) {
-                debugger;
                 parse(head.$view(head));
             } else {
                 var tagName = openTag(head, keyAttr);
@@ -1048,6 +1045,19 @@ var yalla = (function () {
                         params.$elementName = pathUi.split('/').join('.');
                         params.$children = [];
                         params.$store = function (reducer, state, middleware) {
+                            var currentPointer = yalla.idom.currentPointer();
+                            if(currentPointer && DATA_PROP in currentPointer){
+                                if(currentPointer[DATA_PROP].attrs.element == params.$elementName && currentPointer.$store){
+                                    return currentPointer.$store;
+                                }else if(currentPointer.children && currentPointer.children.length == 1){
+                                    // kita harus tambahin check kalau dia levelnya body
+                                    var child = currentPointer.children[0];
+                                    if(child[DATA_PROP] && child[DATA_PROP].attrs.element == params.$elementName && child.$store){
+                                        return child.$store;
+                                    }
+                                }
+
+                            }
                             params.$storeTobeAttachedToDom = params.$storeTobeAttachedToDom || yalla.createStore(reducer, state, middleware);
                             return params.$storeTobeAttachedToDom;
                         };
@@ -1087,7 +1097,8 @@ var yalla = (function () {
 
     if ("onhashchange" in window) {
         window.onhashchange = function () {
-            location.reload();
+            var address = location.hash.substring(1, window.location.hash.length).split("/");
+            renderChain(address);
         }
     } else {
         alert('Browser not supported');
