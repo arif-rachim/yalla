@@ -1085,7 +1085,7 @@ var yalla = (function () {
             output = renderer(attributes);
         }
         yalla.idom.patch(dom, yalla.toDom, output);
-    }
+    };
 
     yalla.start = function (startFile, el, baseLib) {
         yalla.baselib = baseLib || yalla.baseLib;
@@ -1148,7 +1148,7 @@ var yalla = (function () {
         };
         Store.prototype.getState = function () {
             return this.state;
-        }
+        };
         return new Store();
     };
 
