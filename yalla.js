@@ -996,7 +996,7 @@ var yalla = (function () {
             }
         });
 
-        nodes.splice().reverse().forEach(function (node) {
+        nodes.slice().reverse().forEach(function (node) {
             if (node.onload) {
                 node.onload(node);
             }
