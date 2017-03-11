@@ -169,7 +169,7 @@ var yalla = (function () {
                 attributes = attributes || {};
                 var elements = $render(attributes);
                 if(!elements){
-                    throw new Error('No return elements in $render, did you forget return keyword ?');
+                    throw new Error('There is no return in $render function "'+path+'", did you forget the return keyword ?');
                 }
                 var prop = elements[1];
                 if (typeof prop !== 'object' || prop.constructor === Array) {
