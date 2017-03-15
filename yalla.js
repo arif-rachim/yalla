@@ -99,14 +99,14 @@ var yalla = (function () {
                 var evalString = "";
                 if (responseText.indexOf('$render') > 0) {
                     evalString = "(function($inject)" +
-                        "{\n//" + path + "\n" +
-                        "\n\n" + responseText + ";\n\n" +
+                        "{\n//" + path + "------------------------------------------------------------\n" +
+                        "" + responseText + ";\n//--------------------------------------------------------------------\n" +
                         "return $render;})" +
                         "(yalla.inject.bind(yalla));";
                 } else {
                     evalString = "(function($inject)" +
-                        "{\n//" + path + "\nvar $export = {};" +
-                        "\n\n" + responseText + ";\n\n" +
+                        "{\n//" + path + "-------------------------------------------------------------\nvar $export = {};" +
+                        "" + responseText + ";\n//--------------------------------------------------------------------\n" +
                         "return $export;})" +
                         "(yalla.inject.bind(yalla));";
                 }
@@ -124,14 +124,14 @@ var yalla = (function () {
                 });
             }
 
-            function replaceBracketWithExpression(array){
-                function replaceBracket(string) {
-                    return (string.match(/{.*?}/g) || []).reduce(function(text,match){
-                        var newMatch = '"+('+match.substring(1,match.length-1)+')+"';
-                        return text.replace(match,newMatch);
-                    },string);
-                }
+            function replaceBracket(string) {
+                return (string.match(/{.*?}/g) || []).reduce(function(text,match){
+                    var newMatch = '"+('+match.substring(1,match.length-1)+')+"';
+                    return text.replace(match,newMatch);
+                },string);
+            }
 
+            function replaceBracketWithExpression(array){
                 return array.map(function(item){
                     if(typeof item == 'string'){
                         return replaceBracket(item);
@@ -158,19 +158,34 @@ var yalla = (function () {
                     var newText = match.substring(0,match.length-2)+'></'+tagName+'>';
                     return text.replace(match,newText);
                 },responseText);
-                debugger;
+
                 // here we convert to JSONML then we stringify them. We need to do this to get consistent format of the code
                 var resultString = JSON.stringify(yalla.jsonMlFromText(responseText));
-                debugger;
+
                 // take out all var
                 var vars = resultString.match(/\["var".*?}]/g) || [];
+                var varsJson = JSON.parse('['+vars.join(',')+']');
+
+                varsJson = varsJson.reduce(function(text,_var){
+                    var item = _var[1];
+                    var value = item.value;
+                    if(value.indexOf('{')==0){
+                        value = '('+value.substring(1,value.length-1)+')';
+                    }else{
+                        value = '"'+replaceBracket(value)+'"';
+                    }
+                    text += 'var '+item.name+' = '+value+';\n';
+                    return text;
+                },'');
+                debugger;
                 var afterVarsRemoved = replaceBracketWithExpression(cleanArray(JSON.parse(vars.reduce(function(text,match){
                     return text.replace(match,'""');
                 },resultString))));
                 //later we need to compose the vars again to script
                 var script = JSON.stringify(afterVarsRemoved);
                 script = script.replace(/\\"\+\(/g,'"+(').replace(/\)\+\\"/g,')+"');
-                return generateEvalStringForJS('function $render($props){ return '+script+'; }');
+                debugger;
+                return generateEvalStringForJS(varsJson+'function $render($props){ return '+script+'; }',path);
             }
 
             function executeScript(responseText, path) {
