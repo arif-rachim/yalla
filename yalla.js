@@ -75,8 +75,13 @@ var yalla = (function () {
     yalla.loader = (function (context) {
         context._promisesToResolve = {};
 
-        var loadScript = function (path) {
-
+        var loadScript = function (uri) {
+            var path = uri;
+            if (path.indexOf('@') == 0) {
+                path = path.substr(1, path.length) + '.html';
+            } else {
+                path = path + '.js';
+            }
             function lookDependency(responseText) {
                 var injectText = "$inject(";
                 var position = 0;
@@ -90,7 +95,7 @@ var yalla = (function () {
             }
 
 
-            function executeScript(responseText, path) {
+            function generateEvalStringForJS(responseText, path) {
                 var evalString = "";
                 if (responseText.indexOf('$render') > 0) {
                     evalString = "(function($inject)" +
@@ -104,6 +109,76 @@ var yalla = (function () {
                         "\n\n" + responseText + ";\n\n" +
                         "return $export;})" +
                         "(yalla.inject.bind(yalla));";
+                }
+                return evalString;
+            }
+
+            function cleanArray(array) {
+                return array.filter(function(item){
+                    return item && item !== '';
+                }).map(function(item){
+                    if(item.constructor.name === 'Array'){
+                        return cleanArray(item);
+                    }
+                    return item;
+                });
+            }
+
+            function replaceBracketWithExpression(array){
+                function replaceBracket(string) {
+                    return (string.match(/{.*?}/g) || []).reduce(function(text,match){
+                        var newMatch = '"+('+match.substring(1,match.length-1)+')+"';
+                        return text.replace(match,newMatch);
+                    },string);
+                }
+
+                return array.map(function(item){
+                    if(typeof item == 'string'){
+                        return replaceBracket(item);
+                    }
+                    if(typeof item == 'object' ){
+                        if(item.constructor.name == 'Array'){
+                            return replaceBracketWithExpression(item);
+                        }else{
+                            for (var key in item){
+                                item[key] = replaceBracket(item[key]);
+                            }
+                            return item;
+                        }
+                    }
+                    return item;
+                });
+            }
+
+            function generateEvalStringForHTML(responseText, path) {
+                // this line we are cleaning the text wich have immediate closing bracket
+                responseText = (responseText.match(/<.*?\/>/g) || []).reduce(function(text,match){
+                    var emptyStringIndex = match.indexOf(" ");
+                    var tagName = match.substring(1,emptyStringIndex);
+                    var newText = match.substring(0,match.length-2)+'></'+tagName+'>';
+                    return text.replace(match,newText);
+                },responseText);
+                debugger;
+                // here we convert to JSONML then we stringify them. We need to do this to get consistent format of the code
+                var resultString = JSON.stringify(yalla.jsonMlFromText(responseText));
+                debugger;
+                // take out all var
+                var vars = resultString.match(/\["var".*?}]/g) || [];
+                var afterVarsRemoved = replaceBracketWithExpression(cleanArray(JSON.parse(vars.reduce(function(text,match){
+                    return text.replace(match,'""');
+                },resultString))));
+                //later we need to compose the vars again to script
+                var script = JSON.stringify(afterVarsRemoved);
+                script = script.replace(/\\"\+\(/g,'"+(').replace(/\)\+\\"/g,')+"');
+                return generateEvalStringForJS('function $render($props){ return '+script+'; }');
+            }
+
+            function executeScript(responseText, path) {
+                var evalString = "";
+                if (path.indexOf(".html") >= 0) {
+                    evalString = generateEvalStringForHTML(responseText, path);
+                } else {
+                    evalString = generateEvalStringForJS(responseText, path);
                 }
                 return eval(evalString);
             }
@@ -143,7 +218,7 @@ var yalla = (function () {
                     if (path in context && (typeof context[path] !== 'undefined')) {
                         resolve(context[path]);
                     } else {
-                        loadScript(path + ".js").then(function (object) {
+                        loadScript(path).then(function (object) {
                             context[path] = object;
                             resolve(object);
                             delete context._promisesToResolve[path];
@@ -168,8 +243,8 @@ var yalla = (function () {
             function YallaComponent(attributes) {
                 attributes = attributes || {};
                 var elements = $render(attributes);
-                if(!elements){
-                    throw new Error('There is no return in $render function "'+path+'", did you forget the return keyword ?');
+                if (!elements) {
+                    throw new Error('There is no return in $render function "' + path + '", did you forget the return keyword ?');
                 }
                 var prop = elements[1];
                 if (typeof prop !== 'object' || prop.constructor === Array) {
@@ -980,6 +1055,7 @@ var yalla = (function () {
                 elementClose(tagName);
             }
         }
+
         return parse
     })();
 
@@ -1049,13 +1125,13 @@ var yalla = (function () {
                         params.$children = [];
                         params.$store = function (reducer, state, middleware) {
                             var currentPointer = yalla.idom.currentPointer();
-                            if(currentPointer && DATA_PROP in currentPointer){
-                                if(currentPointer[DATA_PROP].attrs.element == params.$elementName && currentPointer.$store){
+                            if (currentPointer && DATA_PROP in currentPointer) {
+                                if (currentPointer[DATA_PROP].attrs.element == params.$elementName && currentPointer.$store) {
                                     return currentPointer.$store;
-                                }else if(currentPointer.children && currentPointer.children.length == 1){
+                                } else if (currentPointer.children && currentPointer.children.length == 1) {
                                     // kita harus tambahin check kalau dia levelnya body
                                     var child = currentPointer.children[0];
-                                    if(child[DATA_PROP] && child[DATA_PROP].attrs.element == params.$elementName && child.$store){
+                                    if (child[DATA_PROP] && child[DATA_PROP].attrs.element == params.$elementName && child.$store) {
                                         return child.$store;
                                     }
                                 }
@@ -1200,6 +1276,219 @@ var yalla = (function () {
         }
     };
 
+    yalla.jsonMlFromText = (function () {
+
+        var addChildren = function (/*DOM*/ elem, /*function*/ filter, /*JsonML*/ jml) {
+            if (elem.hasChildNodes()) {
+                for (var i = 0; i < elem.childNodes.length; i++) {
+                    var child = elem.childNodes[i];
+                    child = fromHTML(child, filter);
+                    if (child) {
+                        jml.push(child);
+                    }
+                }
+                return true;
+            }
+            return false;
+        };
+
+        /**
+         * @param {Node} elem
+         * @param {function} filter
+         * @return {array} JsonML
+         */
+        var fromHTML = function (elem, filter) {
+            if (!elem || !elem.nodeType) {
+                // free references
+                return (elem = null);
+            }
+
+            var i, jml;
+            switch (elem.nodeType) {
+                case 1:  // element
+                case 9:  // document
+                case 11: // documentFragment
+                    jml = [elem.tagName || ''];
+
+                    var attr = elem.attributes,
+                        props = {},
+                        hasAttrib = false;
+
+                    for (i = 0; attr && i < attr.length; i++) {
+                        if (attr[i].specified) {
+                            if (attr[i].name === 'style') {
+                                props.style = elem.style.cssText || attr[i].value;
+                            } else if ('string' === typeof attr[i].value) {
+                                props[attr[i].name] = attr[i].value;
+                            }
+                            hasAttrib = true;
+                        }
+                    }
+                    if (hasAttrib) {
+                        jml.push(props);
+                    }
+
+                    var child;
+                    switch (jml[0].toLowerCase()) {
+                        case 'frame':
+                        case 'iframe':
+                            try {
+                                if ('undefined' !== typeof elem.contentDocument) {
+                                    // W3C
+                                    child = elem.contentDocument;
+                                } else if ('undefined' !== typeof elem.contentWindow) {
+                                    // Microsoft
+                                    child = elem.contentWindow.document;
+                                } else if ('undefined' !== typeof elem.document) {
+                                    // deprecated
+                                    child = elem.document;
+                                }
+
+                                child = fromHTML(child, filter);
+                                if (child) {
+                                    jml.push(child);
+                                }
+                            } catch (ex) {
+                            }
+                            break;
+                        case 'style':
+                            child = elem.styleSheet && elem.styleSheet.cssText;
+                            if (child && 'string' === typeof child) {
+                                // unwrap comment blocks
+                                child = child.replace('<!--', '').replace('-->', '');
+                                jml.push(child);
+                            } else if (elem.hasChildNodes()) {
+                                for (i = 0; i < elem.childNodes.length; i++) {
+                                    child = elem.childNodes[i];
+                                    child = fromHTML(child, filter);
+                                    if (child && 'string' === typeof child) {
+                                        // unwrap comment blocks
+                                        child = child.replace('<!--', '').replace('-->', '');
+                                        jml.push(child);
+                                    }
+                                }
+                            }
+                            break;
+                        case 'input':
+                            addChildren(elem, filter, jml);
+                            child = (elem.type !== 'password') && elem.value;
+                            if (child) {
+                                if (!hasAttrib) {
+                                    // need to add an attribute object
+                                    jml.shift();
+                                    props = {};
+                                    jml.unshift(props);
+                                    jml.unshift(elem.tagName || '');
+                                }
+                                props.value = child;
+                            }
+                            break;
+                        case 'textarea':
+                            if (!addChildren(elem, filter, jml)) {
+                                child = elem.value || elem.innerHTML;
+                                if (child && 'string' === typeof child) {
+                                    jml.push(child);
+                                }
+                            }
+                            break;
+                        default:
+                            addChildren(elem, filter, jml);
+                            break;
+                    }
+
+                    // filter result
+                    if ('function' === typeof filter) {
+                        jml = filter(jml, elem);
+                    }
+
+                    // free references
+                    elem = null;
+                    return jml;
+                case 3: // text node
+                case 4: // CDATA node
+                    var str = String(elem.nodeValue);
+                    // free references
+                    elem = null;
+                    return str;
+                case 10: // doctype
+                    jml = ['!'];
+
+                    var type = ['DOCTYPE', (elem.name || 'html').toLowerCase()];
+
+                    if (elem.publicId) {
+                        type.push('PUBLIC', '"' + elem.publicId + '"');
+                    }
+
+                    if (elem.systemId) {
+                        type.push('"' + elem.systemId + '"');
+                    }
+
+                    jml.push(type.join(' '));
+
+                    // filter result
+                    if ('function' === typeof filter) {
+                        jml = filter(jml, elem);
+                    }
+
+                    // free references
+                    elem = null;
+                    return jml;
+                case 8: // comment node
+                    if ((elem.nodeValue || '').indexOf('DOCTYPE') !== 0) {
+                        // free references
+                        elem = null;
+                        return null;
+                    }
+
+                    jml = ['!',
+                        elem.nodeValue];
+
+                    // filter result
+                    if ('function' === typeof filter) {
+                        jml = filter(jml, elem);
+                    }
+
+                    // free references
+                    elem = null;
+                    return jml;
+                default: // etc.
+                    // free references
+                    return (elem = null);
+            }
+        };
+
+        /**
+         * @param {string} html HTML text
+         * @param {function} filter
+         * @return {array} JsonML
+         */
+        return function (html, filter) {
+            filter = filter || function (jml, el) {
+                    jml.splice(0,1);
+                    return [el.localName].concat(jml.filter(function(item){
+                        if(typeof item === 'string'){
+                            return item.trim().length > 0
+                        }
+                        return true;
+                    }));
+                };
+
+            var elem = document.createElement('div');
+            elem.innerHTML = html;
+            var jml = fromHTML(elem, filter);
+            // free references
+            elem = null;
+
+            if (jml.length === 2) {
+                return jml[1];
+            }
+
+            // make wrapper a document fragment
+            jml[0] = '';
+            return jml;
+        };
+    })();
+
     return yalla;
 })();
 
@@ -1211,7 +1500,7 @@ function scriptStart() {
             if (script.getAttribute('src').indexOf('yalla.js') >= 0) {
                 var main = script.getAttribute('data-main');
                 var base = script.getAttribute('data-base');
-                if(main && base){
+                if (main && base) {
                     yalla.start(main, document.getElementsByName('body')[0], base);
                     return true;
                 }
@@ -1230,3 +1519,52 @@ function startYalla() {
     }
 }
 startYalla();
+
+// bugfix domw parser
+/*
+ * DOMParser HTML extension
+ * 2012-09-04
+ *
+ * By Eli Grey, http://eligrey.com
+ * Public domain.
+ * NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+ */
+
+/*! @source https://gist.github.com/1129031 */
+/*global document, DOMParser*/
+
+(function (DOMParser) {
+    "use strict";
+
+    var
+        proto = DOMParser.prototype
+        , nativeParse = proto.parseFromString
+        ;
+
+    // Firefox/Opera/IE throw errors on unsupported types
+    try {
+        // WebKit returns null on unsupported types
+        if ((new DOMParser()).parseFromString("", "text/html")) {
+            // text/html parsing is natively supported
+            return;
+        }
+    } catch (ex) {
+    }
+
+    proto.parseFromString = function (markup, type) {
+        if (/^\s*text\/html\s*(?:;|$)/i.test(type)) {
+            var
+                doc = document.implementation.createHTMLDocument("")
+                ;
+            if (markup.toLowerCase().indexOf('<!doctype') > -1) {
+                doc.documentElement.innerHTML = markup;
+            }
+            else {
+                doc.body.innerHTML = markup;
+            }
+            return doc;
+        } else {
+            return nativeParse.apply(this, arguments);
+        }
+    };
+}(DOMParser));
