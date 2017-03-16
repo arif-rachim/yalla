@@ -186,15 +186,22 @@ var yalla = (function () {
 
             function generateEvalStringForHTML(responseText, path) {
                 // this line we are cleaning the text wich have immediate closing bracket
-                responseText = (responseText.match(/<.*?\/>/g) || []).reduce(function(text,match){
+                responseText = (responseText.match(/<.*?\/>/g) || []).reduce(function(text,match,index,array){
                     var emptyStringIndex = match.indexOf(" ");
+                    if(emptyStringIndex<0){
+                        emptyStringIndex = match.indexOf("/>");
+                    }
                     var tagName = match.substring(1,emptyStringIndex);
+                    if(tagName == 'br'){
+                        return text;
+                    }
                     var newText = match.substring(0,match.length-2)+'></'+tagName+'>';
                     return text.replace(match,newText);
                 },responseText);
 
                 // here we convert to JSONML then we stringify them. We need to do this to get consistent format of the code
                 var resultString = JSON.stringify(yalla.jsonMlFromText(responseText));
+
                 // take out all var
                 var vars = resultString.match(/\["var".*?}]/g) || [];
                 var injects = resultString.match(/\["inject".*?}]/g) || [];
@@ -238,6 +245,7 @@ var yalla = (function () {
                 script = script.replace(/\\"\+\(/g,'"+(').replace(/\)\+\\"/g,')+"');
                 script = script.replace(/": ""\+\(/g,'":(').replace(/\)\+""/g,')');
                 script = script.replace(/"#@/g,'').replace(/@#"/g,'');
+
                 return generateEvalStringForJS(varibalesJson.text+'function $render($props){ return '+script+'; }',path);
             }
 
