@@ -229,7 +229,7 @@ var yalla = (function () {
                 },varibalesJson);
 
 
-                var afterVarsRemoved = markTagIfItsVariable(varibalesJson.variables,replaceBracketWithExpression(cleanArray(JSON.parse(vars.reduce(function(text,match){
+                var afterVarsRemoved = markTagIfItsVariable(varibalesJson.variables,replaceBracketWithExpression(cleanArray(JSON.parse(vars.concat(injects).reduce(function(text,match){
                     return text.replace(match,'""');
                 },resultString)))));
                 //later we need to compose the vars again to script
