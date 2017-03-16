@@ -11,7 +11,7 @@
  */
 
 var yalla = (function () {
-
+    "use strict";
     var mixin = function (destObject, sourceClass) {
         var props = Object.keys(sourceClass.prototype);
         for (var i = 0; i < props.length; i++) {
@@ -132,12 +132,12 @@ var yalla = (function () {
                 return evalString;
             }
 
-            function cleanArray(array) {
+            function removeItemIfItsEmptyString(array) {
                 return array.filter(function(item){
                     return item && item !== '';
                 }).map(function(item){
                     if(item.constructor.name === 'Array'){
-                        return cleanArray(item);
+                        return removeItemIfItsEmptyString(item);
                     }
                     return item;
                 });
@@ -209,7 +209,7 @@ var yalla = (function () {
                 var varsJson = JSON.parse('['+vars.join(',')+']');
                 var injectsJson = JSON.parse('['+injects.join(',')+']');
 
-                var varibalesJson = varsJson.reduce(function(result,_var){
+                var variablesJson = varsJson.reduce(function(result,_var){
                     var item = _var[1];
                     var value = item.value;
                     if(value.indexOf('{')==0){
@@ -221,32 +221,29 @@ var yalla = (function () {
 
                     var name = item.name.replace(/([A-Z]+)/g,' $1').trim().replace(/\s/g,'-').toLowerCase();
                     result.variables[name] = item.name;
-
                     return result;
                 },{text:'',variables:{}});
 
-                varibalesJson = injectsJson.reduce(function(result,_var){
+                variablesJson = injectsJson.reduce(function(result,_var){
                     var item = _var[1];
                     var value = '$inject("'+item.value+'")';
                     result.text += 'var '+item.name+' = '+value+';\n';
                     var name = item.name.replace(/([A-Z]+)/g,' $1').trim().replace(/\s/g,'-').toLowerCase();
                     result.variables[name] = item.name;
-
                     return result;
-                },varibalesJson);
-
-
-                var afterVarsRemoved = markTagIfItsVariable(varibalesJson.variables,replaceBracketWithExpression(cleanArray(JSON.parse(vars.concat(injects).reduce(function(text,match){
+                },variablesJson);
+                var arrayToBeCleanedString = vars.concat(injects).reduce(function(text,match){
                     return text.replace(match,'""');
-                },resultString)))));
-                //later we need to compose the vars again to script
+                },resultString);
+                var arrayToBeCleaned = JSON.parse(arrayToBeCleanedString);
+                var afterVarsRemoved = markTagIfItsVariable(variablesJson.variables,replaceBracketWithExpression(removeItemIfItsEmptyString(arrayToBeCleaned)));
                 //later we need to compose the vars again to script
                 var script = JSON.stringify(afterVarsRemoved,false,'  ');
                 script = script.replace(/\\"\+\(/g,'"+(').replace(/\)\+\\"/g,')+"');
                 script = script.replace(/": ""\+\(/g,'":(').replace(/\)\+""/g,')');
                 script = script.replace(/"#@/g,'').replace(/@#"/g,'');
-
-                return generateEvalStringForJS(varibalesJson.text+'function $render($props){ return '+script+'; }',path);
+                script = script.replace('"sub-view"','$props.$subView');
+                return generateEvalStringForJS(variablesJson.text+'function $render($props){ return '+script+'; }',path);
             }
 
             function executeScript(responseText, path) {
@@ -316,7 +313,7 @@ var yalla = (function () {
             var $render = dependencyObject;
             var elementName = path.replace(/\//g, '.');
 
-            function YallaComponent(attributes) {
+            var yallaComponent = function (attributes) {
                 attributes = attributes || {};
                 var elements = $render(attributes);
                 if (!elements) {
@@ -331,11 +328,11 @@ var yalla = (function () {
                 prop.id = attributes.id;
                 prop.$storeTobeAttachedToDom = attributes.$storeTobeAttachedToDom;
                 return elements;
-            }
+            };
 
-            YallaComponent.prototype.elementName = elementName;
-            YallaComponent.prototype.path = path;
-            return YallaComponent;
+            yallaComponent.prototype.elementName = elementName;
+            yallaComponent.prototype.path = path;
+            return yallaComponent;
         } else {
             return dependencyObject;
         }
