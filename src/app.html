@@ -1,8 +1,26 @@
 <div>
+
+    <inject name="store" value="app-store"></inject>
+
     <inject name="myButton" value="@comp/my-button"/>
-    <my-button>
-        <div>Shit man this is working !!!</div>
-        <div>LOOKS GREAT !!!</div>
+    <label>Shit</label>
+    <my-button foreach="item in store.getState().items">
+        <label>item</label>
     </my-button>
+
+    <my-button foreach="item in store.getState().items">
+        <label>item</label>
+    </my-button>
+
+    <my-button foreach="item in store.getState().items">
+        <label>item</label>
+    </my-button>
+
+    <my-button foreach="item in store.getState().items">
+        <label>item</label>
+    </my-button>
+
+
+    <sub-view></sub-view>
     <sub-view></sub-view>
 </div>

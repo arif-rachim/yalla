@@ -212,7 +212,6 @@ var yalla = (function () {
                             hasForEach = true;
                             forEachValue = item.foreach;
                         }
-
                     }
                     if(typeof item == 'object' && item.constructor.name == 'Array'){
                         checkForForEachAndPatchToSibling(item);
@@ -241,24 +240,23 @@ var yalla = (function () {
             function updateScriptForForeachTag(script) {
                 var forEachAttributes = script.match(/"\$foreach:.*?"/g) || [];
                 script = forEachAttributes.reduce(function(text,forEachAttr){
-                    var indexForEach = text.indexOf(forEachAttr);
-
+                    var forEachAttrIndex = text.indexOf(forEachAttr);
                     // lets find last comma
-                    var endIndexOfPropsChildren = text.indexOf(']',indexForEach);
+                    var firstClosingBracketAfterForEachAttrIndex = text.indexOf(']',forEachAttrIndex);
 
-                    var arraySymbol = forEachAttr.substring(forEachAttr.indexOf(" in ")+4,forEachAttr.length-1) ;
-                    var indexSearch = forEachAttr.substring('"$foreach:'.length,forEachAttr.indexOf(" in "));
+                    var forEachArraySource = forEachAttr.substring(forEachAttr.indexOf(" in ")+4,forEachAttr.length-1) ;
+                    var forEachItem = forEachAttr.substring('"$foreach:'.length,forEachAttr.indexOf(" in "));
 
-                    var endOfBracket = text.substring(0,indexForEach).lastIndexOf(",");
+                    var endOfBracket = text.substring(0,forEachAttrIndex).lastIndexOf(",");
                     var forEachExpression = forEachAttr.substring(forEachAttr.indexOf(":")+1,forEachAttr.length-1);
                     var forEachString =  '"foreach": "'+forEachExpression+'"';
-                    var beginOfTag = text.substring(0,indexForEach).lastIndexOf(forEachString);
+                    var beginOfTag = text.substring(0,forEachAttrIndex).lastIndexOf(forEachString);
                     var startOfBracket = text.indexOf("[",beginOfTag);
                     var childExpression = text.substring(startOfBracket,endOfBracket);
 
                     var beginComma = text.substring(0,startOfBracket).lastIndexOf(",");
 
-                    text = text.substring(0,beginComma)+'].concat('+arraySymbol+'.map(function('+indexSearch+'){ console.log('+indexSearch+');return  '+childExpression+';}))'+text.substring(endIndexOfPropsChildren+1,script.length);
+                    text = text.substring(0,beginComma)+'].concat('+forEachArraySource+'.map(function('+forEachItem+'){ console.log('+forEachItem+');return  '+childExpression+';}))'+text.substring(firstClosingBracketAfterForEachAttrIndex+1,script.length);
                     text = text.replace(forEachString,'');
                     debugger;
                     return text;
@@ -330,7 +328,7 @@ var yalla = (function () {
                 script = script.replace(/\\"\+\(/g, '"+(').replace(/\)\+\\"/g, ')+"');
                 script = script.replace(/": ""\+\(/g, '":(').replace(/\)\+""/g, ')');
                 script = script.replace(/"#@/g, '').replace(/@#"/g, '');
-                script = script.replace('"sub-view"', '$props.$subView');
+                script = script.replace(/"sub-view"/g, '$props.$subView');
                 script = updateScriptForChildrenTag(script);
                 debugger;
                 script = updateScriptForForeachTag(script);

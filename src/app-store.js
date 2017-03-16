@@ -9,7 +9,8 @@ var store = yalla.createStore(function(prevState,action){
     }
     return state;
 },{
-    label : ''
+    label : '',
+    items : ['one','two','three']
 });
 
 store.setLabel = function(e){
