@@ -203,15 +203,70 @@ var yalla = (function () {
                 return array;
             }
 
-            function updateScriptForChildrenTag(script) {
-                var indexOfPropsChildren = script.indexOf('"$props.$children"');
-                if(indexOfPropsChildren>0){
-                    var endIndexOfPropsChildren = script.indexOf("]",indexOfPropsChildren);
-                    var beginComma = script.substring(0,indexOfPropsChildren).lastIndexOf(",");
-                    script = script.substring(0,beginComma)+'].concat($props.$children)'+script.substring(endIndexOfPropsChildren+1,script.length);
+            function checkForForEachAndPatchToSibling(array) {
+                var hasForEach = false;
+                var forEachValue = "";
+                array.forEach(function(item){
+                    if(typeof item == 'object' && item.constructor.name != 'Array'){
+                        if('foreach' in item){
+                            hasForEach = true;
+                            forEachValue = item.foreach;
+                        }
+
+                    }
+                    if(typeof item == 'object' && item.constructor.name == 'Array'){
+                        checkForForEachAndPatchToSibling(item);
+                    }
+                });
+                if(hasForEach){
+                    array.push('$foreach:'+forEachValue.trim());
                 }
+                return array;
+            }
+
+
+            function updateScriptForChildrenTag(script) {
+                var propsChildren = script.match(/"\$props\.\$children"/g) || [];
+                script = propsChildren.reduce(function(text,match){
+                    var positionOfMatchItem = text.indexOf(match);
+                    var endIndexOfPropsChildren = text.indexOf("]",positionOfMatchItem);
+                    var beginComma = script.substring(0,positionOfMatchItem).lastIndexOf(",");
+                    text = text.substring(0,beginComma)+'].concat($props.$children)'+text.substring(endIndexOfPropsChildren+1,script.length);
+                    return text;
+                },script);
+                return script;
+
+            }
+
+            function updateScriptForForeachTag(script) {
+                var forEachAttributes = script.match(/"\$foreach:.*?"/g) || [];
+                script = forEachAttributes.reduce(function(text,forEachAttr){
+                    var indexForEach = text.indexOf(forEachAttr);
+
+                    // lets find last comma
+                    var endIndexOfPropsChildren = text.indexOf(']',indexForEach);
+
+                    var arraySymbol = forEachAttr.substring(forEachAttr.indexOf(" in ")+4,forEachAttr.length-1) ;
+                    var indexSearch = forEachAttr.substring('"$foreach:'.length,forEachAttr.indexOf(" in "));
+
+                    var endOfBracket = text.substring(0,indexForEach).lastIndexOf(",");
+                    var forEachExpression = forEachAttr.substring(forEachAttr.indexOf(":")+1,forEachAttr.length-1);
+                    var forEachString =  '"foreach": "'+forEachExpression+'"';
+                    var beginOfTag = text.substring(0,indexForEach).lastIndexOf(forEachString);
+                    var startOfBracket = text.indexOf("[",beginOfTag);
+                    var childExpression = text.substring(startOfBracket,endOfBracket);
+
+                    var beginComma = text.substring(0,startOfBracket).lastIndexOf(",");
+
+                    text = text.substring(0,beginComma)+'].concat('+arraySymbol+'.map(function('+indexSearch+'){ console.log('+indexSearch+');return  '+childExpression+';}))'+text.substring(endIndexOfPropsChildren+1,script.length);
+                    text = text.replace(forEachString,'');
+                    debugger;
+                    return text;
+                },script);
                 return script;
             }
+
+
 
             function generateEvalStringForHTML(responseText, path) {
                 // this line we are cleaning the text wich have immediate closing bracket
@@ -228,7 +283,9 @@ var yalla = (function () {
                     return text.replace(match, newText);
                 }, responseText);
                 var jsonMl = yalla.jsonMlFromText(responseText);
+
                 jsonMl = checkForDataChildrenAndPatchToSibling(jsonMl);
+                jsonMl = checkForForEachAndPatchToSibling(jsonMl);
 
                 // here we convert to JSONML then we stringify them. We need to do this to get consistent format of the code
                 var resultString = JSON.stringify(jsonMl);
@@ -276,6 +333,8 @@ var yalla = (function () {
                 script = script.replace('"sub-view"', '$props.$subView');
                 script = updateScriptForChildrenTag(script);
                 debugger;
+                script = updateScriptForForeachTag(script);
+
                 return generateEvalStringForJS(variablesJson.text + 'function $render($props){ return ' + script + '; }', path);
             }
 
