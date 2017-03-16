@@ -82,15 +82,34 @@ var yalla = (function () {
             } else {
                 path = path + '.js';
             }
-            function lookDependency(responseText) {
-                var injectText = "$inject(";
-                var position = 0;
-                var dependency = [];
-                while ((position = responseText.indexOf(injectText, position + 1)) > 0) {
-                    var closingIndex = responseText.indexOf(")", position);
-                    var dep = responseText.substring(position + injectText.length, closingIndex).split(",")[0].replace(/['|"]/g, '');
-                    dependency.push(dep);
+
+            function pullOutChildren(element) {
+                var result = [];
+                if(!element.children){
+                    return result;
                 }
+                for(var i = 0;i<element.children.length;i++){
+                    var attributes = element.children[i].attributes;
+                    for (var j = 0;j<attributes.length;j++){
+                        var attribute = attributes[j];
+                        if(attribute.name == 'value'){
+                            result.push(attribute.value);
+                        }
+                    }
+                    result = result.concat(pullOutChildren(element.children[i]));
+                }
+                return result;
+            }
+
+            function lookDependency(responseText) {
+                var dependenciesRaw = responseText.match(/\$inject\(.*?\)/g) || [];
+                var dependency = dependenciesRaw.map(function(dep){
+                    return dep.substring('$inject("'.length,dep.length-2);
+                });
+                dependenciesRaw = responseText.match(/<injec.*?>/g) || [];
+                var doc = document.createElement('div');
+                doc.innerHTML = dependenciesRaw.join('');
+                dependency = dependency.concat(pullOutChildren(doc));
                 return dependency;
             }
 
@@ -125,6 +144,7 @@ var yalla = (function () {
             }
 
             function replaceBracket(string) {
+
                 return (string.match(/{.*?}/g) || []).reduce(function(text,match){
                     var newMatch = '"+('+match.substring(1,match.length-1)+')+"';
                     return text.replace(match,newMatch);
@@ -150,6 +170,20 @@ var yalla = (function () {
                 });
             }
 
+            function markTagIfItsVariable(variables, array) {
+                return array.map(function(item,index){
+                    if(index == 0 && typeof item == 'string'){
+                        if(item in variables){
+                            return "#@"+variables[item]+"@#";
+                        }
+                    }
+                    if(typeof item == 'object' && item.constructor.name == 'Array'){
+                        return markTagIfItsVariable(variables,item);
+                    }
+                    return item;
+                });
+            }
+
             function generateEvalStringForHTML(responseText, path) {
                 // this line we are cleaning the text wich have immediate closing bracket
                 responseText = (responseText.match(/<.*?\/>/g) || []).reduce(function(text,match){
@@ -161,12 +195,14 @@ var yalla = (function () {
 
                 // here we convert to JSONML then we stringify them. We need to do this to get consistent format of the code
                 var resultString = JSON.stringify(yalla.jsonMlFromText(responseText));
-
                 // take out all var
                 var vars = resultString.match(/\["var".*?}]/g) || [];
-                var varsJson = JSON.parse('['+vars.join(',')+']');
+                var injects = resultString.match(/\["inject".*?}]/g) || [];
 
-                varsJson = varsJson.reduce(function(text,_var){
+                var varsJson = JSON.parse('['+vars.join(',')+']');
+                var injectsJson = JSON.parse('['+injects.join(',')+']');
+
+                var varibalesJson = varsJson.reduce(function(result,_var){
                     var item = _var[1];
                     var value = item.value;
                     if(value.indexOf('{')==0){
@@ -174,18 +210,35 @@ var yalla = (function () {
                     }else{
                         value = '"'+replaceBracket(value)+'"';
                     }
-                    text += 'var '+item.name+' = '+value+';\n';
-                    return text;
-                },'');
-                debugger;
-                var afterVarsRemoved = replaceBracketWithExpression(cleanArray(JSON.parse(vars.reduce(function(text,match){
+                    result.text += 'var '+item.name+' = '+value+';\n';
+
+                    var name = item.name.replace(/([A-Z]+)/g,' $1').trim().replace(/\s/g,'-').toLowerCase();
+                    result.variables[name] = item.name;
+
+                    return result;
+                },{text:'',variables:{}});
+
+                varibalesJson = injectsJson.reduce(function(result,_var){
+                    var item = _var[1];
+                    var value = '$inject("'+item.value+'")';
+                    result.text += 'var '+item.name+' = '+value+';\n';
+                    var name = item.name.replace(/([A-Z]+)/g,' $1').trim().replace(/\s/g,'-').toLowerCase();
+                    result.variables[name] = item.name;
+
+                    return result;
+                },varibalesJson);
+
+
+                var afterVarsRemoved = markTagIfItsVariable(varibalesJson.variables,replaceBracketWithExpression(cleanArray(JSON.parse(vars.reduce(function(text,match){
                     return text.replace(match,'""');
-                },resultString))));
+                },resultString)))));
                 //later we need to compose the vars again to script
-                var script = JSON.stringify(afterVarsRemoved);
+                //later we need to compose the vars again to script
+                var script = JSON.stringify(afterVarsRemoved,false,'  ');
                 script = script.replace(/\\"\+\(/g,'"+(').replace(/\)\+\\"/g,')+"');
-                debugger;
-                return generateEvalStringForJS(varsJson+'function $render($props){ return '+script+'; }',path);
+                script = script.replace(/": ""\+\(/g,'":(').replace(/\)\+""/g,')');
+                script = script.replace(/"#@/g,'').replace(/@#"/g,'');
+                return generateEvalStringForJS(varibalesJson.text+'function $render($props){ return '+script+'; }',path);
             }
 
             function executeScript(responseText, path) {
@@ -1344,6 +1397,7 @@ var yalla = (function () {
                     }
 
                     var child;
+
                     switch (jml[0].toLowerCase()) {
                         case 'frame':
                         case 'iframe':
@@ -1427,7 +1481,6 @@ var yalla = (function () {
                     return str;
                 case 10: // doctype
                     jml = ['!'];
-
                     var type = ['DOCTYPE', (elem.name || 'html').toLowerCase()];
 
                     if (elem.publicId) {
@@ -1534,52 +1587,3 @@ function startYalla() {
     }
 }
 startYalla();
-
-// bugfix domw parser
-/*
- * DOMParser HTML extension
- * 2012-09-04
- *
- * By Eli Grey, http://eligrey.com
- * Public domain.
- * NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
- */
-
-/*! @source https://gist.github.com/1129031 */
-/*global document, DOMParser*/
-
-(function (DOMParser) {
-    "use strict";
-
-    var
-        proto = DOMParser.prototype
-        , nativeParse = proto.parseFromString
-        ;
-
-    // Firefox/Opera/IE throw errors on unsupported types
-    try {
-        // WebKit returns null on unsupported types
-        if ((new DOMParser()).parseFromString("", "text/html")) {
-            // text/html parsing is natively supported
-            return;
-        }
-    } catch (ex) {
-    }
-
-    proto.parseFromString = function (markup, type) {
-        if (/^\s*text\/html\s*(?:;|$)/i.test(type)) {
-            var
-                doc = document.implementation.createHTMLDocument("")
-                ;
-            if (markup.toLowerCase().indexOf('<!doctype') > -1) {
-                doc.documentElement.innerHTML = markup;
-            }
-            else {
-                doc.body.innerHTML = markup;
-            }
-            return doc;
-        } else {
-            return nativeParse.apply(this, arguments);
-        }
-    };
-}(DOMParser));

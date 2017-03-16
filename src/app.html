@@ -1,14 +1,13 @@
+<label>
 
-<div>
+    <div>Hello !!</div>
+    <input type="text" value="{1+2}" onkeyup="{store.setLabel}"/>
+    <br/>
+    Ngeri banget ini {store.getState().label} gaan<br/>
+    <my-button onclick="{store.onClicked}">One</my-button>
+    <sub-view></sub-view>
+    <!-- -->
+    <inject name="myButton" value="@comp/my-button"/>
+    <inject name="store" value="app-store" />
 
-
-    <var name="one" value="{$inject('comp/com-a')}" />
-    <var name="two" value="{$inject('comp/com-a')}" />
-    <var name="three" value="{$inject('comp/com-a')}" />
-    <var name="four" value="Hello World" />
-
-
-    <div>Hello !! {four}</div>
-    <input type="text" value="{1+2}" />
-    Ngeri banget ini {1+1} gaan
-</div>
+</label>

@@ -1,8 +1,10 @@
 /**
- * Created by gal2729 on 3/7/2017.
+ * Created by developer on 3/15/2017.
  */
+var data = $inject('@comp/my-button');
+var dataTwo = $inject('@comp/my-button-two');
 
-var compA = $inject('comp/com-a');
-function $render(){
-    return ['div','hello world',[compA]];
+function $render($props){
+    debugger;
+    return ['hello','world'];
 }
