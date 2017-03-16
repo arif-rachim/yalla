@@ -6,5 +6,5 @@ var dataTwo = $inject('@comp/my-button-two');
 
 function $render($props){
     debugger;
-    return ['hello','world'];
+    return ['hello','world'].concat($props.$children);
 }

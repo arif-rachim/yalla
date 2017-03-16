@@ -1,13 +1,8 @@
-<label>
-
-    <div>Hello !!</div>
-    <input type="text" value="{1+2}" onkeyup="{store.setLabel}"/>
-    <br/>
-    Ngeri banget ini {store.getState().label} gaan<br/>
-    <my-button onclick="{store.onClicked}">One</my-button>
-    <sub-view></sub-view>
-    <!-- -->
+<div>
     <inject name="myButton" value="@comp/my-button"/>
-    <inject name="store" value="app-store" />
-
-</label>
+    <my-button>
+        <div>Shit man this is working !!!</div>
+        <div>LOOKS GREAT !!!</div>
+    </my-button>
+    <sub-view></sub-view>
+</div>
