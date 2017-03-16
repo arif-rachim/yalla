@@ -85,14 +85,14 @@ var yalla = (function () {
 
             function pullOutChildren(element) {
                 var result = [];
-                if(!element.children){
+                if (!element.children) {
                     return result;
                 }
-                for(var i = 0;i<element.children.length;i++){
+                for (var i = 0; i < element.children.length; i++) {
                     var attributes = element.children[i].attributes;
-                    for (var j = 0;j<attributes.length;j++){
+                    for (var j = 0; j < attributes.length; j++) {
                         var attribute = attributes[j];
-                        if(attribute.name == 'value'){
+                        if (attribute.name == 'value') {
                             result.push(attribute.value);
                         }
                     }
@@ -103,8 +103,8 @@ var yalla = (function () {
 
             function lookDependency(responseText) {
                 var dependenciesRaw = responseText.match(/\$inject\(.*?\)/g) || [];
-                var dependency = dependenciesRaw.map(function(dep){
-                    return dep.substring('$inject("'.length,dep.length-2);
+                var dependency = dependenciesRaw.map(function (dep) {
+                    return dep.substring('$inject("'.length, dep.length - 2);
                 });
                 dependenciesRaw = responseText.match(/<injec.*?>/g) || [];
                 var doc = document.createElement('div');
@@ -133,10 +133,10 @@ var yalla = (function () {
             }
 
             function removeItemIfItsEmptyString(array) {
-                return array.filter(function(item){
+                return array.filter(function (item) {
                     return item && item !== '';
-                }).map(function(item){
-                    if(item.constructor.name === 'Array'){
+                }).map(function (item) {
+                    if (item.constructor.name === 'Array') {
                         return removeItemIfItsEmptyString(item);
                     }
                     return item;
@@ -145,22 +145,22 @@ var yalla = (function () {
 
             function replaceBracket(string) {
 
-                return (string.match(/{.*?}/g) || []).reduce(function(text,match){
-                    var newMatch = '"+('+match.substring(1,match.length-1)+')+"';
-                    return text.replace(match,newMatch);
-                },string);
+                return (string.match(/{.*?}/g) || []).reduce(function (text, match) {
+                    var newMatch = '"+(' + match.substring(1, match.length - 1) + ')+"';
+                    return text.replace(match, newMatch);
+                }, string);
             }
 
-            function replaceBracketWithExpression(array){
-                return array.map(function(item){
-                    if(typeof item == 'string'){
+            function replaceBracketWithExpression(array) {
+                return array.map(function (item) {
+                    if (typeof item == 'string') {
                         return replaceBracket(item);
                     }
-                    if(typeof item == 'object' ){
-                        if(item.constructor.name == 'Array'){
+                    if (typeof item == 'object') {
+                        if (item.constructor.name == 'Array') {
                             return replaceBracketWithExpression(item);
-                        }else{
-                            for (var key in item){
+                        } else {
+                            for (var key in item) {
                                 item[key] = replaceBracket(item[key]);
                             }
                             return item;
@@ -171,79 +171,112 @@ var yalla = (function () {
             }
 
             function markTagIfItsVariable(variables, array) {
-                return array.map(function(item,index){
-                    if(index == 0 && typeof item == 'string'){
-                        if(item in variables){
-                            return "#@"+variables[item]+"@#";
+                return array.map(function (item, index) {
+                    if (index == 0 && typeof item == 'string') {
+                        if (item in variables) {
+                            return "#@" + variables[item] + "@#";
                         }
                     }
-                    if(typeof item == 'object' && item.constructor.name == 'Array'){
-                        return markTagIfItsVariable(variables,item);
+                    if (typeof item == 'object' && item.constructor.name == 'Array') {
+                        return markTagIfItsVariable(variables, item);
                     }
                     return item;
                 });
             }
 
+            function checkForDataChildrenAndPatchToSibling(array) {
+                var hasChildrenFlag = false;
+                array.forEach(function(item){
+                    if(typeof item == 'object' && item.constructor.name != 'Array'){
+                        if('data-$children' in item){
+                            hasChildrenFlag = true;
+                        }
+                        delete item['data-$children'];
+                    }
+                    if(typeof item == 'object' && item.constructor.name == 'Array'){
+                        checkForDataChildrenAndPatchToSibling(item);
+                    }
+                });
+                if(hasChildrenFlag){
+                    array.push('$props.$children');
+                }
+                return array;
+            }
+
+            function updateScriptForChildrenTag(script) {
+                var indexOfPropsChildren = script.indexOf('"$props.$children"');
+                if(indexOfPropsChildren>0){
+                    var endIndexOfPropsChildren = script.indexOf("]",indexOfPropsChildren);
+                    var beginComma = script.substring(0,indexOfPropsChildren).lastIndexOf(",");
+                    script = script.substring(0,beginComma)+'].concat($props.$children)'+script.substring(endIndexOfPropsChildren+1,script.length);
+                }
+                return script;
+            }
+
             function generateEvalStringForHTML(responseText, path) {
                 // this line we are cleaning the text wich have immediate closing bracket
-                responseText = (responseText.match(/<.*?\/>/g) || []).reduce(function(text,match,index,array){
+                responseText = (responseText.match(/<.*?\/>/g) || []).reduce(function (text, match, index, array) {
                     var emptyStringIndex = match.indexOf(" ");
-                    if(emptyStringIndex<0){
+                    if (emptyStringIndex < 0) {
                         emptyStringIndex = match.indexOf("/>");
                     }
-                    var tagName = match.substring(1,emptyStringIndex);
-                    if(tagName == 'br'){
+                    var tagName = match.substring(1, emptyStringIndex);
+                    if (tagName == 'br') {
                         return text;
                     }
-                    var newText = match.substring(0,match.length-2)+'></'+tagName+'>';
-                    return text.replace(match,newText);
-                },responseText);
+                    var newText = match.substring(0, match.length - 2) + '></' + tagName + '>';
+                    return text.replace(match, newText);
+                }, responseText);
+                var jsonMl = yalla.jsonMlFromText(responseText);
+                jsonMl = checkForDataChildrenAndPatchToSibling(jsonMl);
 
                 // here we convert to JSONML then we stringify them. We need to do this to get consistent format of the code
-                var resultString = JSON.stringify(yalla.jsonMlFromText(responseText));
+                var resultString = JSON.stringify(jsonMl);
 
                 // take out all var
                 var vars = resultString.match(/\["var".*?}]/g) || [];
                 var injects = resultString.match(/\["inject".*?}]/g) || [];
 
-                var varsJson = JSON.parse('['+vars.join(',')+']');
-                var injectsJson = JSON.parse('['+injects.join(',')+']');
+                var varsJson = JSON.parse('[' + vars.join(',') + ']');
+                var injectsJson = JSON.parse('[' + injects.join(',') + ']');
 
-                var variablesJson = varsJson.reduce(function(result,_var){
+                var variablesJson = varsJson.reduce(function (result, _var) {
                     var item = _var[1];
                     var value = item.value;
-                    if(value.indexOf('{')==0){
-                        value = '('+value.substring(1,value.length-1)+')';
-                    }else{
-                        value = '"'+replaceBracket(value)+'"';
+                    if (value.indexOf('{') == 0) {
+                        value = '(' + value.substring(1, value.length - 1) + ')';
+                    } else {
+                        value = '"' + replaceBracket(value) + '"';
                     }
-                    result.text += 'var '+item.name+' = '+value+';\n';
+                    result.text += 'var ' + item.name + ' = ' + value + ';\n';
 
-                    var name = item.name.replace(/([A-Z]+)/g,' $1').trim().replace(/\s/g,'-').toLowerCase();
+                    var name = item.name.replace(/([A-Z]+)/g, ' $1').trim().replace(/\s/g, '-').toLowerCase();
                     result.variables[name] = item.name;
                     return result;
-                },{text:'',variables:{}});
+                }, {text: '', variables: {}});
 
-                variablesJson = injectsJson.reduce(function(result,_var){
+                variablesJson = injectsJson.reduce(function (result, _var) {
                     var item = _var[1];
-                    var value = '$inject("'+item.value+'")';
-                    result.text += 'var '+item.name+' = '+value+';\n';
-                    var name = item.name.replace(/([A-Z]+)/g,' $1').trim().replace(/\s/g,'-').toLowerCase();
+                    var value = '$inject("' + item.value + '")';
+                    result.text += 'var ' + item.name + ' = ' + value + ';\n';
+                    var name = item.name.replace(/([A-Z]+)/g, ' $1').trim().replace(/\s/g, '-').toLowerCase();
                     result.variables[name] = item.name;
                     return result;
-                },variablesJson);
-                var arrayToBeCleanedString = vars.concat(injects).reduce(function(text,match){
-                    return text.replace(match,'""');
-                },resultString);
+                }, variablesJson);
+                var arrayToBeCleanedString = vars.concat(injects).reduce(function (text, match) {
+                    return text.replace(match, '""');
+                }, resultString);
                 var arrayToBeCleaned = JSON.parse(arrayToBeCleanedString);
-                var afterVarsRemoved = markTagIfItsVariable(variablesJson.variables,replaceBracketWithExpression(removeItemIfItsEmptyString(arrayToBeCleaned)));
+                var afterVarsRemoved = markTagIfItsVariable(variablesJson.variables, replaceBracketWithExpression(removeItemIfItsEmptyString(arrayToBeCleaned)));
                 //later we need to compose the vars again to script
-                var script = JSON.stringify(afterVarsRemoved,false,'  ');
-                script = script.replace(/\\"\+\(/g,'"+(').replace(/\)\+\\"/g,')+"');
-                script = script.replace(/": ""\+\(/g,'":(').replace(/\)\+""/g,')');
-                script = script.replace(/"#@/g,'').replace(/@#"/g,'');
-                script = script.replace('"sub-view"','$props.$subView');
-                return generateEvalStringForJS(variablesJson.text+'function $render($props){ return '+script+'; }',path);
+                var script = JSON.stringify(afterVarsRemoved, false, '  ');
+                script = script.replace(/\\"\+\(/g, '"+(').replace(/\)\+\\"/g, ')+"');
+                script = script.replace(/": ""\+\(/g, '":(').replace(/\)\+""/g, ')');
+                script = script.replace(/"#@/g, '').replace(/@#"/g, '');
+                script = script.replace('"sub-view"', '$props.$subView');
+                script = updateScriptForChildrenTag(script);
+                debugger;
+                return generateEvalStringForJS(variablesJson.text + 'function $render($props){ return ' + script + '; }', path);
             }
 
             function executeScript(responseText, path) {
@@ -1537,9 +1570,9 @@ var yalla = (function () {
          */
         return function (html, filter) {
             filter = filter || function (jml, el) {
-                    jml.splice(0,1);
-                    return [el.localName].concat(jml.filter(function(item){
-                        if(typeof item === 'string'){
+                    jml.splice(0, 1);
+                    return [el.localName].concat(jml.filter(function (item) {
+                        if (typeof item === 'string') {
                             return item.trim().length > 0
                         }
                         return true;
