@@ -78,9 +78,9 @@ var yalla = (function () {
         var loadScript = function (uri) {
             var path = uri;
             if (path.indexOf('@') == 0) {
-                path = path.substr(1, path.length) + '.html';
+                path = path.substr(1, path.length) + '.js';
             } else {
-                path = path + '.js';
+                path = path + '.html';
             }
 
             function pullOutChildren(element) {
@@ -186,18 +186,18 @@ var yalla = (function () {
 
             function checkForDataChildrenAndPatchToSibling(array) {
                 var hasChildrenFlag = false;
-                array.forEach(function(item){
-                    if(typeof item == 'object' && item.constructor.name != 'Array'){
-                        if('data-$children' in item){
+                array.forEach(function (item) {
+                    if (typeof item == 'object' && item.constructor.name != 'Array') {
+                        if ('data-$children' in item) {
                             hasChildrenFlag = true;
                         }
                         delete item['data-$children'];
                     }
-                    if(typeof item == 'object' && item.constructor.name == 'Array'){
+                    if (typeof item == 'object' && item.constructor.name == 'Array') {
                         checkForDataChildrenAndPatchToSibling(item);
                     }
                 });
-                if(hasChildrenFlag){
+                if (hasChildrenFlag) {
                     array.push('$props.$children');
                 }
                 return array;
@@ -206,64 +206,84 @@ var yalla = (function () {
             function checkForForEachAndPatchToSibling(array) {
                 var hasForEach = false;
                 var forEachValue = "";
-                array.forEach(function(item){
-                    if(typeof item == 'object' && item.constructor.name != 'Array'){
-                        if('foreach' in item){
+                array.forEach(function (item) {
+                    if (typeof item == 'object' && item.constructor.name != 'Array') {
+                        if ('foreach' in item) {
                             hasForEach = true;
                             forEachValue = item.foreach;
                         }
                     }
-                    if(typeof item == 'object' && item.constructor.name == 'Array'){
+                    if (typeof item == 'object' && item.constructor.name == 'Array') {
                         checkForForEachAndPatchToSibling(item);
                     }
                 });
-                if(hasForEach){
-                    array.push('$foreach:'+forEachValue.trim());
+                if (hasForEach) {
+                    array.push('$foreach:' + forEachValue.trim());
                 }
                 return array;
+            }
+
+            function checkForStyleAndAppendElementName(array, path) {
+
+                return array.map(function (item, index, array) {
+
+                    if (index > 0 && typeof item == 'string' && array[0] == 'style') {
+                        var matches = item.match(/\s.*?\{/g);
+                        item = matches.reduce(function (text, match, index, array) {
+                            var newText = '\n[element="' + path + '"] ' + match.trim();
+                            return text.replace(match, newText);
+                        }, item);
+                        return item;
+                        // lets process the item
+                    }
+
+                    if (typeof item == 'object' && item.constructor.name == 'Array') {
+                        return checkForStyleAndAppendElementName(item, path)
+                    }
+
+                    return item;
+                });
             }
 
 
             function updateScriptForChildrenTag(script) {
                 var propsChildren = script.match(/"\$props\.\$children"/g) || [];
-                script = propsChildren.reduce(function(text,match){
+                script = propsChildren.reduce(function (text, match) {
                     var positionOfMatchItem = text.indexOf(match);
-                    var endIndexOfPropsChildren = text.indexOf("]",positionOfMatchItem);
-                    var beginComma = script.substring(0,positionOfMatchItem).lastIndexOf(",");
-                    text = text.substring(0,beginComma)+'].concat($props.$children)'+text.substring(endIndexOfPropsChildren+1,script.length);
+                    var endIndexOfPropsChildren = text.indexOf("]", positionOfMatchItem);
+                    var beginComma = script.substring(0, positionOfMatchItem).lastIndexOf(",");
+                    text = text.substring(0, beginComma) + '].concat($props.$children)' + text.substring(endIndexOfPropsChildren + 1, script.length);
                     return text;
-                },script);
+                }, script);
                 return script;
 
             }
 
             function updateScriptForForeachTag(script) {
                 var forEachAttributes = script.match(/"\$foreach:.*?"/g) || [];
-                script = forEachAttributes.reduce(function(text,forEachAttr){
+                script = forEachAttributes.reduce(function (text, forEachAttr) {
                     var forEachAttrIndex = text.indexOf(forEachAttr);
                     // lets find last comma
-                    var firstClosingBracketAfterForEachAttrIndex = text.indexOf(']',forEachAttrIndex);
+                    var firstClosingBracketAfterForEachAttrIndex = text.indexOf(']', forEachAttrIndex);
 
-                    var forEachArraySource = forEachAttr.substring(forEachAttr.indexOf(" in ")+4,forEachAttr.length-1) ;
-                    var forEachItem = forEachAttr.substring('"$foreach:'.length,forEachAttr.indexOf(" in "));
+                    var forEachArraySource = forEachAttr.substring(forEachAttr.indexOf(" in ") + 4, forEachAttr.length - 1);
+                    var forEachItem = forEachAttr.substring('"$foreach:'.length, forEachAttr.indexOf(" in "));
 
-                    var endOfBracket = text.substring(0,forEachAttrIndex).lastIndexOf(",");
-                    var forEachExpression = forEachAttr.substring(forEachAttr.indexOf(":")+1,forEachAttr.length-1);
-                    var forEachString =  '"foreach": "'+forEachExpression+'"';
-                    var beginOfTag = text.substring(0,forEachAttrIndex).lastIndexOf(forEachString);
-                    var startOfBracket = text.indexOf("[",beginOfTag);
-                    var childExpression = text.substring(startOfBracket,endOfBracket);
+                    var endOfBracket = text.substring(0, forEachAttrIndex).lastIndexOf(",");
+                    var forEachExpression = forEachAttr.substring(forEachAttr.indexOf(":") + 1, forEachAttr.length - 1);
+                    var forEachString = '"foreach": "' + forEachExpression + '"';
+                    var beginOfTag = text.substring(0, forEachAttrIndex).lastIndexOf(forEachString);
+                    var startOfBracket = text.indexOf("[", beginOfTag);
+                    var childExpression = text.substring(startOfBracket, endOfBracket);
 
-                    var beginComma = text.substring(0,startOfBracket).lastIndexOf(",");
+                    var beginComma = text.substring(0, startOfBracket).lastIndexOf(",");
 
-                    text = text.substring(0,beginComma)+'].concat('+forEachArraySource+'.map(function('+forEachItem+'){ console.log('+forEachItem+');return  '+childExpression+';}))'+text.substring(firstClosingBracketAfterForEachAttrIndex+1,script.length);
-                    text = text.replace(forEachString,'');
-                    debugger;
+                    text = text.substring(0, beginComma) + '].concat(' + forEachArraySource + '.map(function(' + forEachItem + '){ console.log(' + forEachItem + ');return  ' + childExpression + ';}))' + text.substring(firstClosingBracketAfterForEachAttrIndex + 1, script.length);
+                    text = text.replace(forEachString, '');
                     return text;
-                },script);
+                }, script);
                 return script;
             }
-
 
 
             function generateEvalStringForHTML(responseText, path) {
@@ -284,6 +304,7 @@ var yalla = (function () {
 
                 jsonMl = checkForDataChildrenAndPatchToSibling(jsonMl);
                 jsonMl = checkForForEachAndPatchToSibling(jsonMl);
+                jsonMl = checkForStyleAndAppendElementName(jsonMl, path.replace(/\//g, '.').substring(0,path.lastIndexOf('.')));
 
                 // here we convert to JSONML then we stringify them. We need to do this to get consistent format of the code
                 var resultString = JSON.stringify(jsonMl);
@@ -330,7 +351,6 @@ var yalla = (function () {
                 script = script.replace(/"#@/g, '').replace(/@#"/g, '');
                 script = script.replace(/"sub-view"/g, '$props.$subView');
                 script = updateScriptForChildrenTag(script);
-                debugger;
                 script = updateScriptForForeachTag(script);
 
                 return generateEvalStringForJS(variablesJson.text + 'function $render($props){ return ' + script + '; }', path);
@@ -400,7 +420,7 @@ var yalla = (function () {
     yalla.inject = function (path) {
         var dependencyObject = this.globalContext[path];
         if (typeof dependencyObject === 'function') {
-            var $render = dependencyObject;
+            var $render = dependencyObject
             var elementName = path.replace(/\//g, '.');
 
             var yallaComponent = function (attributes) {
