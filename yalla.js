@@ -230,7 +230,13 @@ var yalla = (function () {
                     if (index > 0 && typeof item == 'string' && array[0] == 'style') {
                         var matches = item.match(/\s.*?\{/g);
                         item = matches.reduce(function (text, match, index, array) {
-                            var newText = '\n[element="' + path + '"] ' + match.trim();
+                            var trimmedMatch = match.trim();
+                            if(trimmedMatch.indexOf('root')<0){
+                                trimmedMatch = 'root '+trimmedMatch;
+                            }
+                            var rootSelector = '[element="' + path + '"]';
+                            trimmedMatch = trimmedMatch.replace('root',rootSelector);
+                            var newText = '\n ' + trimmedMatch;
                             return text.replace(match, newText);
                         }, item);
                         return item;
