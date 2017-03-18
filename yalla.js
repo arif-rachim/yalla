@@ -197,10 +197,10 @@ var yalla = (function () {
                 var hasChildrenFlag = false;
                 array.forEach(function (item) {
                     if (typeof item == 'object' && item.constructor.name != 'Array') {
-                        if ('data-$children' in item) {
+                        if ('$children' in item) {
                             hasChildrenFlag = true;
                         }
-                        delete item['data-$children'];
+                        delete item['$children'];
                     }
                     if (typeof item == 'object' && item.constructor.name == 'Array') {
                         checkForDataChildrenAndPatchToSibling(item);
@@ -364,7 +364,7 @@ var yalla = (function () {
                 script = script.replace(/\\"\+\(/g, '"+(').replace(/\)\+\\"/g, ')+"');
                 script = script.replace(/": ""\+\(/g, '":(').replace(/\)\+""/g, ')');
                 script = script.replace(/"#@/g, '').replace(/@#"/g, '');
-                script = script.replace(/"sub-view"/g, '$props.$subView');
+                script = script.replace(/"router-view"/g, '$props.$subView');
                 script = updateScriptForChildrenTag(script);
                 script = updateScriptForForeachTag(script);
 
