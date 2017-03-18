@@ -1380,14 +1380,16 @@ var yalla = (function () {
     yalla.start = function (startFile, el, baseLib) {
         yalla.baselib = baseLib || yalla.baseLib;
         yalla.rootElement = el || document.getElementsByTagName("body")[0];
+        yalla.startFile = startFile;
         var address = window.location.hash.substring(1, window.location.hash.length).split("/");
-        address = (address.length > 0 && address[0] != "") ? address : [startFile];
+        address = (address.length > 0 && address[0] != "") ? address : [yalla.startFile];
         renderChain(address);
     };
 
     if ("onhashchange" in window) {
         window.onhashchange = function () {
-            var address = location.hash.substring(1, window.location.hash.length).split("/");
+            var address = window.location.hash.substring(1, window.location.hash.length).split("/");
+            address = (address.length > 0 && address[0] != "") ? address : [yalla.startFile];
             renderChain(address);
         }
     } else {
