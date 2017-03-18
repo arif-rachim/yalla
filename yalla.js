@@ -144,12 +144,19 @@ var yalla = (function () {
             }
 
             function replaceBracket(string) {
-
                 return (string.match(/{.*?}/g) || []).reduce(function (text, match) {
                     var newMatch = '"+(' + match.substring(1, match.length - 1) + ')+"';
                     return text.replace(match, newMatch);
                 }, string);
             }
+
+            function replaceBracketForEventListener(string) {
+                return (string.match(/{.*?}/g) || []).reduce(function (text, match) {
+                    var newMatch = '"+(function(e){ return ' + match.substring(1, match.length - 1) + '})+"';
+                    return text.replace(match, newMatch);
+                }, string);
+            }
+
 
             function replaceBracketWithExpression(array) {
                 return array.map(function (item) {
@@ -161,7 +168,9 @@ var yalla = (function () {
                             return replaceBracketWithExpression(item);
                         } else {
                             for (var key in item) {
-                                item[key] = replaceBracket(item[key]);
+
+                                item[key] = key.indexOf('on') == 0 ? replaceBracketForEventListener(item[key]) : replaceBracket(item[key]);
+
                             }
                             return item;
                         }
