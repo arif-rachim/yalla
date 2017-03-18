@@ -67,6 +67,10 @@ var yalla = (function () {
     yalla.mixin = mixin;
     yalla.merge = merge;
     yalla.clone = clone;
+    yalla.isArray = function (obj) {
+        return Object.prototype.toString.call(obj) === '[object Array]';
+    };
+
     yalla.baselib = "libs";
     yalla.globalContext = {};
 
@@ -133,38 +137,47 @@ var yalla = (function () {
             }
 
             function removeItemIfItsEmptyString(array) {
+
                 return array.filter(function (item) {
                     return item && item !== '';
                 }).map(function (item) {
-                    if (item.constructor.name === 'Array') {
+                    if (yalla.isArray(item)) {
                         return removeItemIfItsEmptyString(item);
                     }
                     return item;
                 });
             }
 
-            function replaceBracket(string) {
-                return (string.match(/{.*?}/g) || []).reduce(function (text, match) {
-                    var newMatch = '"+(' + match.substring(1, match.length - 1) + ')+"';
-                    return text.replace(match, newMatch);
-                }, string);
+            function replaceBracket(param) {
+                if(typeof param == 'string'){
+                    return (param.match(/{.*?}/g) || []).reduce(function (text, match) {
+                        var newMatch = '"+(' + match.substring(1, match.length - 1) + ')+"';
+                        return text.replace(match, newMatch);
+                    }, param);
+                }
+
+                return param;
             }
 
-            function replaceBracketForEventListener(string) {
-                return (string.match(/{.*?}/g) || []).reduce(function (text, match) {
-                    var newMatch = '"+(function(e){ return ' + match.substring(1, match.length - 1) + '})+"';
-                    return text.replace(match, newMatch);
-                }, string);
+            function replaceBracketForEventListener(param) {
+                if(typeof param == 'string') {
+                    return (param.match(/{.*?}/g) || []).reduce(function (text, match) {
+                        var newMatch = '"+(function(e){ return ' + match.substring(1, match.length - 1) + '})+"';
+                        return text.replace(match, newMatch);
+                    }, param);
+                }
+                return param;
             }
 
 
             function replaceBracketWithExpression(array) {
+
                 return array.map(function (item) {
                     if (typeof item == 'string') {
                         return replaceBracket(item);
                     }
                     if (typeof item == 'object') {
-                        if (item.constructor.name == 'Array') {
+                        if (yalla.isArray(item)) {
                             return replaceBracketWithExpression(item);
                         } else {
                             for (var key in item) {
@@ -186,7 +199,7 @@ var yalla = (function () {
                             return "#@" + variables[item] + "@#";
                         }
                     }
-                    if (typeof item == 'object' && item.constructor.name == 'Array') {
+                    if (yalla.isArray(item)) {
                         return markTagIfItsVariable(variables, item);
                     }
                     return item;
@@ -196,13 +209,13 @@ var yalla = (function () {
             function checkForDataChildrenAndPatchToSibling(array) {
                 var hasChildrenFlag = false;
                 array.forEach(function (item) {
-                    if (typeof item == 'object' && item.constructor.name != 'Array') {
+                    if (typeof item == 'object' && !yalla.isArray(item)) {
                         if ('$children' in item) {
                             hasChildrenFlag = true;
                         }
                         delete item['$children'];
                     }
-                    if (typeof item == 'object' && item.constructor.name == 'Array') {
+                    if (yalla.isArray(item)) {
                         checkForDataChildrenAndPatchToSibling(item);
                     }
                 });
@@ -216,13 +229,13 @@ var yalla = (function () {
                 var hasForEach = false;
                 var forEachValue = "";
                 array.forEach(function (item) {
-                    if (typeof item == 'object' && item.constructor.name != 'Array') {
+                    if (typeof item == 'object' && !yalla.isArray(item)) {
                         if ('foreach' in item) {
                             hasForEach = true;
                             forEachValue = item.foreach;
                         }
                     }
-                    if (typeof item == 'object' && item.constructor.name == 'Array') {
+                    if (yalla.isArray(item)) {
                         checkForForEachAndPatchToSibling(item);
                     }
                 });
@@ -252,7 +265,7 @@ var yalla = (function () {
                         // lets process the item
                     }
 
-                    if (typeof item == 'object' && item.constructor.name == 'Array') {
+                    if (typeof item == 'object' && yalla.isArray(item)) {
                         return checkForStyleAndAppendElementName(item, path)
                     }
 
@@ -1214,7 +1227,7 @@ var yalla = (function () {
                 var jsonmlData = head(attrsObj);
 
                 jsonmlData = jsonmlData.length == 1 ? jsonmlData.push({}) : jsonmlData;
-                if (typeof jsonmlData[1] === 'object' && jsonmlData[1].constructor.name === 'Array') {
+                if (typeof jsonmlData[1] === 'object' && yalla.isArray(jsonmlData[1])) {
                     jsonmlData.splice(1, 0, {});
                 }
 
