@@ -1199,6 +1199,19 @@ var yalla = (function () {
             var isView = typeof head === 'object' && '$view' in head;
             if (isComponent) {
                 attrsObj = hasAttrs ? attrsObj : {};
+
+                for (var key in attrsObj){
+                    if(key.indexOf('-')>0){
+                        var newKey = key.split('-').map(function(k,index){
+                            if(index == 0){
+                                return k;
+                            }
+                            return k.charAt(0).toUpperCase()+k.substring(1,k.length);
+                        }).join('');
+                        attrsObj[newKey] = attrsObj[key];
+                    }
+                }
+
                 attrsObj.$view = head;
                 attrsObj.$subView = false;
                 attrsObj.$elementName = head.prototype.elementName;
@@ -1206,6 +1219,14 @@ var yalla = (function () {
 
                 if (!head.prototype.elementName) {
                     throw new Error('Something wrong elementName does not exist in the ' + head);
+                }
+
+                // lets clean the attributes
+
+
+                if('$includewhen' in attrsObj && !attrsObj['$includewhen']){
+                    parse([]);
+                    return;
                 }
 
                 // lets assign the node here!
@@ -1224,6 +1245,8 @@ var yalla = (function () {
                     }
                 };
 
+
+
                 var jsonmlData = head(attrsObj);
 
                 jsonmlData = jsonmlData.length == 1 ? jsonmlData.push({}) : jsonmlData;
@@ -1239,6 +1262,13 @@ var yalla = (function () {
             } else if (isView) {
                 parse(head.$view(head));
             } else {
+                if (hasAttrs && '$includewhen' in attrsObj) {
+                    var shouldElementIncluded = attrsObj['$includewhen'];
+                    delete attrsObj['$includewhen'];
+                    if(!shouldElementIncluded){
+                        return parse;
+                    }
+                }
                 var tagName = openTag(head, keyAttr);
                 if (hasAttrs) {
                     applyAttrsObj(attrsObj);
