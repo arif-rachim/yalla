@@ -1,7 +1,7 @@
 {
-  "name": "yalla",
-  "version": "1.0.0",
-  "description": "Yallajs application",
+  "name": "yallajs",
+  "version": "0.0.12",
+  "description": "HTML component with zero boiler plate",
   "main": "yalla.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
