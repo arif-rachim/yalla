@@ -1,13 +1,7 @@
 /*
- UI Framework Callback
- $render : callback function
- $render : function(
- {
- $subView : // for placing subView element,
- $children : // for placing children as An Element
- $store(reducer,initialState,middleware) : // mechanism to create componentStore
- }
- )
+ * Released under the MIT License
+ * Copyright © 2017 Arif Rachim
+ * a.arif.r@gmail.com
  */
 
 var yalla = (function () {
@@ -172,8 +166,12 @@ var yalla = (function () {
 
             function replaceBracketWithExpression(array) {
 
-                return array.map(function (item) {
+                return array.map(function (item,index,array) {
                     if (typeof item == 'string') {
+                        // if its code we skip it
+                        if(array[0] == 'code'){
+                            return item;
+                        }
                         return replaceBracket(item);
                     }
                     if (typeof item == 'object') {
@@ -1270,8 +1268,6 @@ var yalla = (function () {
                 }
                 var tagName = openTag(head, keyAttr);
                 if (hasAttrs) {
-                    // sanitize object
-                    debugger;
                     if(head == 'input' && attrsObj.type == 'checkbox' && 'checked' in attrsObj && !attrsObj.checked){
                         delete attrsObj['checked'];
                     }
