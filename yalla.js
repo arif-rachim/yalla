@@ -149,7 +149,7 @@ var yalla = (function () {
             }
 
             function replaceBracket(param) {
-                if(typeof param == 'string'){
+                if (typeof param == 'string') {
                     return (param.match(/{.*?}/g) || []).reduce(function (text, match) {
                         var newMatch = '"+(' + match.substring(1, match.length - 1) + ')+"';
                         return text.replace(match, newMatch);
@@ -160,7 +160,7 @@ var yalla = (function () {
             }
 
             function replaceBracketForEventListener(param) {
-                if(typeof param == 'string') {
+                if (typeof param == 'string') {
                     return (param.match(/{.*?}/g) || []).reduce(function (text, match) {
                         var newMatch = '"+(function(e){ return ' + match.substring(1, match.length - 1) + '})+"';
                         return text.replace(match, newMatch);
@@ -253,11 +253,11 @@ var yalla = (function () {
                         var matches = item.match(/\s.*?\{/g);
                         item = matches.reduce(function (text, match, index, array) {
                             var trimmedMatch = match.trim();
-                            if(trimmedMatch.indexOf('root')<0){
-                                trimmedMatch = 'root '+trimmedMatch;
+                            if (trimmedMatch.indexOf('root') < 0) {
+                                trimmedMatch = 'root ' + trimmedMatch;
                             }
                             var rootSelector = '[element="' + path + '"]';
-                            trimmedMatch = trimmedMatch.replace('root',rootSelector);
+                            trimmedMatch = trimmedMatch.replace('root', rootSelector);
                             var newText = '\n ' + trimmedMatch;
                             return text.replace(match, newText);
                         }, item);
@@ -332,7 +332,7 @@ var yalla = (function () {
 
                 jsonMl = checkForDataChildrenAndPatchToSibling(jsonMl);
                 jsonMl = checkForForEachAndPatchToSibling(jsonMl);
-                jsonMl = checkForStyleAndAppendElementName(jsonMl, path.replace(/\//g, '.').substring(0,path.lastIndexOf('.')));
+                jsonMl = checkForStyleAndAppendElementName(jsonMl, path.replace(/\//g, '.').substring(0, path.lastIndexOf('.')));
 
                 // here we convert to JSONML then we stringify them. We need to do this to get consistent format of the code
                 var resultString = JSON.stringify(jsonMl);
@@ -1200,13 +1200,13 @@ var yalla = (function () {
             if (isComponent) {
                 attrsObj = hasAttrs ? attrsObj : {};
 
-                for (var key in attrsObj){
-                    if(key.indexOf('-')>0){
-                        var newKey = key.split('-').map(function(k,index){
-                            if(index == 0){
+                for (var key in attrsObj) {
+                    if (key.indexOf('-') > 0) {
+                        var newKey = key.split('-').map(function (k, index) {
+                            if (index == 0) {
                                 return k;
                             }
-                            return k.charAt(0).toUpperCase()+k.substring(1,k.length);
+                            return k.charAt(0).toUpperCase() + k.substring(1, k.length);
                         }).join('');
                         attrsObj[newKey] = attrsObj[key];
                     }
@@ -1224,7 +1224,7 @@ var yalla = (function () {
                 // lets clean the attributes
 
 
-                if('$includewhen' in attrsObj && !attrsObj['$includewhen']){
+                if ('$includewhen' in attrsObj && !attrsObj['$includewhen']) {
                     parse([]);
                     return;
                 }
@@ -1246,7 +1246,6 @@ var yalla = (function () {
                 };
 
 
-
                 var jsonmlData = head(attrsObj);
 
                 jsonmlData = jsonmlData.length == 1 ? jsonmlData.push({}) : jsonmlData;
@@ -1265,12 +1264,21 @@ var yalla = (function () {
                 if (hasAttrs && '$includewhen' in attrsObj) {
                     var shouldElementIncluded = attrsObj['$includewhen'];
                     delete attrsObj['$includewhen'];
-                    if(!shouldElementIncluded){
+                    if (!shouldElementIncluded) {
                         return parse;
                     }
                 }
                 var tagName = openTag(head, keyAttr);
                 if (hasAttrs) {
+                    // sanitize object
+                    debugger;
+                    if(head == 'input' && attrsObj.type == 'checkbox' && 'checked' in attrsObj && !attrsObj.checked){
+                        delete attrsObj['checked'];
+                    }
+                    if(head == 'option' && 'selected' in attrsObj && !attrsObj.selected){
+                        delete attrsObj['selected'];
+                    }
+
                     applyAttrsObj(attrsObj);
                 }
                 elementOpenEnd();
