@@ -65,6 +65,23 @@ var yalla = (function () {
         return Object.prototype.toString.call(obj) === '[object Array]';
     };
 
+    yalla.fetch = function (params) {
+        return new Promise(function (resolve, reject) {
+            var method = params.method || 'GET';
+            var url = params.url || '';
+            var par = params.params || '';
+            var xmlhttp = new XMLHttpRequest();
+            //xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            xmlhttp.open(method, url, true);
+            xmlhttp.onreadystatechange = function () {
+                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                    resolve(xmlhttp.responseText);
+                }
+            };
+            xmlhttp.send(par);
+        });
+    };
+
     yalla.baselib = "libs";
     yalla.globalContext = {};
 
@@ -145,7 +162,7 @@ var yalla = (function () {
             function replaceBracket(param) {
                 if (typeof param == 'string') {
                     return (param.match(/{.*?}/g) || []).reduce(function (text, match) {
-                        var newMatch = '"+(' + match.substring(1, match.length - 1) + ')+"';
+                        var newMatch = '"+(function(){try{return (' + match.substring(1, match.length - 1) + ');}catch(e){console.error(e.message);}return false;}())+"';
                         return text.replace(match, newMatch);
                     }, param);
                 }
@@ -166,10 +183,10 @@ var yalla = (function () {
 
             function replaceBracketWithExpression(array) {
 
-                return array.map(function (item,index,array) {
+                return array.map(function (item, index, array) {
                     if (typeof item == 'string') {
                         // if its code we skip it
-                        if(array[0] == 'code'){
+                        if (array[0] == 'code') {
                             return item;
                         }
                         return replaceBracket(item);
@@ -304,7 +321,7 @@ var yalla = (function () {
 
                     var beginComma = text.substring(0, startOfBracket).lastIndexOf(",");
 
-                    text = text.substring(0, beginComma) + '].concat(' + forEachArraySource + '.map(function(' + forEachItem + '){ console.log(' + forEachItem + ');return  ' + childExpression + ';}))' + text.substring(firstClosingBracketAfterForEachAttrIndex + 1, script.length);
+                    text = text.substring(0, beginComma) + '].concat(' + forEachArraySource + '.map(function(' + forEachItem + '){ return  ' + childExpression + ';}))' + text.substring(firstClosingBracketAfterForEachAttrIndex + 1, script.length);
                     text = text.replace(forEachString, '');
                     return text;
                 }, script);
@@ -342,7 +359,7 @@ var yalla = (function () {
                 var varsJson = JSON.parse('[' + vars.join(',') + ']');
                 var injectsJson = JSON.parse('[' + injects.join(',') + ']');
 
-                var variablesJson = varsJson.reduce(function (result, _var) {
+                var variablesVarJson = varsJson.reduce(function (result, _var) {
                     var item = _var[1];
                     var value = item.value;
                     if (value.indexOf('{') == 0) {
@@ -357,19 +374,19 @@ var yalla = (function () {
                     return result;
                 }, {text: '', variables: {}});
 
-                variablesJson = injectsJson.reduce(function (result, _var) {
+                var variablesInjectsJson = injectsJson.reduce(function (result, _var) {
                     var item = _var[1];
                     var value = '$inject("' + item.value + '")';
                     result.text += 'var ' + item.name + ' = ' + value + ';\n';
                     var name = item.name.replace(/([A-Z]+)/g, ' $1').trim().replace(/\s/g, '-').toLowerCase();
                     result.variables[name] = item.name;
                     return result;
-                }, variablesJson);
+                }, {text: '', variables: {}});
                 var arrayToBeCleanedString = vars.concat(injects).reduce(function (text, match) {
                     return text.replace(match, '""');
                 }, resultString);
                 var arrayToBeCleaned = JSON.parse(arrayToBeCleanedString);
-                var afterVarsRemoved = markTagIfItsVariable(variablesJson.variables, replaceBracketWithExpression(removeItemIfItsEmptyString(arrayToBeCleaned)));
+                var afterVarsRemoved = markTagIfItsVariable(variablesInjectsJson.variables, replaceBracketWithExpression(removeItemIfItsEmptyString(arrayToBeCleaned)));
                 //later we need to compose the vars again to script
                 var script = JSON.stringify(afterVarsRemoved, false, '  ');
                 script = script.replace(/\\"\+\(/g, '"+(').replace(/\)\+\\"/g, ')+"');
@@ -379,7 +396,7 @@ var yalla = (function () {
                 script = updateScriptForChildrenTag(script);
                 script = updateScriptForForeachTag(script);
 
-                return generateEvalStringForJS(variablesJson.text + 'function $render($props){ return ' + script + '; }', path);
+                return generateEvalStringForJS(variablesInjectsJson.text + 'function $render($props){' + variablesVarJson.text + ' return ' + script + '; }', path);
             }
 
             function executeScript(responseText, path) {
@@ -1268,10 +1285,10 @@ var yalla = (function () {
                 }
                 var tagName = openTag(head, keyAttr);
                 if (hasAttrs) {
-                    if(head == 'input' && attrsObj.type == 'checkbox' && 'checked' in attrsObj && !attrsObj.checked){
+                    if (head == 'input' && attrsObj.type == 'checkbox' && 'checked' in attrsObj && !attrsObj.checked) {
                         delete attrsObj['checked'];
                     }
-                    if(head == 'option' && 'selected' in attrsObj && !attrsObj.selected){
+                    if (head == 'option' && 'selected' in attrsObj && !attrsObj.selected) {
                         delete attrsObj['selected'];
                     }
 
@@ -1397,7 +1414,7 @@ var yalla = (function () {
         }, Promise.resolve(false));
     }
 
-    yalla.markAsDirty = function () {
+    yalla.markAsDirty = yalla.debounce(function () {
         var dom = yalla.rootElement;
         var renderer = yalla.uiRoot.$view;
         var attributes = yalla.uiRoot;
@@ -1409,7 +1426,7 @@ var yalla = (function () {
             output = renderer(attributes);
         }
         yalla.idom.patch(dom, yalla.toDom, output);
-    };
+    },10);
 
     yalla.start = function (startFile, el, baseLib) {
         yalla.baselib = baseLib || yalla.baseLib;
@@ -1430,14 +1447,17 @@ var yalla = (function () {
         alert('Browser not supported');
     }
 
-    yalla.createStore = function (reducer, _state, _middleware) {
-        var middleware = _middleware;
+    yalla.createStore = function (reducer, _state, _enhancer) {
+        var middleware = _enhancer;
         var state = _state;
         if (_state) {
             if (typeof _state === 'function') {
                 middleware = _state;
                 state = {};
             }
+        }
+        if(middleware){
+            return middleware(yalla.createStore)(reducer,state);
         }
 
         function Store() {
@@ -1495,9 +1515,9 @@ var yalla = (function () {
 
     yalla.applyMiddleware = function (middlewares) {
         // the first next will be create store !!
-        return function (createStoreFunction) {
+        return function (next) {
             return function (reducer, initialState) {
-                var store = createStoreFunction(reducer, initialState);
+                var store = next(reducer, initialState);
                 var dispatch = store.dispatch.bind(store);
                 var getState = store.getState.bind(store);
                 var chain = [];
