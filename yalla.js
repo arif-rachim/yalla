@@ -162,7 +162,7 @@ var yalla = (function () {
             function replaceBracket(param) {
                 if (typeof param == 'string') {
                     return (param.match(/{.*?}/g) || []).reduce(function (text, match) {
-                        var newMatch = '"+(function(){try{return (' + match.substring(1, match.length - 1) + ');}catch(e){console.error(e.message);}return false;}())+"';
+                        var newMatch = '"+(function(){try{return (' + match.substring(1, match.length - 1) + ');}catch(e){console.error(e.message);}return \'\';}())+"';
                         return text.replace(match, newMatch);
                     }, param);
                 }
@@ -303,19 +303,23 @@ var yalla = (function () {
             }
 
             function updateScriptForForeachTag(script) {
+
                 var forEachAttributes = script.match(/"\$foreach:.*?"/g) || [];
                 script = forEachAttributes.reduce(function (text, forEachAttr) {
                     var forEachAttrIndex = text.indexOf(forEachAttr);
                     // lets find last comma
                     var firstClosingBracketAfterForEachAttrIndex = text.indexOf(']', forEachAttrIndex);
+
                     var forEachArraySource = forEachAttr.substring(forEachAttr.indexOf(" in ") + 4, forEachAttr.length - 1);
                     var forEachItem = forEachAttr.substring('"$foreach:'.length, forEachAttr.indexOf(" in "));
+
                     var endOfBracket = text.substring(0, forEachAttrIndex).lastIndexOf(",");
                     var forEachExpression = forEachAttr.substring(forEachAttr.indexOf(":") + 1, forEachAttr.length - 1);
                     var forEachString = '"foreach": "' + forEachExpression + '"';
                     var beginOfTag = text.substring(0, forEachAttrIndex).lastIndexOf(forEachString);
                     var startOfBracket = text.indexOf("[", beginOfTag);
                     var childExpression = text.substring(startOfBracket, endOfBracket);
+
                     var beginComma = text.substring(0, startOfBracket).lastIndexOf(",");
 
                     text = text.substring(0, beginComma) + '].concat(' + forEachArraySource + '.map(function(' + forEachItem + '){ return  ' + childExpression + ';}))' + text.substring(firstClosingBracketAfterForEachAttrIndex + 1, script.length);
