@@ -308,21 +308,23 @@ var yalla = (function () {
                     var forEachAttrIndex = text.indexOf(forEachAttr);
                     // lets find last comma
                     var firstClosingBracketAfterForEachAttrIndex = text.indexOf(']', forEachAttrIndex);
-
                     var forEachArraySource = forEachAttr.substring(forEachAttr.indexOf(" in ") + 4, forEachAttr.length - 1);
                     var forEachItem = forEachAttr.substring('"$foreach:'.length, forEachAttr.indexOf(" in "));
-
                     var endOfBracket = text.substring(0, forEachAttrIndex).lastIndexOf(",");
                     var forEachExpression = forEachAttr.substring(forEachAttr.indexOf(":") + 1, forEachAttr.length - 1);
                     var forEachString = '"foreach": "' + forEachExpression + '"';
                     var beginOfTag = text.substring(0, forEachAttrIndex).lastIndexOf(forEachString);
                     var startOfBracket = text.indexOf("[", beginOfTag);
                     var childExpression = text.substring(startOfBracket, endOfBracket);
-
                     var beginComma = text.substring(0, startOfBracket).lastIndexOf(",");
 
                     text = text.substring(0, beginComma) + '].concat(' + forEachArraySource + '.map(function(' + forEachItem + '){ return  ' + childExpression + ';}))' + text.substring(firstClosingBracketAfterForEachAttrIndex + 1, script.length);
-                    text = text.replace(forEachString, '');
+                    if(text.charAt(text.indexOf(forEachString)+forEachString.length) == ',' ){
+                        text = text.replace(forEachString+',', '');
+                    }else{
+                        text = text.replace(forEachString, '');
+                    }
+
                     return text;
                 }, script);
                 return script;
@@ -347,6 +349,7 @@ var yalla = (function () {
 
                 jsonMl = checkForDataChildrenAndPatchToSibling(jsonMl);
                 jsonMl = checkForForEachAndPatchToSibling(jsonMl);
+
                 jsonMl = checkForStyleAndAppendElementName(jsonMl, path.replace(/\//g, '.').substring(0, path.lastIndexOf('.')));
 
                 // here we convert to JSONML then we stringify them. We need to do this to get consistent format of the code
