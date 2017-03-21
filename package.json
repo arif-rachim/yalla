@@ -1,6 +1,6 @@
 {
   "name": "yallajs",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "HTML component with zero boiler plate",
   "main": "yalla.js",
   "scripts": {
