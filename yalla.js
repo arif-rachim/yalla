@@ -1356,9 +1356,9 @@ var yalla = (function () {
             nodeAttrs.$node = node;
             if (nodeAttrs.$storeTobeAttachedToDom) {
                 node.$store = nodeAttrs.$storeTobeAttachedToDom;
-                node.$store.subscribe(function () {
-                    yalla.markAsDirty();
-                });
+                // node.$store.subscribe(function () {
+                //     yalla.markAsDirty();
+                // });
             }
         });
 
@@ -1523,7 +1523,11 @@ var yalla = (function () {
         Store.prototype.getState = function () {
             return this.state;
         };
-        return new Store();
+        var store = new Store();
+        store.subscribe(function(){
+            yalla.markAsDirty()
+        });
+        return store;
     };
 
     yalla.combineReducers = function (stateReducers) {
