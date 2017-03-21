@@ -240,9 +240,21 @@ var yalla = (function () {
                 return array;
             }
 
+            function checkIfItContainsForeach(array) {
+                return array.reduce(function(hasForeach,item){
+                    if (typeof item == 'object' && !yalla.isArray(item)) {
+                        if ('foreach' in item) {
+                            hasForeach = true;
+                        }
+                    }
+                    return hasForeach;
+                },false);
+            }
+
             function checkForForEachAndPatchToSibling(array) {
                 var hasForEach = false;
                 var forEachValue = "";
+                var hasChildForeach = false;
                 array.forEach(function (item) {
                     if (typeof item == 'object' && !yalla.isArray(item)) {
                         if ('foreach' in item) {
@@ -251,11 +263,16 @@ var yalla = (function () {
                         }
                     }
                     if (yalla.isArray(item)) {
+                        // var check if child contains foreach
+                        hasChildForeach = hasChildForeach || checkIfItContainsForeach(item);
                         checkForForEachAndPatchToSibling(item);
                     }
                 });
                 if (hasForEach) {
                     array.push('$foreach:' + forEachValue.trim());
+                }
+                if(hasChildForeach){
+                    array.push('$foreach-concat');
                 }
                 return array;
             }
@@ -299,30 +316,38 @@ var yalla = (function () {
                     return text;
                 }, script);
                 return script;
-
             }
 
+            var concatString = '].reduce(function(result,item){if(yalla.isArray(item)){result = result.concat(item);}else{result.push(item);}return result;},[])';
+            var forEachPrefix = '(contacts.map(function(){return';
+            var forEachSubfix = '}))';
             function updateScriptForForeachTag(script) {
+
+                // lets replace foreach concat first
+                var forEachConcats = script.match(/"\$foreach-concat"/g) || [];
+                script = forEachConcats.reduce(function(text,forEachConcat){
+                    var forEachConcatIndex = text.indexOf(forEachConcat);
+                    var closingSquareBracketIndex = text.indexOf(']',forEachConcatIndex);
+                    var lastCommaIndexBeforeForEachConcat = text.substring(0,forEachConcatIndex).lastIndexOf(',');
+                    text = text.substring(0,lastCommaIndexBeforeForEachConcat)+concatString+script.substring(closingSquareBracketIndex+1,text.length);
+                    return text;
+                },script);
 
                 var forEachAttributes = script.match(/"\$foreach:.*?"/g) || [];
                 script = forEachAttributes.reduce(function (text, forEachAttr) {
                     var forEachAttrIndex = text.indexOf(forEachAttr);
-                    // lets find last comma
+                    // ini akhir dari tag foreach
                     var firstClosingBracketAfterForEachAttrIndex = text.indexOf(']', forEachAttrIndex);
-
                     var forEachArraySource = forEachAttr.substring(forEachAttr.indexOf(" in ") + 4, forEachAttr.length - 1);
                     var forEachItem = forEachAttr.substring('"$foreach:'.length, forEachAttr.indexOf(" in "));
-
                     var endOfBracket = text.substring(0, forEachAttrIndex).lastIndexOf(",");
                     var forEachExpression = forEachAttr.substring(forEachAttr.indexOf(":") + 1, forEachAttr.length - 1);
                     var forEachString = '"foreach": "' + forEachExpression + '"';
                     var beginOfTag = text.substring(0, forEachAttrIndex).lastIndexOf(forEachString);
-                    var startOfBracket = text.indexOf("[", beginOfTag);
+                    var startOfBracket = text.substring(0,beginOfTag).lastIndexOf("[");
                     var childExpression = text.substring(startOfBracket, endOfBracket);
-
                     var beginComma = text.substring(0, startOfBracket).lastIndexOf(",");
-
-                    text = text.substring(0, beginComma) + '].concat(' + forEachArraySource + '.map(function(' + forEachItem + '){ return  ' + childExpression + ';}))' + text.substring(firstClosingBracketAfterForEachAttrIndex + 1, script.length);
+                    text = text.substring(0, beginComma)+',('+forEachArraySource+'.map(function('+forEachItem+'){return' + childExpression+ ']}))'+ text.substring(firstClosingBracketAfterForEachAttrIndex + 1, script.length);
                     if(text.charAt(text.indexOf(forEachString)+forEachString.length) == ',' ){
                         text = text.replace(forEachString+',', '');
                     }else{
