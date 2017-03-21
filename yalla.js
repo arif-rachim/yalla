@@ -318,9 +318,8 @@ var yalla = (function () {
                 return script;
             }
 
-            var concatString = '].reduce(function(result,item){if(yalla.isArray(item)){result = result.concat(item);}else{result.push(item);}return result;},[])';
-            var forEachPrefix = '(contacts.map(function(){return';
-            var forEachSubfix = '}))';
+            var concatString = '].reduce(function(result,item){if(yalla.isArray(item) && yalla.isArray(item[0])){result = result.concat(item);}else{result.push(item);}return result;},[])';
+
             function updateScriptForForeachTag(script) {
 
                 // lets replace foreach concat first
@@ -1267,15 +1266,11 @@ var yalla = (function () {
                 if (!head.prototype.elementName) {
                     throw new Error('Something wrong elementName does not exist in the ' + head);
                 }
-
                 // lets clean the attributes
-
-
                 if ('$includewhen' in attrsObj && !attrsObj['$includewhen']) {
                     parse([]);
                     return;
                 }
-
                 // lets assign the node here!
                 var currentNode = currentPointer();
                 if (currentNode && currentNode[DATA_PROP].attrs.element == attrsObj.$elementName) {
@@ -1306,7 +1301,8 @@ var yalla = (function () {
                 elementAttributes.$view = attrsObj.$view;
                 parse(jsonmlData);
             } else if (isView) {
-                parse(head.$view(head));
+                var jsonmlData = head.$view(head);
+                parse(jsonmlData);
             } else {
                 if (hasAttrs && '$includewhen' in attrsObj) {
                     var shouldElementIncluded = attrsObj['$includewhen'];
