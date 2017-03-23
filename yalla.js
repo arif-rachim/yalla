@@ -65,6 +65,53 @@ var yalla = (function () {
         return Object.prototype.toString.call(obj) === '[object Array]';
     };
 
+    yalla.log = {
+        error : function(error){
+            debugger;
+            console.error(error);
+        },
+        syntaxErrorTitle : function(path){
+            console.log('%cSyntaxError in '+path,'font-size:1.5em;color:red;font-family:"verdana"');
+        },
+        sourceCode : function(text){
+            console.log('%c'+text,'font-size:0.9em;color:blue;font-family:"verdana"');
+        },
+        errorMessage : function(errorMessage){
+            console.log('%c'+errorMessage,'font-size:1.5em;color:red;font-family:"verdana"');
+        },
+        expressionError : function(expression){
+            var scriptToParse = yalla.log.scriptToParse;
+            var expressionIndex = scriptToParse.indexOf(expression);
+            var prefix = scriptToParse.substring(0,expressionIndex);
+            var suffix = scriptToParse.substring(expressionIndex+expression.length,scriptToParse.length);
+            console.log('%cInvalid Expression : '+expression,'font-size:0.9em;color:red;font-family:"verdana"');
+            console.log('%c'+prefix+'%c'+expression+'%c'+suffix,'font-size:0.9em;color:green;font-family:"verdana"','font-size:1em;font-weight:bold;color:red;font-family:"verdana"','font-size:0.9em;color:green;font-family:"verdana"');
+        }
+    };
+
+    yalla.encapsulateExpression = function(expression){
+        try{
+            new Function(expression)
+        }catch(err){
+            yalla.log.errorMessage('Invalid Expression '+expression);
+            yalla.log.expressionError(expression);
+
+        }
+        return '"+(function(){try{return (' + expression + ');}catch(e){yalla.log.errorMessage(e.message);yalla.log.expressionError(\''+expression+'\');}return \'\';}())+"';
+    };
+
+    yalla.encapsulateForEachExpression = function(expression){
+        var beginExpression = expression.indexOf(".map");
+        var foreachStatement = " in "+expression.substring(0,beginExpression);
+        try{
+            new Function(expression)
+        }catch(err){
+            yalla.log.errorMessage("Invalid foreach expression");
+            yalla.log.expressionError(foreachStatement);
+        }
+        return '(function(){try{return (' + expression + ');}catch(e){yalla.log.errorMessage("Cannot read the array, is it undefined ?");yalla.log.expressionError(\''+foreachStatement+'\')}return \'\';}())';
+    };
+
     yalla.fetch = function (params) {
         return new Promise(function (resolve, reject) {
             var method = params.method || 'GET';
@@ -162,8 +209,8 @@ var yalla = (function () {
             function replaceBracket(param) {
                 if (typeof param == 'string') {
                     return (param.match(/{.*?}/g) || []).reduce(function (text, match) {
-                        var newMatch = '"+(function(){try{return (' + match.substring(1, match.length - 1) + ');}catch(e){console.error(e.message);}return \'\';}())+"';
-                        return text.replace(match, newMatch);
+                        var expression = match.substring(1, match.length - 1);
+                        return text.replace(match, yalla.encapsulateExpression(expression));
                     }, param);
                 }
 
@@ -269,6 +316,10 @@ var yalla = (function () {
                     }
                 });
                 if (hasForEach) {
+                    if(forEachValue.indexOf("{")==0){
+                        yalla.log.errorMessage('Please remove bracket in foreach expression');
+                        yalla.log.expressionError(forEachValue);
+                    }
                     array.push('$foreach:' + forEachValue.trim());
                 }
                 if(hasChildForeach){
@@ -346,7 +397,10 @@ var yalla = (function () {
                     var startOfBracket = text.substring(0,beginOfTag).lastIndexOf("[");
                     var childExpression = text.substring(startOfBracket, endOfBracket);
                     var beginComma = text.substring(0, startOfBracket).lastIndexOf(",");
-                    text = text.substring(0, beginComma)+',('+forEachArraySource+'.map(function('+forEachItem+'){return' + childExpression+ ']}))'+ text.substring(firstClosingBracketAfterForEachAttrIndex + 1, script.length);
+                    var expression = forEachArraySource+'.map(function('+forEachItem+'){return' + childExpression+ ']})';
+                    expression = yalla.encapsulateForEachExpression(expression);
+
+                    text = text.substring(0, beginComma)+',\n\n\n\n('+expression+')\n\n\n\n'+ text.substring(firstClosingBracketAfterForEachAttrIndex + 1, script.length);
                     if(text.charAt(text.indexOf(forEachString)+forEachString.length) == ',' ){
                         text = text.replace(forEachString+',', '');
                     }else{
@@ -358,8 +412,12 @@ var yalla = (function () {
                 return script;
             }
 
+            function emptyRenderer(error) {
+                return "function $render(){return ['div',{style:{color : 'red'}},'"+error.message+"']};";
+            }
 
             function generateEvalStringForHTML(responseText, path) {
+
                 // this line we are cleaning the text wich have immediate closing bracket
                 responseText = (responseText.match(/<.*?\/>/g) || []).reduce(function (text, match, index, array) {
                     var emptyStringIndex = match.indexOf(" ");
@@ -375,6 +433,10 @@ var yalla = (function () {
                 }, responseText);
                 var jsonMl = yalla.jsonMlFromText(responseText);
 
+                if(jsonMl[0] == '' && (jsonMl.length>3 || (jsonMl.length > 2 && yalla.isArray(jsonMl[1])))){
+                    yalla.log.errorMessage(path+" : component has more than one root");
+                    return emptyRenderer(new Error(path+" : component has more than one root"));
+                }
                 jsonMl = checkForDataChildrenAndPatchToSibling(jsonMl);
                 jsonMl = checkForForEachAndPatchToSibling(jsonMl);
 
@@ -392,6 +454,13 @@ var yalla = (function () {
 
                 var variablesVarJson = varsJson.reduce(function (result, _var) {
                     var item = _var[1];
+                    if(!('name' in item && 'value' in item)){
+                        yalla.log.errorMessage('Missing attribute "name" or "value" in var tag \<var\>');
+                        yalla.log.sourceCode(JSON.stringify(item));
+                    }
+                    if('name' in item && item.name.indexOf('-')>=0){
+                        yalla.log.errorMessage('Do not use hyphen when naming a var object : '+item.name);
+                    }
                     var value = item.value;
                     if (value.indexOf('{') == 0) {
                         value = '(' + value.substring(1, value.length - 1) + ')';
@@ -407,6 +476,13 @@ var yalla = (function () {
 
                 var variablesInjectsJson = injectsJson.reduce(function (result, _var) {
                     var item = _var[1];
+                    if(!('name' in item && 'value' in item)){
+                        yalla.log.errorMessage('Missing attribute "name" or "value" in inject tag \<inject\>');
+                        yalla.log.sourceCode(JSON.stringify(item));
+                    }
+                    if('name' in item && item.name.indexOf('-')>=0){
+                        yalla.log.errorMessage('Do not use hyphen when naming an inject object : '+item.name);
+                    }
                     var value = '$inject("' + item.value + '")';
                     result.text += 'var ' + item.name + ' = ' + value + ';\n';
                     var name = item.name.replace(/([A-Z]+)/g, ' $1').trim().replace(/\s/g, '-').toLowerCase();
@@ -426,18 +502,27 @@ var yalla = (function () {
                 script = script.replace(/"router-view"/g, '$props.$subView');
                 script = updateScriptForChildrenTag(script);
                 script = updateScriptForForeachTag(script);
-
-                return generateEvalStringForJS(variablesInjectsJson.text + 'function $render($props){' + variablesVarJson.text + ' return ' + script + '; }', path);
+                return variablesInjectsJson.text + '\nfunction $render($props){' + variablesVarJson.text + '\nreturn ' + script + ';\n}';
             }
 
             function executeScript(responseText, path) {
-                var evalString = "";
+                var originalText = '';
+                yalla.log.scriptToParse = responseText;
                 if (path.indexOf(".html") >= 0) {
-                    evalString = generateEvalStringForHTML(responseText, path);
-                } else {
-                    evalString = generateEvalStringForJS(responseText, path);
+                    originalText = responseText;
+                    responseText = generateEvalStringForHTML(responseText, path);
                 }
-                return eval(evalString);
+                var evalString = generateEvalStringForJS(responseText, path);
+                try{
+                    return eval(evalString);
+                }catch(err){
+                    yalla.log.syntaxErrorTitle(path);
+                    if(originalText){
+                        yalla.log.sourceCode(originalText);
+                    }
+                    yalla.log.sourceCode(responseText);
+                    return eval(generateEvalStringForJS(emptyRenderer(new Error(path+" : "+err.message))));
+                }
             }
 
             return new Promise(function (resolve, reject) {
@@ -445,21 +530,25 @@ var yalla = (function () {
                 xmlhttp.open("GET", yalla.baselib + "/" + path);
                 xmlhttp.onreadystatechange = function () {
                     if (xmlhttp.readyState == 4) {
-                        var dependency = lookDependency(xmlhttp.responseText);
-                        if (dependency.length > 0) {
-                            Promise.all(dependency.map(function (dependency) {
-                                return yalla.loader(dependency);
-                            })).then(function () {
-                                resolve(executeScript(xmlhttp.responseText, path));
-                            }).catch(function (err) {
-                                reject(err);
-                            });
-                        } else {
-                            try {
-                                resolve(executeScript(xmlhttp.responseText, path));
-                            } catch (err) {
-                                reject(err);
+                        if (xmlhttp.status === 200) {
+                            var dependency = lookDependency(xmlhttp.responseText);
+                            if (dependency.length > 0) {
+                                Promise.all(dependency.map(function (dependency) {
+                                    return yalla.loader(dependency);
+                                })).then(function () {
+                                    resolve(executeScript(xmlhttp.responseText, path));
+                                }).catch(function (err) {
+                                    reject(err);
+                                });
+                            } else {
+                                try {
+                                    resolve(executeScript(xmlhttp.responseText, path));
+                                } catch (err) {
+                                    reject(err);
+                                }
                             }
+                        } else {
+                            console.log('%c'+xmlhttp.statusText+'! %c'+xmlhttp.responseURL,'font-size:20px;font-family:verdana;color:red','font-size:14px;font-family:verdana;color:green');
                         }
                     }
                 };
