@@ -95,9 +95,9 @@ var yalla = (function () {
         }catch(err){
             yalla.log.errorMessage('Invalid Expression '+expression);
             yalla.log.expressionError(expression);
-
         }
-        return '"+(function(){try{return (' + expression + ');}catch(e){yalla.log.errorMessage(e.message);yalla.log.expressionError(\''+expression+'\');}return \'\';}())+"';
+        var errorExpression = expression.replace(/'/g,'"');
+        return '"+(function(){try{return (' + expression + ');}catch(e){yalla.log.errorMessage(e.message);yalla.log.expressionError(\''+errorExpression+'\');}return \'\';}())+"';
     };
 
     yalla.encapsulateForEachExpression = function(expression){
@@ -513,16 +513,16 @@ var yalla = (function () {
                     responseText = generateEvalStringForHTML(responseText, path);
                 }
                 var evalString = generateEvalStringForJS(responseText, path);
-                try{
-                    return eval(evalString);
-                }catch(err){
-                    yalla.log.syntaxErrorTitle(path);
-                    if(originalText){
-                        yalla.log.sourceCode(originalText);
-                    }
-                    yalla.log.sourceCode(responseText);
-                    return eval(generateEvalStringForJS(emptyRenderer(new Error(path+" : "+err.message))));
-                }
+                // try{
+                return eval(evalString);
+                // }catch(err){
+                //     yalla.log.syntaxErrorTitle(path);
+                //     if(originalText){
+                //         yalla.log.sourceCode(originalText);
+                //     }
+                //     yalla.log.sourceCode(responseText);
+                //     return eval(generateEvalStringForJS(emptyRenderer(new Error(path+" : "+err.message))));
+                // }
             }
 
             return new Promise(function (resolve, reject) {
