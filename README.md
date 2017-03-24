@@ -206,10 +206,47 @@ Injecting an Object
 ><inject name="myActions" value="@my-actions"></inject>
 >```
 
+Iterating array using `foreach`
+--------------------
+We can iterate an Array inside components by using `foreach` attribute. 
+Foreach attribute value in yallajs components is similiar with javascript foreach statement : 
+it is separated with in operator.
+`foreach="item in array"`. 
 
-### \<inject\> and $inject
-#### inject a component
-#### inject an object
-### Iterate Array
-#### foreach
+For example :
+
+```html
+<div>
+    <inject name="actions" value="@my-actions"></inject>
+    <ul>
+        <li foreach="item in actions.getItems()">
+            {item.name}
+        </li>
+    </ul>
+</div>
+```
+Above code means we iterate the array, results of function getItems in actions object.
+
+We can get the index, and the array that we iterate by using as the second and third parameter.
+
+```html
+<div>
+    <inject name="actions" value="@my-actions"></inject>
+    <ul>
+        <li foreach="item,index,array in actions.getItems()">
+            No : {index+1} Name : {item.name}
+        </li>
+    </ul>
+</div>
+```
+
+#### *Rules on yallajs `foreach` attribute:*
+>
+>* `foreach` attribute accepts string not `{expression}`
+>```html
+>WRONG !!!
+><li foreach="{item in actions.getItems()}">
+>```
+
+
 ### Component Composition / $children
