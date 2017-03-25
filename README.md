@@ -407,7 +407,7 @@ We can get the index, and the array that we iterate by using as the second and t
 
 State Container with Redux
 ------
-Yallajs is equiped its own state container using redux concept. 
+Yallajs is equiped state container redux. 
 Redux is a predictable state container for JavaScript apps.
 
 Inorder to understand Redux, you can follow this link
