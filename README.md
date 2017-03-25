@@ -5,9 +5,7 @@ YallaJS
 
 Component in Yallajs is just an *HTML*, 
 there is no need to create javascript controller. HTML Component in Yallajs basicly its just
-a **stateless functional component**, it has the same features like react *stateless functional 
-component*, which is *No Features at all*. However instead using javascript with render function 
-and jsx, yallajs is using HTML file.
+a **stateless functional component**.
 
 Yallajs is bundled with **its own state-container** inspired by Redux. Therefore, Yallajs enforce the 
 component to remain stateles and work only in accordance to the state container.
@@ -57,7 +55,80 @@ Therefore Component can be **called directly** from browser by using hashbang op
 ```
 http://localhost:8080/index.html#first-component
 ```
+Component Routing  
+--------------------
+Yallajs equipped with simple but powerful routing framework. We can call a component directly from the 
+browser by using hashbang. 
 
+For example,if we have a component named component-a.html placed directly below the base folder, 
+we can call component-a from browser with following address (assuming the localserver port is 8080):
+```html
+http://localhost:8080/index.html#component-a
+```
+
+In order to access to component which is stored under subfolder or package, we can use  dot `.` to access them :
+
+```
+.
+└── src
+    ├── first-component.html
+    └── package-a
+         ├── second-component.html
+         └── package-b
+             └── third-compoent.html
+```
+To render first-component in browser :
+```html
+http://localhost:8080/index.html#first-component
+```
+
+To render second-component in browser :
+```html
+http://localhost:8080/index.html#package-a.second-component
+```
+
+To render third-component in browser :
+```html
+http://localhost:8080/index.html#package-a.package-b.third-component
+```
+
+
+### Routing with `<router-view>`
+Yallajs also support subrouting using slash `/`. Subrouting in yallajs means we call the other components 
+to be rendered in the browser.
+
+For Example:
+We can request to render second-component after first-component in the browser address bar with following address :
+
+```
+http://localhost:8080/index.html#first-component/package-a.second-component
+```
+
+And in our first-component we need to place the `<router-view>` tag, to inform the browser where they should place the second-component.
+
+```html
+<!-- fisrt-component.html -->
+<div>
+    Hello World
+    <router-view></router-view>
+</div>
+
+<!-- package-a/second-component.html -->
+<div>
+    <label>This is second component</label>
+</div>
+```
+
+Above code will generate following code in browser :
+```html
+<!-- browser result -->
+<div>
+     Hello World
+     <div>
+        <label>This is second component</label>
+     </div>
+</div>
+```
 
 `{expression}` with Bracket
 -------------------------
@@ -131,14 +202,30 @@ Now if called the component from browser we can pass the properties **separated 
 ```
 http://localhost:8080/index.html#first-component:firstName=Bruno:lastName=Mars
 ```
+We can also give each routing component properties
+```
+http://localhost:8080/index.html#first-component:firstName=Bruno:lastName=Mars/package-a.second-component:location=Barcelona:date=April-7
+```
+
 Or if we use them in composite component, we need to use **hyphen-case instead camelCase**.
 ```html
 <div>
     <first-component first-name="Bruno" last-name="Mars"></first-component>
 </div>
 ```
-Composite Component & Dependency Injection
+
+
+Composite Component  
 --------------------
+
+Composite components are components formed from other components. With composite 
+components we can put more features on the component, and make them reusable. 
+
+Composite component divided into two chapter. First is about Dependency Injection, *how to 
+inject outside component into composite component*. Second is about Children, 
+*how to render the elements given by the parent container* into our the component.
+
+###Dependency Injection
 Lets create another component named 'composite-component'
 
 ```
@@ -149,8 +236,7 @@ Lets create another component named 'composite-component'
 └── index.html
 ```
 
-Composite components are components formed from other small components. With composite 
-components we can make bigger components with more feature in it. To include smaller components in 
+To include smaller components in 
 composite components, we can use the `<inject>` tag.
 
 The `<inject>` tag basicly is a dependency injection in Yallajs. We can inject a *component or an object*.
@@ -206,6 +292,72 @@ Injecting an Object
 ><inject name="myActions" value="@my-actions"></inject>
 >```
 
+### Children `$children`
+
+Children are the components given by the parent component (Composite component) to be rendered in the component.
+
+Lets take a look on example
+
+```html
+<!-- composite-component.html -->
+<div>
+    ...
+    <first-component>
+        <!-- start childrens of first component -->
+        <h1>Hello World</h1>
+        <label>This is a label</label>
+        <!-- end childrens of first component -->
+    </first-component> 
+</div>
+```
+Above example, The composite-component.html define the children of first-component. Next in the first-component.html
+we can place the children in using `$children` tag.
+
+```html
+<!-- first-component.html --> 
+<div>
+    Hello World
+    <div $children></div>
+</div>
+```
+
+Above code means that we are going to place the `children` given by the parent component into div tag.
+#### *Rules on yallajs `$children`:*
+>* When we define `$children` into a tag, the children will be included from the last index
+> ```html 
+> <!-- composite-component.html -->
+> <div> 
+>    ...
+>    <first-component>
+>        <!-- start childrens of first component -->
+>        <h1>Hello World</h1>
+>        <label>This is a label</label>
+>        <!-- end childrens of first component -->
+>    </first-component> 
+> </div>
+>
+> <!-- first-component.html -->
+> <div>
+>    Hello World
+>    <div $children>
+>        <div>Label One</div>
+>        <div>Label Two</div>
+>    </div>
+> </div>
+> ```
+Above code will render following in the browser.
+```html
+<div>
+    Hello World
+    <div>
+        <div>Label One</div>
+        <div>Label Two</div>
+        <h1>Hello World</h1>
+        <label>This is a label</label>
+    </div>
+</div>
+```
+
 Iterating array using `foreach`
 --------------------
 We can iterate an Array inside components by using `foreach` attribute. 
@@ -247,6 +399,25 @@ We can get the index, and the array that we iterate by using as the second and t
 >WRONG !!!
 ><li foreach="{item in actions.getItems()}">
 >```
+>* First parameter is the currentValue, second is the index, thrid is the array
+>```html
+>CORRECT !!!
+><li foreach="item,index,array in actions.getItems()">
+>```
 
+State Container with Redux
+------
+Yallajs is equiped its own state container using redux concept. 
+Redux is a predictable state container for JavaScript apps.
 
-### Component Composition / $children
+Inorder to understand Redux, you can follow this link
+
+http://redux.js.org/docs/basics/
+
+State container is a very powerfull tools in order to manage the application scalability. 
+
+What is available in Yallajs Redux :
+
+* Create Store using yalla.createStore.
+* Combine Reducer using yalla.combineReducer.
+* Applumiddleware using yalla.applyMiddleware.
