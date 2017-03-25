@@ -20,7 +20,7 @@ it works as a subcomponent.
 
 Youtube creating Todoapp with yallajs.
 
-[![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/GVQDfolFo5A/0.jpg)](http://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID_HERE)
+[![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/GVQDfolFo5A/0.jpg)](http://www.youtube.com/watch?v=GVQDfolFo5A)
 
 
 Setup
