@@ -1,10 +1,12 @@
 YallaJS
 =======
 
+*[Check our Official site](http://yallajs.io)*
+
 *Build HTML Component with Zero Boilerplate*
 
 Component in Yallajs is just an *HTML*, 
-there is no need to create javascript controller. HTML Component in Yallajs basicly its just
+there is no need to create javascript controller. Behind the screen, it is
 a **stateless functional component**.
 
 Yallajs is bundled with **its own state-container** inspired by Redux. Therefore, Yallajs enforce the 
@@ -15,6 +17,11 @@ but quite powerful. Each component can be called directly from the browser addre
 by using hashbang operator. If the component is invoked via the browser address bar, then these 
 components function as a View, but when its being used as a component of a ***composite component***, then 
 it works as a subcomponent.
+
+Youtube creating Todoapp with yallajs.
+
+[![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/GVQDfolFo5A/0.jpg)](http://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID_HERE)
+
 
 Setup
 ---------
