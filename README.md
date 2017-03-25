@@ -420,4 +420,4 @@ What is available in Yallajs Redux :
 
 * Create Store using yalla.createStore.
 * Combine Reducer using yalla.combineReducer.
-* Applumiddleware using yalla.applyMiddleware.
+* Applymiddleware using yalla.applyMiddleware.
