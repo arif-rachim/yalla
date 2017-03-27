@@ -186,7 +186,7 @@ var yalla = (function () {
                         "(yalla.inject.bind(yalla));";
                 } else {
                     evalString = "(function($inject)" +
-                        "{\n//" + path + "-------------------------------------------------------------\nvar $export = {};" +
+                        "{\n//" + path + "-------------------------------------------------------------\nvar $export = {};\n" +
                         "" + responseText + ";\n//--------------------------------------------------------------------\n" +
                         "return $export;})" +
                         "(yalla.inject.bind(yalla));";
