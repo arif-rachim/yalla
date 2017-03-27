@@ -513,16 +513,7 @@ var yalla = (function () {
                     responseText = generateEvalStringForHTML(responseText, path);
                 }
                 var evalString = generateEvalStringForJS(responseText, path);
-                // try{
                 return eval(evalString);
-                // }catch(err){
-                //     yalla.log.syntaxErrorTitle(path);
-                //     if(originalText){
-                //         yalla.log.sourceCode(originalText);
-                //     }
-                //     yalla.log.sourceCode(responseText);
-                //     return eval(generateEvalStringForJS(emptyRenderer(new Error(path+" : "+err.message))));
-                // }
             }
 
             return new Promise(function (resolve, reject) {
