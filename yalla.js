@@ -516,24 +516,57 @@ var yalla = (function () {
                 return eval(evalString);
             }
 
+            function cleanDependency(responseText,path) {
+                var dependenciesRaw = responseText.match(/\$inject\(.*?\)/g) || [];
+                responseText = dependenciesRaw.reduce(function(script,dep){
+                    var dependency = dep.substring('$inject("'.length, dep.length - 2).replace('@','');
+                    if(dependency.indexOf("/")!=0){
+                        dependency = (dep.indexOf("@") >= 0 ?'@' :'')+path+"/"+dependency;
+                    }
+                    return script.replace(dep,'$inject("'+dependency+'")');
+                },responseText);
+
+                dependenciesRaw = responseText.match(/<inject.*?>/g) || [];
+                responseText = dependenciesRaw.reduce(function(script,dep){
+                    var valueIndex=dep.indexOf("value");
+                    if(valueIndex<0){
+                        return script;
+                    }
+                    var valueStartIndex = dep.indexOf('"',valueIndex) || dep.indexOf("'",valueIndex);
+                    var valueEndIndex = dep.indexOf('"',valueStartIndex+1) || dep.indexOf("'",valueStartIndex+1);
+                    var value = dep.substring(valueStartIndex+1,valueEndIndex);
+                    var dependency = value.replace('@','');
+                    if(dependency.indexOf("/")!=0){
+                        dependency = path+"/"+dependency;
+                    }
+                    dependency = (value.indexOf("@") >= 0 ?'@' :'') + dependency;
+                    var newDep = dep.substring(0,valueStartIndex+1)+dependency+dep.substring(valueEndIndex,dep.length);
+                    return script.replace(dep,newDep);
+                },responseText);
+                return responseText
+            }
+
             return new Promise(function (resolve, reject) {
                 var xmlhttp = new XMLHttpRequest();
                 xmlhttp.open("GET", yalla.baselib + "/" + path);
                 xmlhttp.onreadystatechange = function () {
                     if (xmlhttp.readyState == 4) {
                         if (xmlhttp.status === 200) {
-                            var dependency = lookDependency(xmlhttp.responseText);
+                            // here we need to convert response text and add the dependency
+                            var folder = path.substring(0,path.lastIndexOf("/"));
+                            var responseText = cleanDependency(xmlhttp.responseText,folder);
+                            var dependency = lookDependency(responseText);
                             if (dependency.length > 0) {
                                 Promise.all(dependency.map(function (dependency) {
                                     return yalla.loader(dependency);
                                 })).then(function () {
-                                    resolve(executeScript(xmlhttp.responseText, path));
+                                    resolve(executeScript(responseText, path));
                                 }).catch(function (err) {
                                     reject(err);
                                 });
                             } else {
                                 try {
-                                    resolve(executeScript(xmlhttp.responseText, path));
+                                    resolve(executeScript(responseText, path));
                                 } catch (err) {
                                     reject(err);
                                 }
