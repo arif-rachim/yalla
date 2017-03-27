@@ -521,8 +521,9 @@ var yalla = (function () {
                 responseText = dependenciesRaw.reduce(function(script,dep){
                     var dependency = dep.substring('$inject("'.length, dep.length - 2).replace('@','');
                     if(dependency.indexOf("/")!=0){
-                        dependency = (dep.indexOf("@") >= 0 ?'@' :'')+path+"/"+dependency;
+                        dependency = path+"/"+dependency;
                     }
+                    dependency = (dep.indexOf("@") >= 0 ?'@' :'') + dependency;
                     return script.replace(dep,'$inject("'+dependency+'")');
                 },responseText);
 
@@ -606,7 +607,9 @@ var yalla = (function () {
 
     yalla.inject = function (path) {
         var dependencyObject = this.globalContext[path];
-        if (typeof dependencyObject === 'function') {
+        if(path.indexOf('@')==0){
+            return dependencyObject;
+        }else{
             var $render = dependencyObject
             var elementName = path.replace(/\//g, '.');
 
@@ -630,10 +633,7 @@ var yalla = (function () {
             yallaComponent.prototype.elementName = elementName;
             yallaComponent.prototype.path = path;
             return yallaComponent;
-        } else {
-            return dependencyObject;
         }
-
     };
 
     yalla.idom = (function () {
