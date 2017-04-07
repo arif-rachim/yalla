@@ -1,0 +1,460 @@
+var express = require('express');
+var fs = require('fs');
+var path = require('path');
+var chokidar = require('chokidar');
+var beautify = require('js-beautify').js_beautify;
+var xmldom = require('xmldom');
+var DOMParser = xmldom.DOMParser;
+
+var YALLA_SUFFIX = '.js';
+var JS_SUFFIX = ".js";
+var HTML_SUFFIX = ".html";
+
+String.prototype.isEmpty = function () {
+    return (this.length === 0 || !this.trim());
+};
+
+function convertAttributes(attributes) {
+    return attributes.reduce(function (result, attribute) {
+        var name = attribute.name;
+        var value = attribute.value;
+        var convertedName = name;
+        var convertedValue = value;
+
+        if (attribute.name.indexOf('.trigger') >= 0) {
+            convertedName = 'on' + name.substring(0, (name.length - '.trigger'.length));
+            convertedValue = '{{function(event) %7B return ' + value + ' %7D}}';
+        }
+        else if (attribute.name.indexOf('.bind') >= 0) {
+            convertedName = name.substring(0, (name.length - '.bind'.length));
+            convertedValue = '{{bind:' + value + ' }}';
+        }
+        result[convertedName] = convertedValue;
+        return result;
+    }, {});
+
+}
+
+function lengthableObjectToArray(object) {
+    var result = [];
+    for (var i = 0; i < object.length; i++) {
+        var item = object[i];
+        result.push(item);
+    }
+    return result;
+}
+
+function textToExpression(text) {
+    if (text.trim() == '') {
+        return text;
+    }
+    var matches = text.match(/{{.*?}}/g) || [];
+    var matchesReplacement = matches.map(function (match) {
+
+        var isFunction = match.indexOf('{{function') == 0;
+        var isBind = match.indexOf('{{bind') == 0;
+        return {
+            text: match,
+            replacement: isFunction || isBind ? ('<{{ ' + textToExpressionValue(match) + ' }}>') : textToExpressionValue(match)
+        };
+    });
+    var replacedScript = matchesReplacement.reduce(function (script, replacement) {
+        return script.replace(replacement.text, replacement.replacement);
+    }, text);
+    replacedScript = replacedScript.replace(/"<{{/g, '').replace(/}}>"/g, '').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
+
+    return replacedScript;
+}
+
+function textToExpressionValue(match) {
+    if (match.indexOf('{{') == 0) {
+        var variable = match.substring(2, match.length - 2).replace(/\$/g, 'data.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
+        var isFunction = variable.indexOf('function') == 0;
+        var isBinding = variable.indexOf('bind:') == 0;
+        if (isBinding) {
+            variable = variable.substring('bind:'.length, variable.length);
+        }
+        var replacement = isFunction || isBinding ? variable : '"+(' + variable + ')+"';
+        replacement = replacement.replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
+        return replacement;
+    }
+    return '"' + match + '"';
+}
+
+function escapeBracket(text) {
+    return '%7B' + text.substring(1, text.length - 1) + '%7D';
+}
+
+function convertToIdomString(node, context, elementName, scriptTagContent, level) {
+    var result = [];
+    if (node.constructor.name == "Element") {
+        var attributes = node.attributes;
+        switch (node.nodeName) {
+            case 'slot-view' : {
+                // lets pass the name
+                var slotName = lengthableObjectToArray(attributes).reduce(function (name, node) {
+                    if (node.name == 'name') {
+                        return node.value;
+                    }
+                    return name;
+                }, 'default');
+                result.push('slotView("' + slotName + '");');
+                break;
+            }
+            case 'skip-to-end' : {
+                result.push('skip();');
+                break;
+            }
+            case 'inject' : {
+                var mapObject = lengthableObjectToArray(attributes).reduce(function (labelValue, node) {
+                    labelValue[node.name] = node.value;
+                    return labelValue;
+                }, {});
+                context[mapObject.name] = mapObject.from;
+                result.push('context["' + mapObject.name + '"] = $inject("' + mapObject.from + '");');
+                var camelCaseName = mapObject.name.split('-').map(function (word, index) {
+                    return index == 0 ? word : (word.charAt(0).toUpperCase() + word.substring(1, word.length));
+                }).join('');
+                result.push('var ' + camelCaseName + ' = context["' + mapObject.name + '"];');
+                break;
+            }
+            default : {
+                var nodeIsComponent = node.nodeName in context;
+                var attributesArray = lengthableObjectToArray(attributes);
+                var initialValue = {
+                    foreach: false,
+                    foreachArray: false,
+                    foreachItem: false,
+                    if: false,
+                    slotName: false,
+                    cleanAttributes: [],
+                    beforePatchElement : false,
+                    afterPatchElement : false,
+                    beforePatchAttribute: false,
+                    afterPatchAttribute: false,
+                    beforePatchContent: false,
+                    afterPatchContent: false
+                };
+
+                if (level == 0 && (['script', 'style'].indexOf(node.nodeName) < 0)) {
+                    initialValue.cleanAttributes.push({name: 'element', value: elementName});
+                }
+
+                var condition = attributesArray.reduce(function (condition, attribute) {
+                    if (['for.each', 'if.bind', 'slot.name',
+                            'before.patch-element',
+                            'after.patch-element',
+                            'before.patch-attribute',
+                            'after.patch-attribute',
+                            'before.patch-content',
+                            'after.patch-content'].indexOf(attribute.name) >= 0) {
+                        if (attribute.name == 'for.each') {
+                            condition.foreach = attribute.value;
+                            var foreachType = attribute.value.split(" in ");
+                            condition.foreachArray = foreachType[1];
+                            condition.foreachItem = foreachType[0];
+                        }
+                        if (attribute.name == 'slot.name') {
+                            condition.slotName = attribute.value;
+                        }
+                        if (attribute.name == 'if.bind') {
+                            condition.if = attribute.value;
+                        }
+                        //before patch element start
+                        if (attribute.name == 'before.patch-element') {
+                            condition.beforePatchElement = attribute.value;
+                        }
+                        if (attribute.name == 'before.patch-attribute') {
+                            condition.beforePatchAttribute = attribute.value;
+                        }
+                        if (attribute.name == 'after.patch-attribute') {
+                            condition.afterPatchAttribute = attribute.value;
+                        }
+                        if (attribute.name == 'before.patch-content') {
+                            condition.beforePatchContent = attribute.value;
+                        }
+                        if (attribute.name == 'after.patch-content') {
+                            condition.afterPatchContent = attribute.value;
+                        }
+                        if (attribute.name == 'after.patch-element') {
+                            condition.afterPatchElement = attribute.value;
+                        }
+                    } else {
+                        condition.cleanAttributes.push(attribute);
+                    }
+                    return condition;
+                }, initialValue);
+
+                if (condition.if) {
+                    result.push('if(' + condition.if + '){');
+                }
+
+                if (condition.slotName && condition.slotName != 'default') {
+                    result.push('if(slotName == "' + condition.slotName + '"){');
+                }
+
+                if (condition.foreach) {
+                    result.push('' + condition.foreachArray + '.forEach(function(' + condition.foreachItem + '){');
+                }
+
+                if (nodeIsComponent) {
+                    result.push('context["' + node.nodeName + '"].render(' + textToExpression(escapeBracket(JSON.stringify(convertAttributes(condition.cleanAttributes)))) + ',function(slotName){');
+                    lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
+                        result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
+                    });
+                    result.push('});');
+                } else {
+                    var incrementalDomNode = '{element : IncrementalDOM.currentElement(), pointer : IncrementalDOM.currentPointer()}';
+                    if(condition.beforePatchElement){
+                        result.push('(function (event){ return '+condition.beforePatchElement+' })('+incrementalDomNode+');');
+                    }
+                    result.push('elementOpenStart("' + node.nodeName + '","");');
+                    if(condition.beforePatchAttribute){
+                        result.push('(function (event){ return '+condition.beforePatchAttribute+' })('+incrementalDomNode+');');
+                    }
+                    var attributesObject = convertAttributes(condition.cleanAttributes);
+                    for (var key in attributesObject) {
+                        result.push('attr("' + key + '", ' + textToExpressionValue(attributesObject[key]) + ');');
+                    }
+                    if(condition.afterPatchAttribute){
+                        result.push('(function (event){ return '+condition.afterPatchAttribute+' })('+incrementalDomNode+');');
+                    }
+                    result.push('elementOpenEnd("' + node.nodeName + '");');
+                    if(condition.beforePatchContent){
+                        result.push('(function (event){ return '+condition.beforePatchContent+' })('+incrementalDomNode+');');
+                    }
+                    lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
+                        result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
+                    });
+                    if(condition.afterPatchContent){
+                        result.push('(function (event){ return '+condition.afterPatchContent+' })('+incrementalDomNode+');');
+                    }
+                    result.push('elementClose("' + node.nodeName + '");');
+                    if(condition.afterPatchElement){
+                        result.push('(function (event){ return '+condition.afterPatchElement+' })('+incrementalDomNode+');');
+                    }
+                }
+
+                if (condition.foreach) {
+                    result.push('});');
+                }
+
+                if (condition.slotName && condition.slotName != 'default') {
+                    result.push('}');
+                }
+
+                if (condition.if) {
+                    result.push('}');
+                }
+
+            }
+        }
+
+    } else if (node.constructor.name == "Text") {
+
+        if (!node.nodeValue.isEmpty()) {
+            var isStyle = node.parentNode.nodeName == 'style';
+            var isScript = node.parentNode.nodeName == 'script';
+            var cleanText = node.nodeValue.replace(/[\r\n]/g, "\\r\\n");
+            if (isStyle) {
+                var elementSelector = "[element='" + elementName.trim() + "']";
+                var text = node.nodeValue.replace(/\r\n/g, '').replace(/  /g, '');
+                var cleanScript = text.match(/([^\r\n,{}]+)(,(?=[^}]*\{)|\s*\{)/g).reduce(function (script, match) {
+                    return script.replace(match, '\\r\\n' + elementSelector + match);
+                }, text).replace('root', '');
+                result.push('text("' + cleanScript + '");');
+            } else if (isScript) {
+                scriptTagContent.push(node.nodeValue);
+            } else {
+                var replaceExpression = textToExpression(cleanText);
+                result.push('text("' + replaceExpression + '");');
+            }
+        }
+    }
+    return result;
+}
+
+function convertHtmlToJavascript(file, originalUrl) {
+    var path = originalUrl.substring(1, originalUrl.length - YALLA_SUFFIX.length);
+    var doc = new DOMParser().parseFromString(file);
+    var result = [];
+    var elementName = path.replace(/\\/g, '.').replace(/\//g, '.');
+    if (file && doc) {
+        result.push('var elementOpen = IncrementalDOM.elementOpen, elementClose = IncrementalDOM.elementClose, ' +
+            'elementOpenStart = IncrementalDOM.elementOpenStart, elementOpenEnd = IncrementalDOM.elementOpenEnd, ' +
+            'elementVoid = IncrementalDOM.elementVoid, text = IncrementalDOM.text, attr = IncrementalDOM.attr, skip = IncrementalDOM.skip;');
+        var functionContent = [];
+        functionContent.push('function $render(data,slotView){');
+        var context = {};
+        var scriptTagContent = [];
+        lengthableObjectToArray(doc.childNodes).forEach(function (node) {
+            functionContent = functionContent.concat(convertToIdomString(node, context, elementName, scriptTagContent, 0));
+        });
+        functionContent.push('}');
+        result = result.concat(scriptTagContent).concat(functionContent);
+    }
+    return result.join('\n');
+}
+
+function compileHTML(file, originalUrl) {
+    return beautify(encapsulateScript(convertHtmlToJavascript(file, originalUrl), originalUrl), {indent_size: 2});
+}
+
+function compileJS(file, originalUrl) {
+    return beautify(encapsulateScript(file, originalUrl), {indent_size: 2});
+}
+
+var encapsulateScript = function (text, path) {
+    var componentPath = path.substring(0, path.length - (YALLA_SUFFIX.length)).replace(/\\/g, '/');
+    var result = [];
+    result.push('yalla.framework.addComponent("' + componentPath + '",(function (){');
+    result.push('var $path = "' + componentPath + '";');
+    result.push('var $patchChanges = yalla.framework.renderToScreen;');
+    result.push('var $export = {};');
+    result.push('var context = {};');
+    result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
+    result.push(text);
+    result.push('if(typeof $render === "function"){$export.render = $render;}');
+    result.push('return $export;');
+    result.push('})());');
+    return result.join("\n");
+};
+
+function ensureDirectoryExistence(filePath) {
+    var dirname = path.dirname(filePath);
+    if (fs.existsSync(dirname)) {
+        return true;
+    }
+    ensureDirectoryExistence(dirname);
+    fs.mkdirSync(dirname);
+}
+
+var walk = function (dir) {
+    var results = [];
+    var list = fs.readdirSync(dir);
+    list.forEach(function (file) {
+        file = dir + '/' + file;
+        var stat = fs.statSync(file);
+        if (stat && stat.isDirectory()) results = results.concat(walk(file));
+        else results.push(file)
+    });
+    return results;
+};
+
+function runServer(sourceDir, port) {
+    var app = express();
+    app.use(function (req, res, next) {
+        var url = req.originalUrl;
+        console.log('URL:' + url);
+        if (url.indexOf(sourceDir.substring(1, sourceDir.length)) >= 0) {
+            var path = url.substring(1, url.length - YALLA_SUFFIX.length);
+            var pathJS = path + JS_SUFFIX;
+            var pathHTML = path + HTML_SUFFIX;
+
+            fs.readFile(pathJS, "utf-8", function (err, file) {
+                if (err) {
+                    return err;
+                }
+                console.log('PATH:' + pathJS);
+                res.send(compileJS(file, url));
+            });
+
+            fs.readFile(pathHTML, "utf-8", function (err, file) {
+                if (err) {
+                    return err;
+                }
+                console.log('PATH:' + pathHTML);
+                res.send(compileHTML(file, url));
+            });
+        } else {
+            next();
+        }
+    });
+
+    app.use(express.static('.'));
+    app.listen(port, function () {
+        console.log('YallaJS Running on port ' + port);
+    });
+}
+
+function runCompiler(sourceDir, targetDir) {
+
+    var files = walk(sourceDir);
+
+    files.forEach(function (file) {
+        var targetFile = file.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
+        ensureDirectoryExistence(targetFile);
+        fs.readFile(file, 'utf8', function (err, data) {
+            if (file.indexOf(".html") >= 0) {
+                fs.writeFile(targetFile, compileHTML(data, targetFile.substring(1, targetFile.length)));
+            }
+            if (file.indexOf(".js") >= 0) {
+                fs.writeFile(targetFile, compileJS(data, targetFile.substring(1, targetFile.length)));
+            }
+        });
+    });
+
+    chokidar.watch(sourceDir, {persistent: true})
+        .on('add', function (event) {
+            event = './' + event.replace('\\', '/');
+            var targetFile = event.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
+            ensureDirectoryExistence(targetFile);
+            fs.readFile(event, 'utf8', function (err, data) {
+                if (event.indexOf(".html") >= 0) {
+                    fs.writeFile(targetFile, compileHTML(data, targetFile.substring(1, targetFile.length)));
+                }
+                if (event.indexOf(".js") >= 0) {
+                    fs.writeFile(targetFile, compileJS(data, targetFile.substring(1, targetFile.length)));
+                }
+            });
+            console.log('Path added ', event);
+        })
+        .on('change', function (event) {
+            event = './' + event.replace('\\', '/');
+            var targetFile = event.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
+            ensureDirectoryExistence(targetFile);
+            fs.readFile(event, 'utf8', function (err, data) {
+                if (event.indexOf(".html") >= 0) {
+                    fs.writeFile(targetFile, compileHTML(data, targetFile.substring(1, targetFile.length)));
+                }
+                if (event.indexOf(".js") >= 0) {
+                    fs.writeFile(targetFile, compileJS(data, targetFile.substring(1, targetFile.length)));
+                }
+            });
+            console.log('Path modified ', event);
+        })
+        .on('unlink', function (event, path) {
+            console.log('Path removed ', event);
+        });
+}
+// mode = server|compiler
+var mode = "server";
+var port = 8080;
+
+// var sourceDir = './src';
+// var targetDir = './dist';
+var sourceDir = "./src";
+var targetDir = "./dist";
+
+process.argv.forEach(function (val) {
+    if (val.indexOf("mode") >= 0) {
+        mode = val.split("=")[1];
+    }
+    if (val.indexOf("port") >= 0) {
+        port = val.split("=")[1];
+    }
+    if (val.indexOf("sourceDir") >= 0) {
+        sourceDir = val.split("=")[1];
+    }
+    if (val.indexOf("targetDir") >= 0) {
+        targetDir = val.split("=")[1];
+    }
+
+});
+
+if (mode == 'server') {
+    runServer(sourceDir, port);
+} else {
+    runCompiler(sourceDir, targetDir);
+}
+
