@@ -1,6 +1,6 @@
 {
   "name": "yallajs",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "HTML component with zero boiler plate",
   "main": "yalla.js",
   "scripts": {
@@ -22,5 +22,5 @@
   "bugs": {
     "url": "https://github.com/yallajs/yalla/issues"
   },
-  "homepage": "https://github.com/yallajs/yalla#readme"
+  "homepage": "http://yallajs.io"
 }
