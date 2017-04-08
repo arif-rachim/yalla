@@ -9,6 +9,10 @@ var DOMParser = xmldom.DOMParser;
 var YALLA_SUFFIX = '.js';
 var JS_SUFFIX = ".js";
 var HTML_SUFFIX = ".html";
+var PROMISE_JS = "yalla-promise.js";
+var IDOM_JS = "yalla-idom.js";
+var REDUX_JS = "yalla-redux.js";
+var CORE_JS = "yalla-core.js";
 
 String.prototype.isEmpty = function () {
     return (this.length === 0 || !this.trim());
@@ -257,11 +261,11 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
             var isScript = node.parentNode.nodeName == 'script';
             var cleanText = node.nodeValue.replace(/[\r\n]/g, "\\r\\n");
             if (isStyle) {
-                var elementSelector = "[element='" + elementName.trim() + "']";
+                var elementSelector = "[element='" + elementName.trim() + "'] ";
                 var text = node.nodeValue.replace(/\r\n/g, '').replace(/  /g, '');
                 var cleanScript = text.match(/([^\r\n,{}]+)(,(?=[^}]*\{)|\s*\{)/g).reduce(function (script, match) {
                     return script.replace(match, '\\r\\n' + elementSelector + match);
-                }, text).replace('root', '');
+                }, text).replace("[element='" + elementName.trim() + "'] root", "[element='" + elementName.trim() + "']");
                 result.push('text("' + cleanScript + '");');
             } else if (isScript) {
                 scriptTagContent.push(node.nodeValue);
@@ -346,7 +350,29 @@ function runServer(sourceDir, port) {
     app.use(function (req, res, next) {
         var url = req.originalUrl;
         console.log('URL:' + url);
-        if (url.indexOf(sourceDir.substring(1, sourceDir.length)) >= 0) {
+        var isRequestingYallaComponent = url.indexOf(sourceDir.substring(1, sourceDir.length)) >= 0;
+        var isRequestingYallaLib = url.indexOf('yalla.js')>=0;
+        if(isRequestingYallaLib){
+            res.writeHead(200, {"Content-Type": "application/javascript"});
+            fs.readFile(PROMISE_JS,"utf-8",function (err,text) {
+                if(err)throw err;
+                res.write(text);
+                fs.readFile(IDOM_JS,"utf-8",function (err,text) {
+                    if(err)throw err;
+                    res.write(text);
+                    fs.readFile(REDUX_JS,"utf-8",function (err,text) {
+                        if(err)throw err;
+                        res.write(text);
+                        fs.readFile(CORE_JS,"utf-8",function (err,text) {
+                            if(err)throw err;
+                            res.write(text);
+                            res.end();
+                            console.log('OK WE HAVE SEND THE YALLAJS');
+                        })
+                    })
+                });
+            });
+        }else if (isRequestingYallaComponent) {
             var path = url.substring(1, url.length - YALLA_SUFFIX.length);
             var pathJS = path + JS_SUFFIX;
             var pathHTML = path + HTML_SUFFIX;
@@ -433,7 +459,7 @@ var port = 8080;
 
 // var sourceDir = './src';
 // var targetDir = './dist';
-var sourceDir = "./src";
+var sourceDir = "./components";
 var targetDir = "./dist";
 
 process.argv.forEach(function (val) {

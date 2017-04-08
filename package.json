@@ -22,5 +22,11 @@
   "bugs": {
     "url": "https://github.com/yallajs/yalla/issues"
   },
-  "homepage": "http://yallajs.io"
+  "homepage": "http://yallajs.io",
+  "dependencies": {
+    "chokidar": "^1.6.1",
+    "express": "^4.15.2",
+    "js-beautify": "^1.6.12",
+    "xmldom": "^0.1.27"
+  }
 }
