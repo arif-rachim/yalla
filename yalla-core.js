@@ -199,12 +199,13 @@ var yalla = (function () {
 
     framework.start = function () {
         var scripts = document.querySelector("script[yalla-component]") || [];
+        if (!utils.assertNotNull(scripts.attributes['yalla-component'],scripts.attributes['yalla-base'], scripts.attributes['yalla-domtarget'])) {
+            throw new Error("script tag should contain attributes 'yalla-component', 'yalla-base' and 'yalla-domtarget'");
+        }
         var component = scripts.attributes['yalla-component'].nodeValue;
         var base = scripts.attributes['yalla-base'].nodeValue;
         var domTarget = scripts.attributes['yalla-domtarget'].nodeValue;
-        if (!utils.assertNotNull(component, base, domTarget)) {
-            throw new Error("script tag should contain attributes 'yalla-component', 'yalla-base' and 'yalla-domtarget'");
-        }
+
         framework.base = base;
         framework.domTarget = domTarget;
         framework.defaultComponent = component;

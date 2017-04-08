@@ -351,10 +351,10 @@ var walk = function (dir) {
 
 function buildYallaJs() {
     var result = [];
-    result.push(fs.readFileSync(PROMISE_JS, "utf-8"));
-    result.push(fs.readFileSync(IDOM_JS, "utf-8"));
-    result.push(fs.readFileSync(REDUX_JS, "utf-8"));
-    result.push(fs.readFileSync(CORE_JS, "utf-8"));
+    result.push(fs.readFileSync(__dirname+'/'+PROMISE_JS, "utf-8"));
+    result.push(fs.readFileSync(__dirname+'/'+IDOM_JS, "utf-8"));
+    result.push(fs.readFileSync(__dirname+'/'+REDUX_JS, "utf-8"));
+    result.push(fs.readFileSync(__dirname+'/'+CORE_JS, "utf-8"));
     return result.join('\n\n');
 }
 function runServer(sourceDir, port) {
