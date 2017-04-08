@@ -1,10 +1,13 @@
 {
   "name": "yallajs",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "HTML component with zero boiler plate",
   "main": "yalla.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "yalla": "yalla-cli.js"
   },
   "repository": {
     "type": "git",
@@ -27,6 +30,7 @@
     "chokidar": "^1.6.1",
     "express": "^4.15.2",
     "js-beautify": "^1.6.12",
+    "minimist": "^1.2.0",
     "xmldom": "^0.1.27"
   }
 }

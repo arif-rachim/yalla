@@ -252,10 +252,40 @@ var yalla = (function () {
         }).catch(function (err) {
             log.error(err.stack);
         });
+
+
+    };
+
+
+    var attributes = IncrementalDOM.attributes;
+    attributes['checked'] = function(element, name, value) {
+        if(value){
+            element.setAttribute('checked',true);
+        }else{
+            element.removeAttribute('checked');
+        }
+    };
+
+    IncrementalDOM.notifications.nodesCreated = function(nodes){
+        nodes.forEach(function(node){
+            if(node.oncreated){
+                node.oncreated.call(node,node)
+            }
+        });
+    };
+
+    IncrementalDOM.notifications.nodesDeleted = function(nodes){
+        nodes.forEach(function(node){
+            if(node.ondeleted){
+                node.ondeleted.call(node,node);
+            }
+        });
     };
 
     return yalla;
 })();
+
+
 
 window.onload = function () {
     yalla.framework.start();
@@ -268,29 +298,3 @@ if ("onhashchange" in window) {
 } else {
     alert('Browser not supported');
 }
-var attributes = IncrementalDOM.attributes;
-attributes['checked'] = function(element, name, value) {
-    if(value){
-        element.setAttribute('checked',true);
-    }else{
-        element.removeAttribute('checked');
-    }
-};
-
-IncrementalDOM.notifications.nodesCreated = function(nodes){
-    nodes.forEach(function(node){
-        if(node.oncreated){
-            node.oncreated.call(node,node)
-            yalla.log.info('node created '+node.nodeName);
-        }
-    });
-};
-
-IncrementalDOM.notifications.nodesDeleted = function(nodes){
-    nodes.forEach(function(node){
-        if(node.ondeleted){
-            node.ondeleted.call(node,node);
-            yalla.log.info('node deleted '+node.nodeName);
-        }
-    });
-};

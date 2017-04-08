@@ -1,9 +1,13 @@
+#!/usr/bin/env node
+
 var express = require('express');
 var fs = require('fs');
 var path = require('path');
 var chokidar = require('chokidar');
 var beautify = require('js-beautify').js_beautify;
 var xmldom = require('xmldom');
+
+
 var DOMParser = xmldom.DOMParser;
 
 var YALLA_SUFFIX = '.js';
@@ -345,38 +349,28 @@ var walk = function (dir) {
     return results;
 };
 
+function buildYallaJs() {
+    var result = [];
+    result.push(fs.readFileSync(PROMISE_JS, "utf-8"));
+    result.push(fs.readFileSync(IDOM_JS, "utf-8"));
+    result.push(fs.readFileSync(REDUX_JS, "utf-8"));
+    result.push(fs.readFileSync(CORE_JS, "utf-8"));
+    return result.join('\n\n');
+}
 function runServer(sourceDir, port) {
     var app = express();
     app.use(function (req, res, next) {
         var url = req.originalUrl;
-        console.log('URL:' + url);
         var isRequestingYallaComponent = url.indexOf(sourceDir.substring(1, sourceDir.length)) >= 0;
         var isRequestingYallaLib = url.indexOf('yalla.js')>=0;
         if(isRequestingYallaLib){
             res.writeHead(200, {"Content-Type": "application/javascript"});
-            fs.readFile(PROMISE_JS,"utf-8",function (err,text) {
-                if(err)throw err;
-                res.write(text);
-                fs.readFile(IDOM_JS,"utf-8",function (err,text) {
-                    if(err)throw err;
-                    res.write(text);
-                    fs.readFile(REDUX_JS,"utf-8",function (err,text) {
-                        if(err)throw err;
-                        res.write(text);
-                        fs.readFile(CORE_JS,"utf-8",function (err,text) {
-                            if(err)throw err;
-                            res.write(text);
-                            res.end();
-                            console.log('OK WE HAVE SEND THE YALLAJS');
-                        })
-                    })
-                });
-            });
+            res.write(buildYallaJs());
+            res.end();
         }else if (isRequestingYallaComponent) {
             var path = url.substring(1, url.length - YALLA_SUFFIX.length);
             var pathJS = path + JS_SUFFIX;
             var pathHTML = path + HTML_SUFFIX;
-
             fs.readFile(pathJS, "utf-8", function (err, file) {
                 if (err) {
                     return err;
@@ -384,7 +378,6 @@ function runServer(sourceDir, port) {
                 console.log('PATH:' + pathJS);
                 res.send(compileJS(file, url));
             });
-
             fs.readFile(pathHTML, "utf-8", function (err, file) {
                 if (err) {
                     return err;
@@ -399,14 +392,13 @@ function runServer(sourceDir, port) {
 
     app.use(express.static('.'));
     app.listen(port, function () {
-        console.log('YallaJS Running on port ' + port);
+        console.log('\n\nYallaJS Running on port ' + port);
     });
 }
 
 function runCompiler(sourceDir, targetDir) {
-
     var files = walk(sourceDir);
-
+    fs.writeFile(targetDir+"/yalla.js",buildYallaJs());
     files.forEach(function (file) {
         var targetFile = file.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
         ensureDirectoryExistence(targetFile);
@@ -453,33 +445,39 @@ function runCompiler(sourceDir, targetDir) {
             console.log('Path removed ', event);
         });
 }
-// mode = server|compiler
-var mode = "server";
-var port = 8080;
 
-// var sourceDir = './src';
-// var targetDir = './dist';
-var sourceDir = "./components";
-var targetDir = "./dist";
 
-process.argv.forEach(function (val) {
-    if (val.indexOf("mode") >= 0) {
-        mode = val.split("=")[1];
-    }
-    if (val.indexOf("port") >= 0) {
-        port = val.split("=")[1];
-    }
-    if (val.indexOf("sourceDir") >= 0) {
-        sourceDir = val.split("=")[1];
-    }
-    if (val.indexOf("targetDir") >= 0) {
-        targetDir = val.split("=")[1];
-    }
+var argv  = require('minimist')(process.argv.slice(2));
 
-});
+var mode = argv.m;
+var port = argv.p;
+var sourceDir = argv.s;
+var targetDir = argv.d;
+
+if(!mode){
+    console.log('Missing mode "server" or "compiler" (-m server)');
+    mode = 'server';
+}
+if(mode === 'server' && !port ){
+    console.log('Missing port (-p 8080)');
+    port = '8080';
+}
+
+if(!sourceDir){
+    console.log('Missing sourceDir (-s src)');
+    sourceDir = 'src';
+}
+
+if(mode === 'compiler' && !targetDir){
+    console.log('Missing distributionDir (-d dist)');
+    targetDir = 'dist';
+}
+
+sourceDir = './'+sourceDir;
+targetDir = './'+targetDir;
 
 if (mode == 'server') {
-    runServer(sourceDir, port);
+    runServer(sourceDir, parseInt(port));
 } else {
     runCompiler(sourceDir, targetDir);
 }
