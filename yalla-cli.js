@@ -63,18 +63,18 @@ function textToExpression(text) {
         var isBind = match.indexOf('{{bind') == 0;
         return {
             text: match,
-            replacement: isFunction || isBind ? ('<{{ ' + textToExpressionValue(match) + ' }}>') : textToExpressionValue(match)
+            replacement: isFunction || isBind ? ('<{{ ' + textToExpressionValue(match,true) + ' }}>') : textToExpressionValue(match,true)
         };
     });
     var replacedScript = matchesReplacement.reduce(function (script, replacement) {
         return script.replace(replacement.text, replacement.replacement);
     }, text);
-    replacedScript = replacedScript.replace(/"<{{/g, '').replace(/}}>"/g, '').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
+    replacedScript = replacedScript.replace(/"<{{/g, '').replace(/}}>"/g, '').replace(/%7B/g, '{').replace(/%7D/g, '}').replace(/"/g,'\\"').replace(/%34/g,'"').trim();
 
     return replacedScript;
 }
 
-function textToExpressionValue(match) {
+function textToExpressionValue(match,encodeDoubleQuote) {
     if (match.indexOf('{{') == 0) {
         var variable = match.substring(2, match.length - 2).replace(/\$/g, 'data.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
         var isFunction = variable.indexOf('function') == 0;
@@ -82,7 +82,8 @@ function textToExpressionValue(match) {
         if (isBinding) {
             variable = variable.substring('bind:'.length, variable.length);
         }
-        var replacement = isFunction || isBinding ? variable : '"+(' + variable + ')+"';
+        var doubleQuote = encodeDoubleQuote ? '%34' : '"';
+        var replacement = isFunction || isBinding ? variable : (doubleQuote+'+(' + variable + ')+'+doubleQuote);
         replacement = replacement.replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
         return replacement;
     }
@@ -159,14 +160,14 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         if (attribute.name == 'for.each') {
                             condition.foreach = attribute.value;
                             var foreachType = attribute.value.split(" in ");
-                            condition.foreachArray = foreachType[1];
+                            condition.foreachArray = textToExpressionValue('{{bind:'+foreachType[1]+'}}');
                             condition.foreachItem = foreachType[0];
                         }
                         if (attribute.name == 'slot.name') {
                             condition.slotName = attribute.value;
                         }
                         if (attribute.name == 'if.bind') {
-                            condition.if = attribute.value;
+                            condition.if = textToExpressionValue('{{bind:'+attribute.value+'}}');
                         }
                         //before patch element start
                         if (attribute.name == 'before.patch-element') {
@@ -263,7 +264,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
         if (!node.nodeValue.isEmpty()) {
             var isStyle = node.parentNode.nodeName == 'style';
             var isScript = node.parentNode.nodeName == 'script';
-            var cleanText = node.nodeValue.replace(/[\r\n]/g, "\\r\\n");
+            var cleanText = node.nodeValue.replace(/[\r\n]/g, "");
             if (isStyle) {
                 var elementSelector = "[element='" + elementName.trim() + "'] ";
                 var text = node.nodeValue.replace(/\r\n/g, '').replace(/  /g, '');
