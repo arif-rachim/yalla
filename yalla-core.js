@@ -128,7 +128,9 @@ var yalla = (function () {
     framework.addComponent = function (name, component) {
         yalla.components[name] = component;
         var path = name + framework.filePrefix;
-        framework.componentLoadListener[path].call();
+        if(path in framework.componentLoadListener){
+            framework.componentLoadListener[path].call();
+        }
     };
 
     framework.attachScriptToDocument = function (url) {

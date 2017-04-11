@@ -2,7 +2,6 @@
   "name": "yallajs",
   "version": "0.0.17",
   "description": "HTML component with zero boiler plate",
-  "main": "yalla.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
