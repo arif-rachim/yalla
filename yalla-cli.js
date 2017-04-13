@@ -137,6 +137,8 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     if: false,
                     slotName: false,
                     cleanAttributes: [],
+                    asyncTrigger : false,
+                    asyncResult : false,
                     beforePatchElement : false,
                     afterPatchElement : false,
                     beforePatchAttribute: false,
@@ -151,6 +153,8 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
 
                 var condition = attributesArray.reduce(function (condition, attribute) {
                     if (['for.each', 'if.bind', 'slot.name',
+                            'async.trigger',
+                            'async.result',
                             'before.patch-element',
                             'after.patch-element',
                             'before.patch-attribute',
@@ -168,6 +172,12 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         }
                         if (attribute.name == 'if.bind') {
                             condition.if = textToExpressionValue('{{bind:'+attribute.value+'}}');
+                        }
+                        if (attribute.name == 'async.trigger') {
+                            condition.asyncTrigger = textToExpressionValue('{{bind:'+attribute.value+'}}');
+                        }
+                        if (attribute.name == 'async.result') {
+                            condition.asyncResult = attribute.value;
                         }
                         //before patch element start
                         if (attribute.name == 'before.patch-element') {
@@ -206,6 +216,12 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     result.push('' + condition.foreachArray + '.forEach(function(' + condition.foreachItem + '){');
                 }
 
+                if(condition.asyncResult){
+                    context.asyncFuncSequence = context.asyncFuncSequence || 0;
+                    context.asyncFuncSequence += 1;
+                    result.push('function async_'+context.asyncFuncSequence+'('+condition.asyncResult+'){');
+                }
+
                 if (nodeIsComponent) {
                     result.push('context["' + node.nodeName + '"].render(' + textToExpression(escapeBracket(JSON.stringify(convertAttributes(condition.cleanAttributes)))) + ',function(slotName){');
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
@@ -225,6 +241,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     for (var key in attributesObject) {
                         result.push('attr("' + key + '", ' + textToExpressionValue(attributesObject[key]) + ');');
                     }
+
                     if(condition.afterPatchAttribute){
                         result.push('(function (event){ return '+condition.afterPatchAttribute+' })('+incrementalDomNode+');');
                     }
@@ -238,10 +255,22 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     if(condition.afterPatchContent){
                         result.push('(function (event){ return '+condition.afterPatchContent+' })('+incrementalDomNode+');');
                     }
+                    if (condition.asyncTrigger) {
+                        context.asyncFuncSequence = context.asyncFuncSequence || 0;
+                        var asyncFunctionName = 'async_'+context.asyncFuncSequence;
+                        result.push('(function(domNode) { var node = domNode.element;');
+                        var then = condition.asyncTrigger+'.then(function(result){ $patchChanges(node,function(){ '+asyncFunctionName+'.call(node,result) }); }); ';
+                        result.push(then);
+                        result.push('})('+incrementalDomNode+');');
+                    }
                     result.push('elementClose("' + node.nodeName + '");');
                     if(condition.afterPatchElement){
                         result.push('(function (event){ return '+condition.afterPatchElement+' })('+incrementalDomNode+');');
                     }
+                }
+
+                if(condition.asyncResult){
+                    result.push('}');
                 }
 
                 if (condition.foreach) {

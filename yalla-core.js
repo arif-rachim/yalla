@@ -214,7 +214,7 @@ var yalla = (function () {
         framework.renderToScreen();
     };
 
-    framework.renderToScreen = function () {
+    function patchGlobal(){
         var address = [framework.defaultComponent];
         if (window.location.hash != "") {
             address = window.location.hash.substring(1, window.location.hash.length).split("/");
@@ -255,8 +255,14 @@ var yalla = (function () {
         }).catch(function (err) {
             log.error(err.stack);
         });
+    }
 
-
+    framework.renderToScreen = function () {
+        if(arguments.length == 2){
+            IncrementalDOM.patch(arguments[0],arguments[1]);
+        }else{
+            patchGlobal();
+        }
     };
 
 
