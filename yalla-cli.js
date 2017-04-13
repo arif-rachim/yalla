@@ -213,6 +213,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 }
 
                 if (condition.foreach) {
+                    result.push('' + condition.foreachArray+ ' = '+condition.foreachArray+' || [];');
                     result.push('' + condition.foreachArray + '.forEach(function(' + condition.foreachItem + '){');
                 }
 
@@ -259,8 +260,11 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         context.asyncFuncSequence = context.asyncFuncSequence || 0;
                         var asyncFunctionName = 'async_'+context.asyncFuncSequence;
                         result.push('(function(domNode) { var node = domNode.element;');
-                        var then = condition.asyncTrigger+'.then(function(result){ $patchChanges(node,function(){ '+asyncFunctionName+'.call(node,result) }); }); ';
+                        result.push('var promise = '+condition.asyncTrigger+';');
+                        result.push('if(promise && "then" in promise){');
+                        var then = 'promise.then(function(result){ $patchChanges(node,function(){ '+asyncFunctionName+'.call(node,result) }); }); ';
                         result.push(then);
+                        result.push('}else{yalla.log.error(new Error("Expecting Promise from '+condition.asyncTrigger+'").stack);}');
                         result.push('})('+incrementalDomNode+');');
                     }
                     result.push('elementClose("' + node.nodeName + '");');
