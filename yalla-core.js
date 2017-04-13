@@ -134,6 +134,13 @@ var yalla = (function () {
     };
 
     framework.attachScriptToDocument = function (url) {
+        var componentPath = url.substring(0,url.length-".js".length);
+        if (componentPath in yalla.components) {
+            return Promise.resolve(true);
+        }
+        if(url in framework.componentLoadListener){
+            return Promise.resolve(true);
+        }
         return new Promise(function (resolve) {
             var s = document.createElement('script');
             s.setAttribute("src", '.'+url);
