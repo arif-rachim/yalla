@@ -126,11 +126,11 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     return labelValue;
                 }, {});
                 context[mapObject.name] = mapObject.from;
-                result.push('context["' + mapObject.name + '"] = $inject("' + mapObject.from + '");');
+                result.push('$context["' + mapObject.name + '"] = $inject("' + mapObject.from + '");');
                 var camelCaseName = mapObject.name.split('-').map(function (word, index) {
                     return index == 0 ? word : (word.charAt(0).toUpperCase() + word.substring(1, word.length));
                 }).join('');
-                result.push('var ' + camelCaseName + ' = context["' + mapObject.name + '"];');
+                result.push('var ' + camelCaseName + ' = $context["' + mapObject.name + '"];');
                 break;
             }
             default : {
@@ -234,7 +234,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     var convertedAttributes = convertAttributes(condition.cleanAttributes);
                     var escapedBracketJson = escapeBracket(JSON.stringify(convertedAttributes));
                     var expressionObjectInString = textToExpression(escapedBracketJson, true);
-                    result.push('context["' + node.nodeName + '"].render(' + expressionObjectInString + ',function(slotName){');
+                    result.push('$context["' + node.nodeName + '"].render(' + expressionObjectInString + ',function(slotName){');
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
@@ -269,7 +269,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     }
 
                     if (condition.refName) {
-                        result.push('context["' + condition.refName + '"] = function (){');
+                        result.push('$context["_' + condition.refName + '"] = function (){');
                     }
 
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
@@ -278,7 +278,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
 
                     if (condition.refName) {
                         result.push('};');
-                        result.push('context["' + condition.refName + '"]();')
+                        result.push('$context["_' + condition.refName + '"]();')
                     }
 
                     if (condition.dataLoad) {
@@ -379,7 +379,7 @@ var encapsulateScript = function (text, path) {
     result.push('var $path = "' + componentPath + '";');
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
     result.push('var $export = {};');
-    result.push('var context = {};');
+    result.push('var $context = {};');
     result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
     result.push(text);
     result.push('if(typeof $render === "function"){$export.render = $render;}');
