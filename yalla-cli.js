@@ -269,7 +269,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     }
 
                     if (condition.refName) {
-                        result.push('$context["_' + condition.refName + '"] = function (){');
+                        result.push('$context["_' + condition.refName + '"] = function(event){ return { node : event.element, render : function() {');
                     }
 
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
@@ -277,8 +277,8 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     });
 
                     if (condition.refName) {
-                        result.push('};');
-                        result.push('$context["_' + condition.refName + '"]();')
+                        result.push('} } }(' + incrementalDomNode + ');');
+                        result.push('$context["_' + condition.refName + '"].render();')
                     }
 
                     if (condition.dataLoad) {
@@ -380,6 +380,7 @@ var encapsulateScript = function (text, path) {
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
     result.push('var $export = {};');
     result.push('var $context = {};');
+    result.push('var $patchRef = function(refName){ $patchChanges($context["_"+refName].node,function(){ $context["_"+refName].render(); }) };');
     result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
     result.push(text);
     result.push('if(typeof $render === "function"){$export.render = $render;}');
