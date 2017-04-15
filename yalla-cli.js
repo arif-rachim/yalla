@@ -266,6 +266,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('}); }); }else { ');
                         result.push('asyncFunc__'+context.asyncFuncSequence+'.call(node,promise)');
                         result.push('}})('+incrementalDomNode+');');
+                        context.asyncFuncSequence -= 1;
                     }
 
                     if(condition.afterPatchContent){
