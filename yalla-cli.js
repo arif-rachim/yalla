@@ -52,7 +52,7 @@ function lengthableObjectToArray(object) {
     return result;
 }
 
-function textToExpression(text) {
+function textToExpression(text, replaceDoubleQuote) {
     if (text.trim() == '') {
         return text;
     }
@@ -63,18 +63,24 @@ function textToExpression(text) {
         var isBind = match.indexOf('{{bind') == 0;
         return {
             text: match,
-            replacement: isFunction || isBind ? ('<{{ ' + textToExpressionValue(match,true) + ' }}>') : textToExpressionValue(match,true)
+            replacement: isFunction || isBind ? ('<{{ ' + textToExpressionValue(match, true) + ' }}>') : textToExpressionValue(match, true)
         };
     });
     var replacedScript = matchesReplacement.reduce(function (script, replacement) {
         return script.replace(replacement.text, replacement.replacement);
     }, text);
-    replacedScript = replacedScript.replace(/"<{{/g, '').replace(/}}>"/g, '').replace(/%7B/g, '{').replace(/%7D/g, '}').replace(/"/g,'\\"').replace(/%34/g,'"').trim();
+    replacedScript = replacedScript.replace(/"<{{/g, '').replace(/}}>"/g, '').replace(/%7B/g, '{').replace(/%7D/g, '}');
 
+    if (replaceDoubleQuote == undefined || replaceDoubleQuote == false) {
+        replacedScript = replacedScript.replace(/"/g, '\\"').replace(/%34/g, '"').trim();
+    } else {
+        replacedScript = replacedScript.replace(/%34/g, '"').trim();
+    }
     return replacedScript;
 }
 
-function textToExpressionValue(match,encodeDoubleQuote) {
+
+function textToExpressionValue(match, encodeDoubleQuote) {
     if (match.indexOf('{{') == 0) {
         var variable = match.substring(2, match.length - 2).replace(/\$/g, '_data.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
         var isFunction = variable.indexOf('function') == 0;
@@ -83,7 +89,7 @@ function textToExpressionValue(match,encodeDoubleQuote) {
             variable = variable.substring('bind:'.length, variable.length);
         }
         var doubleQuote = encodeDoubleQuote ? '%34' : '"';
-        var replacement = isFunction || isBinding ? variable : (doubleQuote+'+(' + variable + ')+'+doubleQuote);
+        var replacement = isFunction || isBinding ? variable : (doubleQuote + '+(' + variable + ')+' + doubleQuote);
         replacement = replacement.replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
         return replacement;
     }
@@ -137,10 +143,11 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     if: false,
                     slotName: false,
                     cleanAttributes: [],
-                    dataLoad : false,
-                    dataName : 'data',
-                    beforePatchElement : false,
-                    afterPatchElement : false,
+                    dataLoad: false,
+                    dataName: 'data',
+                    refName: false,
+                    beforePatchElement: false,
+                    afterPatchElement: false,
                     beforePatchAttribute: false,
                     afterPatchAttribute: false,
                     beforePatchContent: false,
@@ -152,7 +159,10 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 }
 
                 var condition = attributesArray.reduce(function (condition, attribute) {
-                    if (['for.each', 'if.bind', 'slot.name',
+                    if (['ref.name',
+                            'for.each',
+                            'if.bind',
+                            'slot.name',
                             'data.load',
                             'data.name',
                             'before.patch-element',
@@ -161,20 +171,23 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                             'after.patch-attribute',
                             'before.patch-content',
                             'after.patch-content'].indexOf(attribute.name) >= 0) {
+                        if (attribute.name == 'ref.name') {
+                            condition.refName = attribute.value;
+                        }
                         if (attribute.name == 'for.each') {
                             condition.foreach = attribute.value;
                             var foreachType = attribute.value.split(" in ");
-                            condition.foreachArray = textToExpressionValue('{{bind:'+foreachType[1]+'}}');
+                            condition.foreachArray = textToExpressionValue('{{bind:' + foreachType[1] + '}}');
                             condition.foreachItem = foreachType[0];
                         }
                         if (attribute.name == 'slot.name') {
                             condition.slotName = attribute.value;
                         }
                         if (attribute.name == 'if.bind') {
-                            condition.if = textToExpressionValue('{{bind:'+attribute.value+'}}');
+                            condition.if = textToExpressionValue('{{bind:' + attribute.value + '}}');
                         }
                         if (attribute.name == 'data.load') {
-                            condition.dataLoad = textToExpressionValue('{{bind:'+attribute.value+'}}');
+                            condition.dataLoad = textToExpressionValue('{{bind:' + attribute.value + '}}');
                         }
                         if (attribute.name == 'data.name') {
                             condition.dataName = attribute.value;
@@ -213,69 +226,80 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 }
 
                 if (condition.foreach) {
-                    result.push('' + condition.foreachArray+ ' = '+condition.foreachArray+' || [];');
+                    result.push('' + condition.foreachArray + ' = ' + condition.foreachArray + ' || [];');
                     result.push('' + condition.foreachArray + '.forEach(function(' + condition.foreachItem + '){');
                 }
 
                 if (nodeIsComponent) {
-                    result.push('context["' + node.nodeName + '"].render(' + textToExpression(escapeBracket(JSON.stringify(convertAttributes(condition.cleanAttributes)))) + ',function(slotName){');
+                    var convertedAttributes = convertAttributes(condition.cleanAttributes);
+                    var escapedBracketJson = escapeBracket(JSON.stringify(convertedAttributes));
+                    var expressionObjectInString = textToExpression(escapedBracketJson, true);
+                    result.push('context["' + node.nodeName + '"].render(' + expressionObjectInString + ',function(slotName){');
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
                     result.push('});');
                 } else {
                     var incrementalDomNode = '{element : IncrementalDOM.currentElement(), pointer : IncrementalDOM.currentPointer()}';
-                    if(condition.beforePatchElement){
-                        result.push('(function (event){ return '+condition.beforePatchElement+' })('+incrementalDomNode+');');
+                    if (condition.beforePatchElement) {
+                        result.push('(function (event){ return ' + condition.beforePatchElement + ' })(' + incrementalDomNode + ');');
                     }
                     result.push('elementOpenStart("' + node.nodeName + '","");');
-                    if(condition.beforePatchAttribute){
-                        result.push('(function (event){ return '+condition.beforePatchAttribute+' })('+incrementalDomNode+');');
+                    if (condition.beforePatchAttribute) {
+                        result.push('(function (event){ return ' + condition.beforePatchAttribute + ' })(' + incrementalDomNode + ');');
                     }
                     var attributesObject = convertAttributes(condition.cleanAttributes);
                     for (var key in attributesObject) {
                         result.push('attr("' + key + '", ' + textToExpressionValue(attributesObject[key]) + ');');
                     }
 
-                    if(condition.afterPatchAttribute){
-                        result.push('(function (event){ return '+condition.afterPatchAttribute+' })('+incrementalDomNode+');');
+                    if (condition.afterPatchAttribute) {
+                        result.push('(function (event){ return ' + condition.afterPatchAttribute + ' })(' + incrementalDomNode + ');');
                     }
                     result.push('elementOpenEnd("' + node.nodeName + '");');
-                    if(condition.beforePatchContent){
-                        result.push('(function (event){ return '+condition.beforePatchContent+' })('+incrementalDomNode+');');
+                    if (condition.beforePatchContent) {
+                        result.push('(function (event){ return ' + condition.beforePatchContent + ' })(' + incrementalDomNode + ');');
                     }
 
-                    if(condition.dataLoad){
+                    if (condition.dataLoad) {
                         context.asyncFuncSequence = context.asyncFuncSequence || 0;
                         context.asyncFuncSequence += 1;
                         result.push('(function(domNode) { var node = domNode.element;');
-                        result.push('function asyncFunc__'+context.asyncFuncSequence+'('+condition.dataName+'){');
+                        result.push('function asyncFunc__' + context.asyncFuncSequence + '(' + condition.dataName + '){');
+                    }
+
+                    if (condition.refName) {
+                        result.push('context["' + condition.refName + '"] = function (){');
                     }
 
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
 
+                    if (condition.refName) {
+                        result.push('};');
+                        result.push('context["' + condition.refName + '"]();')
+                    }
 
                     if (condition.dataLoad) {
                         result.push('}');
-                        result.push('var promise = '+condition.dataLoad+';');
+                        result.push('var promise = ' + condition.dataLoad + ';');
                         result.push('if(promise && typeof promise == "object" && "then" in promise){');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
-                        result.push('asyncFunc__'+context.asyncFuncSequence+'.call(node,_result)');
+                        result.push('asyncFunc__' + context.asyncFuncSequence + '.call(node,_result)');
                         result.push('}); }); }else { ');
-                        result.push('asyncFunc__'+context.asyncFuncSequence+'.call(node,promise)');
-                        result.push('}})('+incrementalDomNode+');');
+                        result.push('asyncFunc__' + context.asyncFuncSequence + '.call(node,promise)');
+                        result.push('}})(' + incrementalDomNode + ');');
                         context.asyncFuncSequence -= 1;
                     }
 
-                    if(condition.afterPatchContent){
-                        result.push('(function (event){ return '+condition.afterPatchContent+' })('+incrementalDomNode+');');
+                    if (condition.afterPatchContent) {
+                        result.push('(function (event){ return ' + condition.afterPatchContent + ' })(' + incrementalDomNode + ');');
                     }
 
                     result.push('elementClose("' + node.nodeName + '");');
-                    if(condition.afterPatchElement){
-                        result.push('(function (event){ return '+condition.afterPatchElement+' })('+incrementalDomNode+');');
+                    if (condition.afterPatchElement) {
+                        result.push('(function (event){ return ' + condition.afterPatchElement + ' })(' + incrementalDomNode + ');');
                     }
                 }
 
@@ -387,10 +411,10 @@ var walk = function (dir) {
 
 function buildYallaJs() {
     var result = [];
-    result.push(fs.readFileSync(__dirname+'/'+PROMISE_JS, "utf-8"));
-    result.push(fs.readFileSync(__dirname+'/'+IDOM_JS, "utf-8"));
-    result.push(fs.readFileSync(__dirname+'/'+REDUX_JS, "utf-8"));
-    result.push(fs.readFileSync(__dirname+'/'+CORE_JS, "utf-8"));
+    result.push(fs.readFileSync(__dirname + '/' + PROMISE_JS, "utf-8"));
+    result.push(fs.readFileSync(__dirname + '/' + IDOM_JS, "utf-8"));
+    result.push(fs.readFileSync(__dirname + '/' + REDUX_JS, "utf-8"));
+    result.push(fs.readFileSync(__dirname + '/' + CORE_JS, "utf-8"));
     return result.join('\n\n');
 }
 function runServer(sourceDir, port) {
@@ -398,12 +422,12 @@ function runServer(sourceDir, port) {
     app.use(function (req, res, next) {
         var url = req.originalUrl;
         var isRequestingYallaComponent = url.indexOf(sourceDir.substring(1, sourceDir.length)) >= 0;
-        var isRequestingYallaLib = url.indexOf('yalla.js')>=0;
-        if(isRequestingYallaLib){
+        var isRequestingYallaLib = url.indexOf('yalla.js') >= 0;
+        if (isRequestingYallaLib) {
             res.writeHead(200, {"Content-Type": "application/javascript"});
             res.write(buildYallaJs());
             res.end();
-        }else if (isRequestingYallaComponent) {
+        } else if (isRequestingYallaComponent) {
             var path = url.substring(1, url.length - YALLA_SUFFIX.length);
             var pathJS = path + JS_SUFFIX;
             var pathHTML = path + HTML_SUFFIX;
@@ -434,7 +458,7 @@ function runServer(sourceDir, port) {
 
 function runCompiler(sourceDir, targetDir) {
     var files = walk(sourceDir);
-    fs.writeFile(targetDir+"/yalla.js",buildYallaJs());
+    fs.writeFile(targetDir + "/yalla.js", buildYallaJs());
     files.forEach(function (file) {
         var targetFile = file.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
         ensureDirectoryExistence(targetFile);
@@ -483,34 +507,34 @@ function runCompiler(sourceDir, targetDir) {
 }
 
 
-var argv  = require('minimist')(process.argv.slice(2));
+var argv = require('minimist')(process.argv.slice(2));
 
 var mode = argv.m;
 var port = argv.p;
 var sourceDir = argv.s;
 var targetDir = argv.d;
 
-if(!mode){
+if (!mode) {
     console.log('Missing mode "server" or "compiler" (-m server)');
     mode = 'server';
 }
-if(mode === 'server' && !port ){
+if (mode === 'server' && !port) {
     console.log('Missing port (-p 8080)');
     port = '8080';
 }
 
-if(!sourceDir){
+if (!sourceDir) {
     console.log('Missing sourceDir (-s src)');
     sourceDir = 'src';
 }
 
-if(mode === 'compiler' && !targetDir){
+if (mode === 'compiler' && !targetDir) {
     console.log('Missing distributionDir (-d dist)');
     targetDir = 'dist';
 }
 
-sourceDir = './'+sourceDir;
-targetDir = './'+targetDir;
+sourceDir = './' + sourceDir;
+targetDir = './' + targetDir;
 
 if (mode == 'server') {
     runServer(sourceDir, parseInt(port));
