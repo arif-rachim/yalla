@@ -76,7 +76,7 @@ function textToExpression(text) {
 
 function textToExpressionValue(match,encodeDoubleQuote) {
     if (match.indexOf('{{') == 0) {
-        var variable = match.substring(2, match.length - 2).replace(/\$/g, 'data.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
+        var variable = match.substring(2, match.length - 2).replace(/\$/g, '_data.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
         var isFunction = variable.indexOf('function') == 0;
         var isBinding = variable.indexOf('bind:') == 0;
         if (isBinding) {
@@ -107,7 +107,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     }
                     return name;
                 }, 'default');
-                result.push('slotView("' + slotName + '");');
+                result.push('_slotView("' + slotName + '");');
                 break;
             }
             case 'skip-to-end' : {
@@ -137,8 +137,8 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     if: false,
                     slotName: false,
                     cleanAttributes: [],
-                    asyncTrigger : false,
-                    asyncResult : false,
+                    dataLoad : false,
+                    dataName : 'data',
                     beforePatchElement : false,
                     afterPatchElement : false,
                     beforePatchAttribute: false,
@@ -153,8 +153,8 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
 
                 var condition = attributesArray.reduce(function (condition, attribute) {
                     if (['for.each', 'if.bind', 'slot.name',
-                            'async.trigger',
-                            'async.result',
+                            'data.load',
+                            'data.name',
                             'before.patch-element',
                             'after.patch-element',
                             'before.patch-attribute',
@@ -173,11 +173,11 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         if (attribute.name == 'if.bind') {
                             condition.if = textToExpressionValue('{{bind:'+attribute.value+'}}');
                         }
-                        if (attribute.name == 'async.trigger') {
-                            condition.asyncTrigger = textToExpressionValue('{{bind:'+attribute.value+'}}');
+                        if (attribute.name == 'data.load') {
+                            condition.dataLoad = textToExpressionValue('{{bind:'+attribute.value+'}}');
                         }
-                        if (attribute.name == 'async.result') {
-                            condition.asyncResult = attribute.value;
+                        if (attribute.name == 'data.name') {
+                            condition.dataName = attribute.value;
                         }
                         //before patch element start
                         if (attribute.name == 'before.patch-element') {
@@ -217,12 +217,6 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     result.push('' + condition.foreachArray + '.forEach(function(' + condition.foreachItem + '){');
                 }
 
-                if(condition.asyncResult){
-                    context.asyncFuncSequence = context.asyncFuncSequence || 0;
-                    context.asyncFuncSequence += 1;
-                    result.push('function async_'+context.asyncFuncSequence+'('+condition.asyncResult+'){');
-                }
-
                 if (nodeIsComponent) {
                     result.push('context["' + node.nodeName + '"].render(' + textToExpression(escapeBracket(JSON.stringify(convertAttributes(condition.cleanAttributes)))) + ',function(slotName){');
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
@@ -250,31 +244,38 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     if(condition.beforePatchContent){
                         result.push('(function (event){ return '+condition.beforePatchContent+' })('+incrementalDomNode+');');
                     }
+
+                    if(condition.dataLoad){
+                        context.asyncFuncSequence = context.asyncFuncSequence || 0;
+                        context.asyncFuncSequence += 1;
+                        result.push('(function(domNode) { var node = domNode.element;');
+                        result.push('function asyncFunc__'+context.asyncFuncSequence+'('+condition.dataName+'){');
+                    }
+
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
+
+
+                    if (condition.dataLoad) {
+                        result.push('}');
+                        result.push('var promise = '+condition.dataLoad+';');
+                        result.push('if(promise && typeof promise == "object" && "then" in promise){');
+                        result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
+                        result.push('asyncFunc__'+context.asyncFuncSequence+'.call(node,_result)');
+                        result.push('}); }); }else { ');
+                        result.push('asyncFunc__'+context.asyncFuncSequence+'.call(node,promise)');
+                        result.push('}})('+incrementalDomNode+');');
+                    }
+
                     if(condition.afterPatchContent){
                         result.push('(function (event){ return '+condition.afterPatchContent+' })('+incrementalDomNode+');');
                     }
-                    if (condition.asyncTrigger) {
-                        context.asyncFuncSequence = context.asyncFuncSequence || 0;
-                        var asyncFunctionName = 'async_'+context.asyncFuncSequence;
-                        result.push('(function(domNode) { var node = domNode.element;');
-                        result.push('var promise = '+condition.asyncTrigger+';');
-                        result.push('if(promise && "then" in promise){');
-                        var then = 'promise.then(function(result){ $patchChanges(node,function(){ '+asyncFunctionName+'.call(node,result) }); }); ';
-                        result.push(then);
-                        result.push('}else{yalla.log.error(new Error("Expecting Promise from '+condition.asyncTrigger+'").stack);}');
-                        result.push('})('+incrementalDomNode+');');
-                    }
+
                     result.push('elementClose("' + node.nodeName + '");');
                     if(condition.afterPatchElement){
                         result.push('(function (event){ return '+condition.afterPatchElement+' })('+incrementalDomNode+');');
                     }
-                }
-
-                if(condition.asyncResult){
-                    result.push('}');
                 }
 
                 if (condition.foreach) {
@@ -326,7 +327,7 @@ function convertHtmlToJavascript(file, originalUrl) {
             'elementOpenStart = IncrementalDOM.elementOpenStart, elementOpenEnd = IncrementalDOM.elementOpenEnd, ' +
             'elementVoid = IncrementalDOM.elementVoid, text = IncrementalDOM.text, attr = IncrementalDOM.attr, skip = IncrementalDOM.skip;');
         var functionContent = [];
-        functionContent.push('function $render(data,slotView){');
+        functionContent.push('function $render(_data,_slotView){');
         var context = {};
         var scriptTagContent = [];
         lengthableObjectToArray(doc.childNodes).forEach(function (node) {
