@@ -226,8 +226,8 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 }
 
                 if (condition.foreach) {
-                    result.push('' + condition.foreachArray + ' = ' + condition.foreachArray + ' || [];');
-                    result.push('' + condition.foreachArray + '.forEach(function(' + condition.foreachItem + '){');
+                    result.push(' var _array = ' + condition.foreachArray + ' || [];');
+                    result.push(' _array.forEach(function(' + condition.foreachItem + '){');
                 }
 
                 if (nodeIsComponent) {
