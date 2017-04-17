@@ -269,7 +269,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     }
 
                     if (condition.refName) {
-                        result.push('$context["_' + condition.refName + '"] = function(event){ return { node : event.element, render : function() {');
+                        result.push('var _ref = function(event){ return { node : event.element, render : function() {');
                     }
 
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
@@ -278,7 +278,8 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
 
                     if (condition.refName) {
                         result.push('} } }(' + incrementalDomNode + ');');
-                        result.push('$context["_' + condition.refName + '"].render();')
+                        result.push('$storeRef("'+condition.refName+'",_ref);');
+                        result.push('_ref.render();')
                     }
 
                     if (condition.dataLoad) {
@@ -378,9 +379,10 @@ var encapsulateScript = function (text, path) {
     result.push('yalla.framework.addComponent("' + componentPath + '",(function (){');
     result.push('var $path = "' + componentPath + '";');
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
+    result.push('var $storeRef = yalla.framework.storeRef;');
     result.push('var $export = {};');
     result.push('var $context = {};');
-    result.push('var $patchRef = function(refName){ $patchChanges($context["_"+refName].node,function(){ $context["_"+refName].render(); }) };');
+    result.push('var $patchRef = yalla.framework.patchRef;');
     result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
     result.push(text);
     result.push('if(typeof $render === "function"){$export.render = $render;}');
