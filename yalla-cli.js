@@ -286,6 +286,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('}');
                         result.push('var promise = ' + condition.dataLoad + ';');
                         result.push('if(promise && typeof promise == "object" && "then" in promise){');
+                        result.push('skip();');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
                         result.push('asyncFunc__' + context.asyncFuncSequence + '.call(node,_result)');
                         result.push('}); }); }else { ');
