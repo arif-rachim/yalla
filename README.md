@@ -25,7 +25,9 @@ This is the pseudo code of your reusable component look like:
 ```
 
 Following the implementation of above component in different frameworks  :
+
 #1. Angular
+
 ```html
 import {Component, View} from "angular2/core";
 @Component({
@@ -54,6 +56,7 @@ export class NameCardClass {
 *23 lines*
 
 #2. Polymer
+
 ```html
 <dom-module id="name-card">
   <template>
@@ -79,6 +82,7 @@ export class NameCardClass {
 *20 lines*
 
 #3. Vue
+
 ```html
 Vue.component('name-card', {
   template : '<div>
@@ -98,6 +102,7 @@ Vue.component('name-card', {
 
 
 #4. React
+
 ```jsx
 function NameCard(props) {
     render() {
@@ -115,6 +120,7 @@ Note : ini adalah Stateless functional Component react yg baru saja dirilis seja
 
 
 #5. Yalla
+
 ```html
 <div>
     <label click.trigger="$onNameClick(event)">
@@ -131,8 +137,6 @@ YallaJS is in the library not in your code.
  
  We strongly encourage you to follow the tutorial on how to create a contact manager application with yallajs to get a clear picture of YallaJS.
  
-
-
 ### Installation And Setup
 
 To install yallajs you can type the following in the command line
