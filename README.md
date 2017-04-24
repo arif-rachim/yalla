@@ -26,7 +26,7 @@ This is the pseudo code of your reusable component look like:
 
 Following the implementation of above component in different frameworks  :
 
-#1. Angular
+# 1. Angular
 
 ```html
 import {Component, View} from "angular2/core";
@@ -55,7 +55,7 @@ export class NameCardClass {
 ```
 *23 lines*
 
-#2. Polymer
+# 2. Polymer
 
 ```html
 <dom-module id="name-card">
@@ -81,7 +81,7 @@ export class NameCardClass {
 ```
 *20 lines*
 
-#3. Vue
+# 3. Vue
 
 ```html
 Vue.component('name-card', {
@@ -101,7 +101,7 @@ Vue.component('name-card', {
 13 lines
 
 
-#4. React
+# 4. React
 
 ```jsx
 function NameCard(props) {
@@ -119,7 +119,7 @@ function NameCard(props) {
 Note : ini adalah Stateless functional Component react yg baru saja dirilis sejak versi 0.14.0
 
 
-#5. Yalla
+# 5. Yalla
 
 ```html
 <div>
