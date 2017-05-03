@@ -417,9 +417,9 @@ The browser will render the output as follows :
 ```
 ## Component Dependency Injection
 
-YallaJS components can be combined with other components (sub-components) to form more complex components or so-called composite components.
+YallaJS components can be combined with other components (sub-components) to form more complex components or so-called ***composite-component***.
 
-YallaJS composite composite uses the ```<inject>``` tag to inject sub-component.
+YallaJS ***composite-component*** uses the ```<inject>``` tag to inject *sub-component*.
 
 YallaJS ```<inject>``` tag requires 2 mandatory properties,```from``` and ```name``` . ```from``` property contains the 
 path (location) of sub-component. The ```name``` property contains the sub-component tag, to be used in the composite component.
@@ -432,7 +432,7 @@ Example :
      +-- name-card.html 
      +-- john-doe.html 
 ```
-Inside name-card.html
+Inside ***composite-component*** : name-card.html 
 
 ```html
 <inject from="/john-doe" name="johndoe">
@@ -441,12 +441,12 @@ Inside name-card.html
 </div>
 ```
 
-Inside john-doe.html
+Inside ***sub-component*** : john-doe.html
 ```html
 <p>My name is John Doe</p>
 ```
 
-We can call the name-card from the browser in the following way
+We can call the ***composit-component*** name-card from the browser in the following way
 
 ```html
 http://localhost:8080/index.html#name-card
@@ -459,7 +459,49 @@ Browser will render :
 </div>
 ```
 
+### Passing properties to sub-component.
+
+YallaJS ***composit-component*** can also assign property value to the sub-components.
+
+Following is an example:
+ 
+ ```html
+  .
+  +-- index.html
+  +-- /src
+      +-- name-card.html 
+      +-- first-last-name.html 
+ ```
+
+Inside ***composite-component*** : name-card.html 
+
+```html
+<inject from="/first-last-name" name="firstlast-name">
+<div>
+    Hello : <firstlast-name firstName="Jane" lastName="Roe"></firstlast-name>
+</div>
+```
+
+Inside ***sub-component*** : first-last-name.html
+```html
+<p>My name is {{$firstName}} {{$lastName}}</p>
+```
+
+We can call the ***composit-component*** name-card from the browser in the following way
+
+```html
+http://localhost:8080/index.html#name-card
+```
+
+Browser will render :
+```html
+<div>
+    Hello : <p>My name is Jane Roe</p>
+</div>
+```
+
 ## Content Projection
+
 ## Named Content Projection
 ## Listening on Component Event
 ## Publishing Component Event
