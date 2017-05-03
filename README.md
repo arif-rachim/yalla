@@ -116,7 +116,7 @@ function NameCard(props) {
 }
 ```
 *10 lines*
-Note : ini adalah Stateless functional Component react yg baru saja dirilis sejak versi 0.14.0
+This is Stateless functional Component react which has just been released since version 0.14.0
 
 
 # 5. Yalla
@@ -148,17 +148,129 @@ npm install -g yallajs
 After successful installation, you can call the compiler by typing ```yalla```
 From the command line.
  
-### Expression with Double Curly Braces
-### Routing component in Address Bar
-### SubRouting component in Address Bar
-### Accessing Parameter with $
-### Component Dependency Injection
-### Content Projection
-### Named Content Projection
-### Listening on Component Event
-### Publishing Component Event
-### Binding attribute with value
-### Iterate array with Foreach
-### Repaint changes
-### Conditional Rendering with if.bind
-### Asynchrounous Data Load
+## YallaJS Expression
+
+YallaJS expressions can be written inside double braces : ```{{expression}}```.
+
+YallaJS expressions can also be written inside  ```attribute.bind="expression"```.
+
+YallaJS will resolve the expression, and return the result exactly where the expression is written.
+
+**YallaJS expresions** are much like **JavaScript expressions**: They can contain literals, operators and variables.
+ 
+ Example :
+ 
+```html
+<div>
+    <p>My first expression : {{ 5 + 5 }}</p>
+</div>
+```
+
+This will print : *My first expression : 10* 
+
+### YallaJS Numbers 
+YallaJS numbers are like JavaScript numbers
+```html
+<div>
+    <p>Total in dollar : {{ quantity * cost }}</p>
+</div>
+<script>
+    var quantity = 1;
+    var cost = 5;
+</script>
+```
+
+This will print : *Total in dollar : 5*
+
+***Same example using ```attribute.bind```***
+```html
+<input type="text" value.bind="quantity * cost">
+<script>
+    var quantity = 1;
+    var cost = 5;
+</script>    
+```
+This will render : <input type="text" value="5">
+
+### YallaJS Strings
+YallaJS strings are like JavaScript strings :
+```
+<div> The name is {{ firstName + ' ' + lastName }}
+<script>
+    var firstName = "John";
+    var lastName = "Doe";
+</script>
+```
+This will render : *The name is John Doe*
+
+***Same example using ```attribute.bind```***
+
+```html
+<input type="text" value.bind="firstName+' '+lastName">
+<script>
+    var firstName = "John";
+    var lastName = "Doe";
+</script>
+```
+This will render : <input type="text" value="John Doe">
+
+### YallaJS Objects
+YallaJS objects are like JavaScript Objects :
+```
+<div>The name is {{ person.lastName }} </div>
+<script>
+    var person = {firstName : 'John',lastName : 'Doe'}
+</scrip>
+```
+This will render : *The name is Doe*
+
+***Same example using ```attribute.bind```***
+
+```html
+<input type="text" value.bind="person.lastName">
+<script>
+    var person = {firstName : 'John',lastName : 'Doe'}
+</script>
+```
+
+This will render
+<input type="text" value="Doe">
+### YallaJS Arrays
+YallaJS arrays are like JavaScript arrays :
+```
+<div>The third result is {{ points[2] }}</div>
+<script>
+    var points = [1,15,19,2,40]
+</script>
+```
+This will render : *The third result is 19*
+
+***Same example using ```attribute.bind```***
+```
+<input type="text" value.bind="points[2]">
+<script>
+    var points = [1,15,19,2,40]
+</script>
+```
+This will render : <input type="text" value="19">
+
+### YallaJS Expressions vs. JavaScript Expressions
+Like JavaScript expressions, YallaJS expressions can contain literals, operators, and variables.
+
+Unlike JavaScript expressions, YallaJS expressions can be written inside HTML.
+
+YallaJS expressions do not support conditionals, loops, and exceptions, while JavaScript expressions do.
+
+## Routing component in Address Bar
+## SubRouting component in Address Bar
+## Accessing Parameter with $
+## Component Dependency Injection
+## Content Projection
+## Named Content Projection
+## Listening on Component Event
+## Publishing Component Event
+## Binding attribute with value
+## Iterate array with Foreach
+## Repaint changes
+## Conditional Rendering with if.bind
+## Asynchrounous Data Load
