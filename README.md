@@ -261,8 +261,56 @@ Unlike JavaScript expressions, YallaJS expressions can be written inside HTML.
 
 YallaJS expressions do not support conditionals, loops, and exceptions, while JavaScript expressions do.
 
-## Routing component in Address Bar
-## SubRouting component in Address Bar
+## Calling a component from browser's address bar
+
+YallaJS components can be accessed through the browser address bar using ```#```.
+
+YallaJS components that are in the folder can be accessed using dot ```.```
+
+Example :
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+```
+To display the name-card in the browser we can call in the following way
+```textmate
+http://localhost:8080/index.html#name-card
+```
+
+Examples : call components that are inside a folder using ```.```
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- /comp
+        +-- rooster-grid.html
+```
+To display the rooster-grid in the browser we can call by typing 
+```
+http://localhost:8080/index.html#comp.rooster-grid
+```
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- /comp
+         +-- /comp-name
+             +-- another-comp.html
+ 
+```
+To display the rooster-grid in the browser we can call by typing 
+```textmate
+http://localhost:8080/index.html#comp.comp-name.rooster-grid
+```
+
+## Chaining components from the browser's address bar
+
+
+
 ## Accessing Parameter with $
 ## Component Dependency Injection
 ## Content Projection
