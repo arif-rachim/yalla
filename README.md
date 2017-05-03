@@ -502,6 +502,56 @@ Browser will render :
 
 ## Content Projection
 
+YallaJS content projection is the mechanism of including the content of sub-component from composite-component by reference.
+
+YallaJS uses ```<slot-view>``` to include the content of sub-component.
+
+The following is an example of using content projection in YallaJS :
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+     +-- john-doe.html 
+```
+Inside ***composite-component*** : name-card.html 
+
+```html
+<inject from="/john-doe" name="johndoe">
+<div>
+    Hello : 
+    <johndoe>
+        <div>My name is Jane Roe</div>
+    </johndoe>
+</div>
+```
+
+Inside ***sub-component*** : john-doe.html
+```html
+<div>
+    <p>My name is John Doe</p>
+    <slot-view></slot-view>
+</div>
+```
+
+We can call the ***composit-component*** name-card from the browser in the following way
+
+```html
+http://localhost:8080/index.html#name-card
+```
+
+Browser will render :
+```html
+<div>
+    Hello :
+     <div>
+        <p>My name is John Doe</p>
+        <div>My name is Jane Roe</div>
+    </div>
+</div>
+```
+
 ## Named Content Projection
 ## Listening on Component Event
 ## Publishing Component Event
