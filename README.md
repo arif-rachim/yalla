@@ -194,7 +194,7 @@ This will render : <input type="text" value="5">
 
 ### YallaJS Strings
 YallaJS strings are like JavaScript strings :
-```
+```html
 <div> The name is {{ firstName + ' ' + lastName }} </div>
 <script>
     var firstName = "John";
@@ -216,7 +216,7 @@ This will render : <input type="text" value="John Doe">
 
 ### YallaJS Objects
 YallaJS objects are like JavaScript Objects :
-```
+```html
 <div>The name is {{ person.lastName }} </div>
 <script>
     var person = {firstName : 'John',lastName : 'Doe'}
@@ -237,7 +237,7 @@ This will render
 <input type="text" value="Doe">
 ### YallaJS Arrays
 YallaJS arrays are like JavaScript arrays :
-```
+```html
 <div>The third result is {{ points[2] }}</div>
 <script>
     var points = [1,15,19,2,40]
@@ -246,7 +246,7 @@ YallaJS arrays are like JavaScript arrays :
 This will render : *The third result is 19*
 
 ***Same example using ```attribute.bind```***
-```
+```html
 <input type="text" value.bind="points[2]">
 <script>
     var points = [1,15,19,2,40]
@@ -416,6 +416,49 @@ The browser will render the output as follows :
 </div>
 ```
 ## Component Dependency Injection
+
+YallaJS components can be combined with other components (sub-components) to form more complex components or so-called composite components.
+
+YallaJS composite composite uses the ```<inject>``` tag to inject sub-component.
+
+YallaJS ```<inject>``` tag requires 2 mandatory properties,```from``` and ```name``` . ```from``` property contains the 
+path (location) of sub-component. The ```name``` property contains the sub-component tag, to be used in the composite component.
+
+Example :
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+     +-- john-doe.html 
+```
+Inside name-card.html
+
+```html
+<inject from="/john-doe" name="johndoe">
+<div>
+    Hello : <johndoe></johndoe>
+</div>
+```
+
+Inside john-doe.html
+```html
+<p>My name is John Doe</p>
+```
+
+We can call the name-card from the browser in the following way
+
+```html
+http://localhost:8080/index.html#name-card
+```
+
+Browser will render :
+```html
+<div>
+    Hello : <p>My name is John Doe</p>
+</div>
+```
+
 ## Content Projection
 ## Named Content Projection
 ## Listening on Component Event
