@@ -552,7 +552,71 @@ Browser will render :
 </div>
 ```
 
-## Named Content Projection
+### Named Content Projection
+YallaJS content-projection can be named so that sub-component can place content in desired location.
+
+YallaJS content-projection in ***composite-component*** can be marked by using ```slot.name``` attribute.
+
+YallaJS content-projection in ***sub-component*** can be marked by using ```<slot-view name="slotName">```
+
+Berikut ini adalah contohnya :
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+     +-- john-doe.html 
+```
+Inside ***composite-component*** : name-card.html 
+
+```html
+<inject from="/john-doe" name="johndoe">
+<div>
+    Hello : 
+    <johndoe>
+        <div slot.name="title">Jane Roe</div>
+        <div slot.name="address">Dubai Marina</div>
+    </johndoe>
+</div>
+```
+
+Inside ***sub-component*** : john-doe.html
+```html
+<div>
+    <p>My name is John Doe</p>
+    <div class="title-css">
+        <slot-view name="title"></slot-view>
+    </div>
+    <div class="address-css">
+        <slot-view name="address"></slot-view>
+    </div>
+</div>
+```
+
+We can call the ***composit-component*** name-card from the browser in the following way
+
+```html
+http://localhost:8080/index.html#name-card
+```
+
+Browser will render :
+```html
+<div>
+    Hello :
+     <div>
+        <p>My name is John Doe</p>
+        <div class="title-css">
+            <div>Jane Roe</div>
+        </div>
+        <div class="address-css">
+            <div>Dubai Marina</div>
+        </div>
+    </div>
+</div>
+```
+
+
 ## Listening on Component Event
 ## Publishing Component Event
 ## Binding attribute with value
