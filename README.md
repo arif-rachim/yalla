@@ -386,7 +386,35 @@ Then the browser will render :
 </div>
 ```
 
-## Accessing Parameter with $
+## Accessing component properties using prefix $
+
+YallaJS component can accept properties from ***browser's address bar***, or from ***parent komponent***.
+
+YallaJS component uses ```$propsName``` to access the value of the property.
+
+YallaJS uses the ```:``` to separate properties.
+
+
+Example :
+/src/name-card.html
+```html
+<div>
+    My name is : {{ $firstName +' '+ $lastName }}
+</div>
+```
+
+We can call name-card with firstName and lastName properties in the following way from browser's address bar :
+
+```html
+http://localhost:8080/index.html#name-card:firstName=John:lastName=Doe
+```
+
+The browser will render the output as follows :
+```html
+<div>
+    My name is : John Doe
+</div>
+```
 ## Component Dependency Injection
 ## Content Projection
 ## Named Content Projection
