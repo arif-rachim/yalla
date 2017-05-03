@@ -195,7 +195,7 @@ This will render : <input type="text" value="5">
 ### YallaJS Strings
 YallaJS strings are like JavaScript strings :
 ```
-<div> The name is {{ firstName + ' ' + lastName }}
+<div> The name is {{ firstName + ' ' + lastName }} </div>
 <script>
     var firstName = "John";
     var lastName = "Doe";
@@ -307,9 +307,84 @@ To display the rooster-grid in the browser we can call by typing
 http://localhost:8080/index.html#comp.comp-name.rooster-grid
 ```
 
-## Chaining components from the browser's address bar
+## Chaining sub-components from the browser's address bar
+YallaJS can chain sub-components that are called through the browser's address bar by using a separator ```/```
+
+YallaJS component uses ```<slot-view>``` to display sub-components that are called through the browser address bar.
 
 
+Example :
+
+src/hello.html :
+```html
+<div>
+    <p>Hello :</p>
+    <slot-view></slot-view>
+</div>
+```
+
+src/john-doe.html :
+```html
+<p>John Doe</p>
+```
+
+*The folder structure is as follows :*
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- hello.html
+     +-- john-doe.html
+ 
+```
+
+We can chain the ```hello``` component and ```john-doe``` component via the browser address bar in the following way :
+
+```html
+http://localhost:8080/index.html#hello/john-doe
+```
+
+Then the browser will render as follows :
+```html
+<div>
+    <p>Hello :</p>
+    <p>John Doe</p>
+</div>
+```
+
+### Example if we want to chain components that are in sub-folders
+
+
+/src/comp/myname-is.html
+```html
+<p>My Name is : </p>
+<slot-view></slot-view>
+```
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- hello.html
+     +-- john-doe.html
+     +-- /comp
+         +-- myname-is.html
+ 
+```
+
+We can chain the ```hello``` component, the ```comp.myname-is``` component and the ```john-doe``` component in the following way :
+
+```html
+http://localhost:8080/index.html#hello/comp.myname-is/john-doe
+```
+Then the browser will render :
+```html
+<div>
+    <p>Hello :</p>
+    <p>My Name is :</p>
+    <p>John Doe</p>
+</div>
+```
 
 ## Accessing Parameter with $
 ## Component Dependency Injection
