@@ -618,7 +618,40 @@ Browser will render :
 
 
 ## Listening on Component Event
+
+YallaJS component can listen to event from dom by using ```eventname.trigger```.
+
+YallaJS ```eventname.trigger``` is basically a wrapper against dom event listener ```oneventname```
+
+Here is an example of usage ```eventname.trigger``` :
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+```
+Inside name-card.html 
+
+```html
+<div>
+    <input type="text" change.trigger="textChange(this)">
+    <button click.trigger="helloWorld(event)">Hello World</button>
+</div>
+<script>
+    function helloWorld(event){
+        alert('Hello World');
+    }
+    
+    function textChange(textInput){
+        alert(textInput.value);
+    }
+</script>
+```
+
 ## Publishing Component Event
+
+
 ## Binding attribute with value
 ## Iterate array with Foreach
 ## Repaint changes
