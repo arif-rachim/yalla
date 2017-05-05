@@ -388,7 +388,7 @@ Then the browser will render :
 
 ## Accessing component properties using prefix $
 
-YallaJS component can accept properties from ***browser's address bar***, or from ***parent komponent***.
+YallaJS component can accept properties from ***browser's address bar***, or from ***parent component***.
 
 YallaJS component uses ```$propsName``` to access the value of the property.
 
@@ -559,7 +559,7 @@ YallaJS content-projection in ***composite-component*** can be marked by using `
 
 YallaJS content-projection in ***sub-component*** can be marked by using ```<slot-view name="slotName">```
 
-Berikut ini adalah contohnya :
+Following is an example of *named* ***content-projection*** usage :
 
 ```html
  .
