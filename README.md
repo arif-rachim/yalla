@@ -792,4 +792,44 @@ Inside name-card.html
 </script>
 ```
 
-## Asynchrounous Data Load
+## Asynchronous Data Load
+ 
+Yalla JS has asynchronous data load feature that is useful for building progressive webapps.
+ 
+YallaJS asynchronous data load receives a function that returns the promise, and then renders the dom based on the result
+of the promise.
+ 
+YallaJS uses the ```data.load``` attribute to render the function that returns the promise.
+ 
+Following is an example of asynchronous data load usage.
+
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+```
+Inside name-card.html 
+
+```html
+<div>
+    <div data.load="loadUserFromDb()">
+        {{ data.user.name }}
+    </div>
+</div>
+<script>
+    function loadUserFromDb(){
+        return new Promise(function(resolve){
+            // we can fetch network service
+            var data = {
+                user:{
+                   name : 'John Doe'
+               }
+           };
+            
+            resolve(data);
+        });
+    }
+</script>
+```
