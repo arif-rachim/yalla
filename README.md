@@ -623,7 +623,7 @@ YallaJS component can listen to event from dom by using ```eventname.trigger```.
 
 YallaJS ```eventname.trigger``` is basically a wrapper against dom event listener ```oneventname```
 
-Here is an example of usage ```eventname.trigger``` :
+Following is an example of usage ```eventname.trigger``` :
 
 ```html
  .
@@ -651,9 +651,145 @@ Inside name-card.html
 
 ## Publishing Component Event
 
+YallaJS ***sub-component*** can publish events using ```$oneventname``` property. 
 
-## Binding attribute with value
+YallaJS ***composite-component*** can listen to an event using ```eventname.trigger```
+
+Following is an example of publishing event :
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+     +-- john-doe.html 
+```
+
+
+Inside ***sub-component*** : john-doe.html
+```html
+<div>
+    <p>My name is John Doe</p>
+    <button click.trigger="jonDoeClicked($onMyEvent)">JOHN DOE CLICKED</button>
+</div>
+<script>
+    function jonDoeClicked(onMyEvent){
+        onMyEvent('John Doe Clicked');
+    }
+</script>
+```
+
+Inside ***composite-component*** : name-card.html 
+
+```html
+<inject from="/john-doe" name="johndoe">
+<div>
+    Hello : 
+    <johndoe MyEvent.trigger="onCustomEventListener(event)"> </johndoe>
+</div>
+<script>
+    function onCustomEventListener(event){
+        alert(event);
+    }
+</script>
+```
+
 ## Iterate array with Foreach
-## Repaint changes
+
+YallaJS component can render the array by using ```for.each``` attribute.
+
+Following is an example of ```for.each``` usage :
+
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+```
+Inside name-card.html 
+
+```html
+<div>
+    <ul>
+        <li for.each="person in people">
+            {{ person.name }}
+        </li>
+    </ul>
+</div>
+<script>
+    var people = [{name:'John Doe'},
+                  {name:'Jane Doe'},
+                  {name:'John Roe'},
+                  {name:'Jane Roe'}]
+</script>
+```
+
+
 ## Conditional Rendering with if.bind
+
+YallaJS component can use the ```if.bind``` attribute to determine whether the dom will be rendered or not.
+
+YallaJS ```if.bind``` accept a boolean value
+
+Following is an example of ```if.bind``` usage :
+
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+```
+Inside name-card.html 
+
+```html
+<div>
+    <button click.trigger="toggleShow()">Toggle</button>
+    <div if.bind="showDom">Show if showDom == true</div>
+</div>
+<script>
+    var showDom = false;
+    
+    function toggleShow() {
+        showDom = !showDom;
+        $patchChanges();
+    }
+</script>
+```
+
+## Repaint changes
+
+YallaJS uses google incremental dom as library to create dom tree and update it.
+
+YallaJS use commands ```$patchChanges``` to update the dom tree by incremental dom.
+
+Following is an example of ```$patchChanges``` usage:
+
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+```
+Inside name-card.html 
+
+```html
+<div>
+    {{ currentTime }}
+    <button click.trigger="startTimer()">Start</button>
+</div>
+<script>
+    var currentTime = new Date();
+    
+    function startTimer(){
+        setInterval(function(){
+            currentTime = new Date();
+            $patchChanges();
+        },1000);
+    }
+</script>
+```
+
 ## Asynchrounous Data Load
