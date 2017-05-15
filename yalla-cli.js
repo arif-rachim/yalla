@@ -470,6 +470,12 @@ function runServer(sourceDir, port) {
 }
 
 function runCompiler(sourceDir, targetDir) {
+    if(!fs.existsSync(sourceDir)){
+        fs.mkdirSync(sourceDir);
+    }
+    if(!fs.existsSync(targetDir)){
+        fs.mkdirSync(targetDir);
+    }
     var files = walk(sourceDir);
     fs.writeFile(targetDir + "/yalla.js", buildYallaJs());
     files.forEach(function (file) {
