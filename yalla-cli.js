@@ -325,7 +325,13 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
         if (!node.nodeValue.isEmpty()) {
             var isStyle = node.parentNode.nodeName == 'style';
             var isScript = node.parentNode.nodeName == 'script';
-            var cleanText = node.nodeValue.replace(/[\r\n]/g, "");
+            var isRawText =  lengthableObjectToArray(node.parentNode.attributes).reduce(function(rawText,attribute){
+                if(attribute.name == 'raw.text'){
+                    return true;
+                }
+                return rawText;
+            },false);
+
             if (isStyle) {
                 var elementSelector = "[element='" + elementName.trim() + "'] ";
                 var text = node.nodeValue.replace(/\r\n/g, '').replace(/  /g, '');
@@ -335,7 +341,10 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 result.push('text("' + cleanScript + '");');
             } else if (isScript) {
                 scriptTagContent.push(node.nodeValue);
-            } else {
+            } else if (isRawText){
+                result.push('text("' + node.nodeValue.replace(/\r\n/g, '\\r\\n') + '");');
+            }else {
+                var cleanText = node.nodeValue.replace(/[\r\n]/g, "");
                 var replaceExpression = textToExpression(cleanText);
                 result.push('text("' + replaceExpression + '");');
             }

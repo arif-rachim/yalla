@@ -261,6 +261,30 @@ Unlike JavaScript expressions, YallaJS expressions can be written inside HTML.
 
 YallaJS expressions do not support conditionals, loops, and exceptions, while JavaScript expressions do.
 
+## Raw Text
+YallaJS will ignore the expression when the element has an attribute ```raw.text```.
+
+Following is an example of ```raw.text``` usage.
+
+
+```html
+ .
+ +-- index.html
+ +-- /src
+     +-- name-card.html 
+```
+Inside name-card.html 
+
+```html
+<div>
+    <div raw.text="true">
+        This will be ignored {{ data.user.name }}
+    </div>
+</div>
+```
+
+When we call this component from browser browser will ignore the expression and display the content as is.
+
 ## Calling a component from browser's address bar
 
 YallaJS components can be accessed through the browser address bar using ```#```.
@@ -874,3 +898,4 @@ Inside index.html
     </script>
 </html>
 ```
+
