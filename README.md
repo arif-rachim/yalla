@@ -833,3 +833,44 @@ Inside name-card.html
     }
 </script>
 ```
+## Security
+
+YallaJS has a function callback to validate if a path can be accessible or not.
+
+YallaJS security can be implemented using yalla-routing attribute , in the script tag inside the index.html.
+
+YallaJS yalla-routing callback should return a promise for asynchronous checking.
+
+Following is an example of security implementation in YallaJS.
+
+```html
+ .
+ +-- index.html 
+```
+Inside index.html 
+
+```html
+<!doctype html>
+<html>
+    <head>
+        <script src="yalla.js" 
+            yalla-component="app"
+            yalla-base="src"
+            yalla-domtarget="body"
+            yalla-routing="validateAccess"
+    </head>
+    <body></body>
+    <script>
+        function validateAccess(requestedPath){
+            var loginPath = '#login';
+            return new Promise(function (resolve){ 
+                if(localStorage.getItem('logged.in.user')){
+                    resolve(requestedPath);
+                }else{
+                    resolve(loginPath);
+                }
+            });
+        }
+    </script>
+</html>
+```
