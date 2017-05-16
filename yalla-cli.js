@@ -117,7 +117,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 break;
             }
             case 'skip-to-end' : {
-                result.push('skip();');
+                result.push('_skip();');
                 break;
             }
             case 'inject' : {
@@ -244,19 +244,19 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     if (condition.beforePatchElement) {
                         result.push('(function (event){ return ' + condition.beforePatchElement + ' })(' + incrementalDomNode + ');');
                     }
-                    result.push('elementOpenStart("' + node.nodeName + '","");');
+                    result.push('_elementOpenStart("' + node.nodeName + '","");');
                     if (condition.beforePatchAttribute) {
                         result.push('(function (event){ return ' + condition.beforePatchAttribute + ' })(' + incrementalDomNode + ');');
                     }
                     var attributesObject = convertAttributes(condition.cleanAttributes);
                     for (var key in attributesObject) {
-                        result.push('attr("' + key + '", ' + textToExpressionValue(attributesObject[key]) + ');');
+                        result.push('_attr("' + key + '", ' + textToExpressionValue(attributesObject[key]) + ');');
                     }
 
                     if (condition.afterPatchAttribute) {
                         result.push('(function (event){ return ' + condition.afterPatchAttribute + ' })(' + incrementalDomNode + ');');
                     }
-                    result.push('elementOpenEnd("' + node.nodeName + '");');
+                    result.push('_elementOpenEnd("' + node.nodeName + '");');
                     if (condition.beforePatchContent) {
                         result.push('(function (event){ return ' + condition.beforePatchContent + ' })(' + incrementalDomNode + ');');
                     }
@@ -286,7 +286,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('}');
                         result.push('var promise = ' + condition.dataLoad + ';');
                         result.push('if(promise && typeof promise == "object" && "then" in promise){');
-                        result.push('skip();');
+                        result.push('_skip();');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
                         result.push('asyncFunc__' + context.asyncFuncSequence + '.call(node,_result)');
                         result.push('}); }); }else { ');
@@ -299,7 +299,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('(function (event){ return ' + condition.afterPatchContent + ' })(' + incrementalDomNode + ');');
                     }
 
-                    result.push('elementClose("' + node.nodeName + '");');
+                    result.push('_elementClose("' + node.nodeName + '");');
                     if (condition.afterPatchElement) {
                         result.push('(function (event){ return ' + condition.afterPatchElement + ' })(' + incrementalDomNode + ');');
                     }
@@ -338,15 +338,15 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 var cleanScript = text.match(/([^\r\n,{}]+)(,(?=[^}]*\{)|\s*\{)/g).reduce(function (script, match) {
                     return script.replace(match, '\\r\\n' + elementSelector + match);
                 }, text).replace("[element='" + elementName.trim() + "'] root", "[element='" + elementName.trim() + "']");
-                result.push('text("' + cleanScript + '");');
+                result.push('_text("' + cleanScript + '");');
             } else if (isScript) {
                 scriptTagContent.push(node.nodeValue);
             } else if (isRawText){
-                result.push('text("' + node.nodeValue.replace(/\r\n/g, '\\r\\n') + '");');
+                result.push('_text("' + node.nodeValue.replace(/\r\n/g, '\\r\\n') + '");');
             }else {
                 var cleanText = node.nodeValue.replace(/[\r\n]/g, "");
                 var replaceExpression = textToExpression(cleanText);
-                result.push('text("' + replaceExpression + '");');
+                result.push('_text("' + replaceExpression + '");');
             }
         }
     }
@@ -359,9 +359,9 @@ function convertHtmlToJavascript(file, originalUrl) {
     var result = [];
     var elementName = path.replace(/\\/g, '.').replace(/\//g, '.');
     if (file && doc) {
-        result.push('var elementOpen = IncrementalDOM.elementOpen, elementClose = IncrementalDOM.elementClose, ' +
-            'elementOpenStart = IncrementalDOM.elementOpenStart, elementOpenEnd = IncrementalDOM.elementOpenEnd, ' +
-            'elementVoid = IncrementalDOM.elementVoid, text = IncrementalDOM.text, attr = IncrementalDOM.attr, skip = IncrementalDOM.skip;');
+        result.push('var _elementOpen = IncrementalDOM.elementOpen, _elementClose = IncrementalDOM.elementClose, ' +
+            '_elementOpenStart = IncrementalDOM.elementOpenStart, _elementOpenEnd = IncrementalDOM.elementOpenEnd, ' +
+            '_elementVoid = IncrementalDOM.elementVoid, _text = IncrementalDOM.text, _attr = IncrementalDOM.attr, _skip = IncrementalDOM.skip;');
         var functionContent = [];
         functionContent.push('function $render(_data,_slotView){');
         var context = {};
