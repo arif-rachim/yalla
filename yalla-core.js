@@ -270,17 +270,19 @@ var yalla = (function () {
         }else if(window.location.search.indexOf(googleEscapedFragment) == 0){
             addressString = decodeURIComponent(window.location.search.substring(googleEscapedFragment.length,window.location.search.length));
         }
-        address = addressString.split("/").map(function(addr){
-            if(addr && addr.indexOf('!') == 0 && addr.length > 1){
-                addr = addr.substring(1,addr.length);
-            }
-            return addr;
-        }).filter(function(addr){
-            if(addr && addr.length > 0 && addr.indexOf('!') < 0){
-                return true;
-            }
-            return false;
-        });
+        if(addressString && addressString.length > 0){
+            address = addressString.split("/").map(function(addr){
+                if(addr && addr.indexOf('!') == 0 && addr.length > 1){
+                    addr = addr.substring(1,addr.length);
+                }
+                return addr;
+            }).filter(function(addr){
+                if(addr && addr.length > 0 && addr.indexOf('!') < 0){
+                    return true;
+                }
+                return false;
+            });
+        }
 
         var componentAndParams = address.map(function (pathQuery) {
             var valParams = pathQuery.split(':');
