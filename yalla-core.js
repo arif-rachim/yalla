@@ -264,7 +264,17 @@ var yalla = (function () {
     function patchGlobal() {
         var address = [framework.defaultComponent];
         if (window.location.hash != "") {
-            address = window.location.hash.substring(1, window.location.hash.length).split("/");
+            address = window.location.hash.substring(1, window.location.hash.length).split("/").map(function(addr){
+                if(addr && addr.indexOf('!') == 0 && addr.length > 1){
+                    addr = addr.substring(1,addr.length);
+                }
+                return addr;
+            }).filter(function(addr){
+                if(addr && addr.length > 0 && addr.indexOf('!') < 0){
+                    return true;
+                }
+                return false;
+            });
         }
         var componentAndParams = address.map(function (pathQuery) {
             var valParams = pathQuery.split(':');
