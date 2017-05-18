@@ -504,7 +504,7 @@ function runCompiler(sourceDir, targetDir) {
                     fs.writeFile(targetFile, compileJS(data, targetFile.substring(1, targetFile.length)));
                 }
             });
-            console.log('Path added ', event);
+            console.log('[+]', event);
         })
         .on('change', function (event) {
             event = './' + event.replace('\\', '/');
@@ -518,10 +518,15 @@ function runCompiler(sourceDir, targetDir) {
                     fs.writeFile(targetFile, compileJS(data, targetFile.substring(1, targetFile.length)));
                 }
             });
-            console.log('Path modified ', event);
+            console.log('[#]', event);
         })
         .on('unlink', function (event, path) {
-            console.log('Path removed ', event);
+            event = './' + event.replace('\\', '/');
+            var targetFile = event.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
+            fs.unlink(targetFile,function(err){
+                if(!err)
+                    console.log('[-]',event);
+            });
         });
 }
 
