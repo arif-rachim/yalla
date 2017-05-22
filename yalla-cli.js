@@ -31,7 +31,7 @@ function convertAttributes(attributes) {
 
         if (attribute.name.indexOf('.trigger') >= 0) {
             convertedName = 'on' + name.substring(0, (name.length - '.trigger'.length));
-            convertedValue = '{{function(event) %7B return ' + value + ' %7D}}';
+            convertedValue = '{{function(event) %7B ' + value + '; return false; %7D}}';
         }
         else if (attribute.name.indexOf('.bind') >= 0) {
             convertedName = name.substring(0, (name.length - '.bind'.length));
