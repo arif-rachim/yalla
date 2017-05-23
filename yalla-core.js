@@ -179,11 +179,16 @@ var yalla = (function () {
     };
 
     framework.loadScriptAndDependency = function (component) {
+        if(component.indexOf('.')>0){
+            log.error('Invalid dependency : '+component);
+            return Promise.reject();
+        }
         var componentPath = framework.composePathFromBase(component);
         if (componentPath in yalla.components) {
             return Promise.resolve(true);
         }
         var url = componentPath + framework.filePrefix;
+
         var relativePath = component.substring(0, component.lastIndexOf("/") + 1);
         return new Promise(function (resolve) {
             utils.fetch('.' + url).then(function (req) {
@@ -194,7 +199,7 @@ var yalla = (function () {
                 if (utils.nonEmptyArray(injects)) {
                     var injectsPromise = injects.map(function (inject) {
                         if (inject.charAt(0) != '/') {
-                            inject = "/" + relativePath + inject;
+                            inject = "/" + inject;
                         }
                         return framework.loadScriptAndDependency(inject);
                     });

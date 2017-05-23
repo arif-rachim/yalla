@@ -45,9 +45,11 @@ function convertAttributes(attributes) {
 
 function lengthableObjectToArray(object) {
     var result = [];
-    for (var i = 0; i < object.length; i++) {
-        var item = object[i];
-        result.push(item);
+    if(object && object.length > 0){
+        for (var i = 0; i < object.length; i++) {
+            var item = object[i];
+            result.push(item);
+        }
     }
     return result;
 }
