@@ -26,7 +26,7 @@ var yalla = (function () {
 
     function showErrorInBrowser(message){
         var errorDiv = document.createElement('div');
-        errorDiv.style = 'background:#000;color: red;padding:10px;position:fixed;bottom:0px;right:0px;left:0px';
+        errorDiv.style = 'background:#000;color: red;padding:10px;position:fixed;bottom:0px;right:0px;left:0px;z-index:10000;';
         var deleteButton = document.createElement('button');
         deleteButton.innerText = 'OK';
         deleteButton.style = 'float:right;background-color: #4CAF50; /* Green */ border: none; padding:5px; color: white; text-align: center; text-decoration: none; display: inline-block; font-size: 12px;';
