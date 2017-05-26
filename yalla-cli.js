@@ -339,9 +339,9 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
 
             if (isStyle) {
                 var elementSelector = "[element='" + elementName.trim() + "'] ";
-                var text = node.nodeValue.replace(/\r\n/g, '').replace(/  /g, '');
-                var cleanScript = text.match(/([^\r\n,{}]+)(,(?=[^}]*\{)|\s*\{)/g).reduce(function (script, match) {
-                    return script.replace(match, '\\r\\n' + elementSelector + match);
+                var text = node.nodeValue.replace(/\r\n/g, '').replace(/\n/g,'').replace(/  /g, '').replace(/"/g,'\'');
+                var cleanScript = text.match(/([^\n,{}]+)(,(?=[^}]*\{)|\s*\{)/g).reduce(function (script, match) {
+                    return script.replace(match, '\\n' + elementSelector + match);
                 }, text).replace("[element='" + elementName.trim() + "'] root", "[element='" + elementName.trim() + "']");
                 result.push('_text("' + cleanScript + '");');
             } else if (isScript) {
