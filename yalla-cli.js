@@ -25,7 +25,7 @@ String.prototype.isEmpty = function () {
 function convertAttributes(attributes) {
     return attributes.reduce(function (result, attribute) {
         var name = attribute.name;
-        var value = attribute.value;
+        var value = attribute.value.replace(/"/g,"'");
         var convertedName = name;
         var convertedValue = value;
 
