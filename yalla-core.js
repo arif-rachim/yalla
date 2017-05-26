@@ -26,7 +26,7 @@ var yalla = (function () {
 
     function showErrorInBrowser(message){
         var errorDiv = document.createElement('div');
-        errorDiv.style = 'background:#000;color: red;padding:10px;';
+        errorDiv.style = 'background:#000;color: red;padding:10px;position:fixed;bottom:0px;right:0px;left:0px';
         var deleteButton = document.createElement('button');
         deleteButton.innerText = 'OK';
         deleteButton.style = 'float:right;background-color: #4CAF50; /* Green */ border: none; padding:5px; color: white; text-align: center; text-decoration: none; display: inline-block; font-size: 12px;';
@@ -38,12 +38,7 @@ var yalla = (function () {
         messageDiv.style = 'font-size:20px';
         errorDiv.appendChild(deleteButton);
         errorDiv.appendChild(messageDiv);
-
-        if(document.body.children.length > 0){
-            document.body.insertBefore(errorDiv,document.body.children[0]);
-        }else{
-            document.body.appendChild(errorDiv);
-        }
+        document.body.appendChild(errorDiv);
     }
 
     var utils = yalla.utils;
