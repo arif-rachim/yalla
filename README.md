@@ -123,7 +123,7 @@ This is Stateless functional Component react which has just been released since 
 
 ```html
 <div>
-    <label click.trigger="$onNameClick(event)">
+    <label click.trigger="this.emitEvent('name-click')">
         {{$firstName}} {{$secondName}}
     </label>
     <slot-view></slot-view>
@@ -694,11 +694,11 @@ Inside ***sub-component*** : john-doe.html
 ```html
 <div>
     <p>My name is John Doe</p>
-    <button click.trigger="jonDoeClicked($onMyEvent)">JOHN DOE CLICKED</button>
+    <button click.trigger="onButtonClicked()">John Doe Clicked</button>
 </div>
 <script>
-    function jonDoeClicked(onMyEvent){
-        onMyEvent('John Doe Clicked');
+    function onButtonClicked(){
+        this.emitEvent('my-event',{value:'john doe is clicked'})
     }
 </script>
 ```
@@ -709,7 +709,7 @@ Inside ***composite-component*** : name-card.html
 <inject from="/john-doe" name="johndoe">
 <div>
     Hello : 
-    <johndoe MyEvent.trigger="onCustomEventListener(event)"> </johndoe>
+    <johndoe my-event.trigger="onCustomEventListener(event)"> </johndoe>
 </div>
 <script>
     function onCustomEventListener(event){

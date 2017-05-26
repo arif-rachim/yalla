@@ -31,7 +31,7 @@ function convertAttributes(attributes) {
 
         if (attribute.name.indexOf('.trigger') >= 0) {
             convertedName = 'on' + name.substring(0, (name.length - '.trigger'.length));
-            var fireEvent = "this.dispatchComponentEvent = function(eventName,data)%7B if('on'+eventName in _data) %7B data.target = this; data.type = eventName; _data['on'+eventName](data); %7D %7D;";
+            var fireEvent = "this.emitEvent = function(eventName,data)%7B data = data || %7B%7D; if(typeof data === 'string')%7B data = %7B data : data %7D; %7D; if('on'+eventName in _data) %7B data.target = this; data.type = eventName; _data['on'+eventName](data); %7D %7D;";
             var value = value.substring(0,value.indexOf('('))+'.bind(this)'+value.substring(value.indexOf('('),value.length);
             var functionContent = (attribute.name !== 'submit' ? 'return '+value+';' : value+'; return false; ');
             convertedValue = '{{function(event) %7B ' + fireEvent+' '+ functionContent + ' %7D}}';
