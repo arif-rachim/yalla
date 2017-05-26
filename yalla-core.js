@@ -21,7 +21,30 @@ var yalla = (function () {
 
     log.error = function (message) {
         console.log('%c' + message, 'font-size:1.2em;color:red;font-family=verdana');
+        showErrorInBrowser(message);
     };
+
+    function showErrorInBrowser(message){
+        var errorDiv = document.createElement('div');
+        errorDiv.style = 'background:#000;color: red;padding:10px;';
+        var deleteButton = document.createElement('button');
+        deleteButton.innerText = 'OK';
+        deleteButton.style = 'float:right;background-color: #4CAF50; /* Green */ border: none; padding:5px; color: white; text-align: center; text-decoration: none; display: inline-block; font-size: 12px;';
+        deleteButton.onclick = function(event){
+            event.target.parentNode.remove();
+        };
+        var messageDiv = document.createElement('div');
+        messageDiv.innerText = message;
+        messageDiv.style = 'font-size:20px';
+        errorDiv.appendChild(deleteButton);
+        errorDiv.appendChild(messageDiv);
+
+        if(document.body.children.length > 0){
+            document.body.insertBefore(errorDiv,document.body.children[0]);
+        }else{
+            document.body.appendChild(errorDiv);
+        }
+    }
 
     var utils = yalla.utils;
 
@@ -87,12 +110,16 @@ var yalla = (function () {
 
         return new Promise(function (resolve, reject) {
             var req = createXMLHTTPObject();
+            req.timeout = 2000;
             if (!req) return;
             var method = (postData) ? "POST" : "GET";
             req.open(method, url, true);
             if (postData) {
                 req.setRequestHeader('Content-type', 'application/json');
             }
+            req.ontimeout = function (e) {
+                reject(req);
+            };
             req.onreadystatechange = function () {
                 if (req.readyState != 4) return;
                 if (req.status != 200 && req.status != 304) {
@@ -347,13 +374,33 @@ var yalla = (function () {
 
 
     var attributes = IncrementalDOM.attributes;
-    attributes['checked'] = function (element, name, value) {
-        if (value) {
-            element.setAttribute('checked', true);
-        } else {
-            element.removeAttribute('checked');
-        }
-    };
+    // html5 boolean attributes
+    /*
+     checked             (input type=checkbox/radio)
+     selected            (option)
+     disabled            (input, textarea, button, select, option, optgroup)
+     readonly            (input type=text/password, textarea)
+     multiple            (select)
+     ismap     isMap     (img, input type=image)
+
+     defer               (script)
+     declare             (object; never used)
+     noresize  noResize  (frame)
+     nowrap    noWrap    (td, th; deprecated)
+     noshade   noShade   (hr; deprecated)
+     compact             (ul, ol, dl, menu, dir; deprecated)
+     */
+
+    ['checked','selected','disabled','readonly','required','multiple','ismap'].forEach(function(key){
+        attributes[key] = function (element, name, value) {
+            if (value) {
+                element.setAttribute(key, true);
+            } else {
+                element.removeAttribute(key);
+            }
+        };
+    });
+
 
     IncrementalDOM.notifications.nodesCreated = function (nodes) {
         nodes.forEach(function (node) {

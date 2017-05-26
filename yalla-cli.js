@@ -6,7 +6,7 @@ var path = require('path');
 var chokidar = require('chokidar');
 var beautify = require('js-beautify').js_beautify;
 var xmldom = require('xmldom');
-
+var endOfLine = require('os').EOL;
 
 var DOMParser = xmldom.DOMParser;
 
@@ -31,7 +31,10 @@ function convertAttributes(attributes) {
 
         if (attribute.name.indexOf('.trigger') >= 0) {
             convertedName = 'on' + name.substring(0, (name.length - '.trigger'.length));
-            convertedValue = '{{function(event) %7B ' + value + '; return false; %7D}}';
+            var fireEvent = "this.dispatchComponentEvent = function(eventName,data)%7B if('on'+eventName in _data) %7B data.target = this; data.type = eventName; _data['on'+eventName](data); %7D %7D;";
+            var value = value.substring(0,value.indexOf('('))+'.bind(this)'+value.substring(value.indexOf('('),value.length);
+            var functionContent = (attribute.name !== 'submit' ? 'return '+value+';' : value+'; return false; ');
+            convertedValue = '{{function(event) %7B ' + fireEvent+' '+ functionContent + ' %7D}}';
         }
         else if (attribute.name.indexOf('.bind') >= 0) {
             convertedName = name.substring(0, (name.length - '.bind'.length));

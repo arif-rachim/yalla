@@ -5,16 +5,13 @@
     <meta name="viewport" content="initial-scale=1, width=device-width">
     <title>YallaJS v2.0</title>
     <script src="yalla.js" yalla-component="app" yalla-base="src" yalla-domtarget="body"></script>
-    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="//cdn.rawgit.com/milligram/milligram/master/dist/milligram.min.css">
 </head>
 <body>
 </body>
 <script>
     function routing(path){
         return new Promise(function(resolve){
-            resolve(true);
+            resolve(path);
         });
     }
 </script>
