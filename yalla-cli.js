@@ -573,32 +573,53 @@ var mode = argv.m;
 var port = argv.p;
 var sourceDir = argv.s;
 var targetDir = argv.d;
+var help = argv.h;
 
-if (!mode) {
-    console.log('Missing mode "server" or "compiler" (-m server)');
-    mode = 'server';
+if(help){
+    var helpDoc = [];
+    helpDoc.push('');
+    helpDoc.push('  Usage : yalla [options]');
+    helpDoc.push('');
+    helpDoc.push('      -m compiler                              run yalla as compiler mode (watch source dir and generate result in dist dir) or as server ');
+    helpDoc.push('      -m server                                run yalla as server mode (watch http request, pull code from source dir and return compiled code to client)');
+    helpDoc.push('      -p 8080                                  port number when yalla run as server mode');
+    helpDoc.push('      -s src                                   base directory for the source code');
+    helpDoc.push('      -d dist                                  base directory for the compiled code');
+    helpDoc.push('');
+    helpDoc.push('  Example : ');
+    helpDoc.push('');
+    helpDoc.push('      yalla -p 9090                            run yalla server in port 9090 with source directory name "src"');
+    helpDoc.push('      yalla -p 9090 -s source                  run yalla server in port 9090 with source directory name "source"');
+    helpDoc.push('      yalla -m compiler                        run yalla compiler, watch changes in "src" directory and compile result to "dist" directory');
+    helpDoc.push('      yalla -m compiler -s source -d output    run yalla compiler, watch changes in "source" directory and compile result to "output" directory');
+    helpDoc.push('');
+    console.log(helpDoc.join('\n'));
+}else{
+    if (!mode) {
+        console.log('-m default set to "server"');
+        mode = 'server';
+    }
+    if (mode === 'server' && !port) {
+        console.log('-p default set to "8080"');
+        port = '8080';
+    }
+
+    if (!sourceDir) {
+        console.log('-s default set to "src"');
+        sourceDir = 'src';
+    }
+
+    if (mode === 'compiler' && !targetDir) {
+        console.log('-d default set to "dist"');
+        targetDir = 'dist';
+    }
+
+    sourceDir = './' + sourceDir;
+    targetDir = './' + targetDir;
+
+    if (mode == 'server') {
+        runServer(sourceDir, parseInt(port));
+    } else {
+        runCompiler(sourceDir, targetDir);
+    }
 }
-if (mode === 'server' && !port) {
-    console.log('Missing port (-p 8080)');
-    port = '8080';
-}
-
-if (!sourceDir) {
-    console.log('Missing sourceDir (-s src)');
-    sourceDir = 'src';
-}
-
-if (mode === 'compiler' && !targetDir) {
-    console.log('Missing distributionDir (-d dist)');
-    targetDir = 'dist';
-}
-
-sourceDir = './' + sourceDir;
-targetDir = './' + targetDir;
-
-if (mode == 'server') {
-    runServer(sourceDir, parseInt(port));
-} else {
-    runCompiler(sourceDir, targetDir);
-}
-
