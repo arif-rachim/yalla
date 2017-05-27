@@ -381,11 +381,22 @@ function convertHtmlToJavascript(file, originalUrl) {
 }
 
 function compileHTML(file, originalUrl) {
-    return beautify(encapsulateScript(convertHtmlToJavascript(file, originalUrl), originalUrl), {indent_size: 2});
+    try{
+        return beautify(encapsulateScript(convertHtmlToJavascript(file, originalUrl), originalUrl), {indent_size: 2});
+    }catch(err){
+        console.warn(err)
+        return '';
+    }
+
 }
 
 function compileJS(file, originalUrl) {
-    return beautify(encapsulateScript(file, originalUrl), {indent_size: 2});
+    try{
+        return beautify(encapsulateScript(file, originalUrl), {indent_size: 2});
+    }catch(err){
+        console.warn(err);
+        return '';
+    }
 }
 
 var encapsulateScript = function (text, path) {
@@ -496,41 +507,57 @@ function runCompiler(sourceDir, targetDir) {
         });
     });
 
+    function compileSource(event) {
+        var validExtension = event.indexOf(HTML_SUFFIX) === (event.length - HTML_SUFFIX.length) || event.indexOf(JS_SUFFIX) === (event.length - JS_SUFFIX.length);
+        if(!validExtension){
+            return false;
+        }
+        event = './' + event.replace('\\', '/');
+        var targetFile = event.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
+        ensureDirectoryExistence(targetFile);
+        fs.readFile(event, 'utf8', function (err, data) {
+            if (!err) {
+                if (event.indexOf(".html") >= 0) {
+                    fs.writeFile(targetFile, compileHTML(data, targetFile.substring(1, targetFile.length)));
+                }
+                if (event.indexOf(".js") >= 0) {
+                    fs.writeFile(targetFile, compileJS(data, targetFile.substring(1, targetFile.length)));
+                }
+            }
+        });
+        return true;
+    }
+
     chokidar.watch(sourceDir, {persistent: true})
         .on('add', function (event) {
-            event = './' + event.replace('\\', '/');
-            var targetFile = event.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
-            ensureDirectoryExistence(targetFile);
-            fs.readFile(event, 'utf8', function (err, data) {
-                if (event.indexOf(".html") >= 0) {
-                    fs.writeFile(targetFile, compileHTML(data, targetFile.substring(1, targetFile.length)));
-                }
-                if (event.indexOf(".js") >= 0) {
-                    fs.writeFile(targetFile, compileJS(data, targetFile.substring(1, targetFile.length)));
-                }
-            });
-            console.log('[+]', event);
+            if(compileSource(event)){
+                console.log('[+]', event);
+            }
         })
         .on('change', function (event) {
-            event = './' + event.replace('\\', '/');
-            var targetFile = event.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
-            ensureDirectoryExistence(targetFile);
-            fs.readFile(event, 'utf8', function (err, data) {
-                if (event.indexOf(".html") >= 0) {
-                    fs.writeFile(targetFile, compileHTML(data, targetFile.substring(1, targetFile.length)));
-                }
-                if (event.indexOf(".js") >= 0) {
-                    fs.writeFile(targetFile, compileJS(data, targetFile.substring(1, targetFile.length)));
-                }
-            });
-            console.log('[#]', event);
+            if(compileSource(event)){
+                console.log('[#]', event);
+            }
         })
         .on('unlink', function (event, path) {
+            var validExtension = event.indexOf(HTML_SUFFIX) === (event.length - HTML_SUFFIX.length) || event.indexOf(JS_SUFFIX) === (event.length - JS_SUFFIX.length);
+            if(!validExtension){
+                return;
+            }
             event = './' + event.replace('\\', '/');
             var targetFile = event.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
             fs.unlink(targetFile,function(err){
-                if(!err)
+                if(!err){
                     console.log('[-]',event);
+                    setTimeout(function(){
+                        if(fs.existsSync(event)){
+                            if(compileSource(event)){
+                                console.log('[+]', event);
+                            }
+                        }
+                    },100);
+                }
+
             });
         });
 }
