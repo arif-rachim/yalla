@@ -31,7 +31,9 @@ function convertAttributes(attributes) {
 
         if (attribute.name.indexOf('.trigger') >= 0) {
             convertedName = 'on' + name.substring(0, (name.length - '.trigger'.length));
-            var fireEvent = "this.emitEvent = function(eventName,data)%7B data = data || %7B%7D; if(typeof data === 'string')%7B data = %7B data : data %7D; %7D; if('on'+eventName in _data) %7B data.target = this; data.type = eventName; _data['on'+eventName](data); %7D %7D;";
+
+
+            var fireEvent = "this.emitEvent = function(eventName,data)%7B var event = new ComponentEvent(eventName,data,this); if('on'+eventName in _data) %7B _data['on'+eventName](event); %7D %7D;";
             var value = value.substring(0,value.indexOf('('))+'.bind(this)'+value.substring(value.indexOf('('),value.length);
             var functionContent = (attribute.name !== 'submit' ? 'return '+value+';' : value+'; return false; ');
             convertedValue = '{{function(event) %7B ' + fireEvent+' '+ functionContent + ' %7D}}';
@@ -402,6 +404,7 @@ function compileJS(file, originalUrl) {
 var encapsulateScript = function (text, path) {
     var componentPath = path.substring(0, path.length - (YALLA_SUFFIX.length)).replace(/\\/g, '/');
     var result = [];
+
     result.push('yalla.framework.addComponent("' + componentPath + '",(function (){');
     result.push('var $path = "' + componentPath + '";');
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
@@ -410,7 +413,9 @@ var encapsulateScript = function (text, path) {
     result.push('var $context = {};');
     result.push('var $patchRef = yalla.framework.patchRef;');
     result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
+    result.push('function ComponentEvent(type,data,target){ this.data = data; this.target = target; this.type = type; }\n');
     result.push(text);
+
     result.push('if(typeof $render === "function"){$export.render = $render;}');
     result.push('return $export;');
     result.push('})());');
