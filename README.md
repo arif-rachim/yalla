@@ -675,7 +675,7 @@ Inside name-card.html
 
 ## Publishing Component Event
 
-YallaJS ***sub-component*** can publish events using ```$oneventname``` property. 
+YallaJS ***sub-component*** can publish component event using ```emitEvent``` method. 
 
 YallaJS ***composite-component*** can listen to an event using ```eventname.trigger```
 
