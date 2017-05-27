@@ -582,7 +582,7 @@ if(help){
     helpDoc.push('');
     helpDoc.push('      -m compiler                              run yalla as compiler mode (watch source dir and generate result in dist dir) or as server ');
     helpDoc.push('      -m server                                run yalla as server mode (watch http request, pull code from source dir and return compiled code to client)');
-    helpDoc.push('      -p 8080                                  port number when yalla run as server mode');
+    helpDoc.push('      -p 8080                                  port number when yalla run as server');
     helpDoc.push('      -s src                                   base directory for the source code');
     helpDoc.push('      -d dist                                  base directory for the compiled code');
     helpDoc.push('');
