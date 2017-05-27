@@ -415,7 +415,6 @@ var encapsulateScript = function (text, path) {
     result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
     result.push('function ComponentEvent(type,data,target){ this.data = data; this.target = target; this.type = type; }\n');
     result.push(text);
-
     result.push('if(typeof $render === "function"){$export.render = $render;}');
     result.push('return $export;');
     result.push('})());');
