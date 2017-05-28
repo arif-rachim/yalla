@@ -548,8 +548,9 @@ function runCompiler(sourceDir, targetDir) {
             if(!validExtension){
                 return;
             }
-            event = './' + event.replace('\\', '/');
-            var targetFile = event.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
+
+            var cleanEvent = './' + event.replace('\\', '/');
+            var targetFile = cleanEvent.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
             fs.unlink(targetFile,function(err){
                 if(!err){
                     console.log('[-]',event);

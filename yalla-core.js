@@ -385,7 +385,6 @@ var yalla = (function () {
      noshade   noShade   (hr; deprecated)
      compact             (ul, ol, dl, menu, dir; deprecated)
      */
-
     ['checked','selected','disabled','readonly','required','multiple','ismap'].forEach(function(key){
         attributes[key] = function (element, name, value) {
             if (value) {
@@ -395,6 +394,11 @@ var yalla = (function () {
             }
         };
     });
+
+    // BUG Fix for the attributes.value not updating in IncrementalDOM
+    attributes.value = function(element,name,value){
+        element.value = value;
+    };
 
 
     IncrementalDOM.notifications.nodesCreated = function (nodes) {
