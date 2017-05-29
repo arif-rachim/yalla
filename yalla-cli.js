@@ -35,7 +35,8 @@ function convertAttributes(attributes) {
 
             var fireEvent = "this.emitEvent = function(eventName,data)%7B var event = new ComponentEvent(eventName,data,this); if('on'+eventName in _data) %7B _data['on'+eventName](event); %7D %7D;";
             var value = value.substring(0,value.indexOf('('))+'.bind(this)'+value.substring(value.indexOf('('),value.length);
-            var functionContent = (attribute.name !== 'submit' ? 'return '+value+';' : value+'; return false; ');
+            console.log(attribute.name);
+            var functionContent = (attribute.name !== 'submit.trigger' ? 'return '+value+';' : value+'; return false; ');
             convertedValue = '{{function(event) %7B ' + fireEvent+' '+ functionContent + ' %7D}}';
         }
         else if (attribute.name.indexOf('.bind') >= 0) {

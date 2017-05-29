@@ -1,6 +1,6 @@
 {
   "name": "yallajs",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "description": "HTML component with zero boiler plate",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
