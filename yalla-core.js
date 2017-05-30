@@ -220,6 +220,18 @@ var yalla = (function () {
         });
     };
 
+    framework.getParentComponent = function(node){
+        var _node = node;
+        while(_node.parentNode){
+            var _parentNode = _node.parentNode;
+            if('element' in _parentNode.attributes){
+                return _parentNode;
+            }
+            _node = _node.parentNode;
+        }
+        return null;
+    };
+
     framework.renderChain = function (address) {
         return address.reduceRight(function (current, path) {
             return current.then(function () {

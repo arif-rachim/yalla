@@ -22,6 +22,9 @@ String.prototype.isEmpty = function () {
     return (this.length === 0 || !this.trim());
 };
 
+var OPEN_BRACKET = '%7B';
+var CLOSE_BRACKET = '%7D';
+
 function convertAttributes(attributes) {
     return attributes.reduce(function (result, attribute) {
         var name = attribute.name;
@@ -31,14 +34,20 @@ function convertAttributes(attributes) {
 
         if (attribute.name.indexOf('.trigger') >= 0) {
             convertedName = 'on' + name.substring(0, (name.length - '.trigger'.length));
-
-
-            var fireEvent = "this.emitEvent = function(eventName,data)%7B var event = new ComponentEvent(eventName,data,this); if('on'+eventName in _data) %7B _data['on'+eventName](event); %7D %7D;";
-            var value = value.substring(0,value.indexOf('('))+'.bind(this)'+value.substring(value.indexOf('('),value.length);
+            var selfWrapper = ["var self = "+OPEN_BRACKET+" target : event.target "+CLOSE_BRACKET+";"];
+            selfWrapper.push("self.properties = _data;");
+            selfWrapper.push("if('elements' in self.target) "+OPEN_BRACKET+"self.elements = self.target.elements;"+CLOSE_BRACKET);
+            selfWrapper.push("self.currentTarget = this == event.target ? self.target : _parentComponent(event.currentTarget);");
+            selfWrapper.push("self.component = _parentComponent(self.currentTarget);");
+            selfWrapper.push("self.component.yallaComponentState = self.component.yallaComponentState || {};");
+            selfWrapper.push("self.state = self.component.yallaComponentState;");
+            selfWrapper.push("self.emitEvent = function(eventName,data)"+OPEN_BRACKET+" var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _data) "+OPEN_BRACKET+" _data['on'+eventName](event); "+CLOSE_BRACKET+' '+CLOSE_BRACKET+";");
+            var value = value.substring(0,value.indexOf('('))+'.bind(self)'+value.substring(value.indexOf('('),value.length);
             var functionContent = (attribute.name !== 'submit.trigger' ? 'return '+value+';' : value+'; return false; ');
-            convertedValue = '{{function(event) %7B ' + fireEvent+' '+ functionContent + ' %7D}}';
+            convertedValue = '{{function(event) %7B ' + selfWrapper.join('') +' '+ functionContent + ' %7D}}';
         }
         else if (attribute.name.indexOf('.bind') >= 0) {
+
             convertedName = name.substring(0, (name.length - '.bind'.length));
             convertedValue = '{{bind:' + value + ' }}';
         }
@@ -267,7 +276,17 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     if (condition.dataLoad) {
                         context.asyncFuncSequence = context.asyncFuncSequence || 0;
                         context.asyncFuncSequence += 1;
-                        result.push('(function(domNode) { var node = domNode.element;');
+                        result.push('(function(domNode) { ');
+                        result.push('var node = domNode.element;');
+                        result.push("var self = {target:node};");
+                        result.push("self.properties = _data;");
+                        result.push("if('elements' in self.target){ self.elements = self.target.elements;}");
+                        result.push("self.currentTarget = self.target;");
+                        result.push("self.component = _parentComponent(self.currentTarget);");
+                        result.push("self.component.yallaComponentState = self.component.yallaComponentState || {};");
+                        result.push("self.state = self.component.yallaComponentState;");
+
+                        // ACHIM DO SOMETHING HERE !!!
                         result.push('function asyncFunc__' + context.asyncFuncSequence + '(' + condition.dataName + '){');
                     }
 
@@ -278,7 +297,10 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
 
                     if (condition.dataLoad) {
                         result.push('}');
-                        result.push('var promise = ' + condition.dataLoad + ';');
+                        result.push('node = domNode.element;');
+                        var functionName = condition.dataLoad.substring(0,condition.dataLoad.indexOf('('));
+                        var functionParam = condition.dataLoad.substring(condition.dataLoad.indexOf('('),condition.dataLoad.length);
+                        result.push('var promise = ' + functionName+'.bind(self)'+functionParam+ ';');
                         result.push('if(promise && typeof promise == "object" && "then" in promise){');
                         result.push('_skip();');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
@@ -397,9 +419,9 @@ var encapsulateScript = function (text, path) {
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
     result.push('var $export = {};');
     result.push('var $context = {};');
-    result.push('var $patchRef = yalla.framework.patchRef;');
+    result.push('var _parentComponent = yalla.framework.getParentComponent;');
     result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
-    result.push('function ComponentEvent(type,data,target){ this.data = data; this.target = target; this.type = type; }\n');
+    result.push('function ComponentEvent(type,data,target,currentTarget){ this.data = data; this.target = target; this.type = type; this.currentTarget = currentTarget;}\n');
     result.push(text);
     result.push('if(typeof $render === "function"){$export.render = $render;}');
     result.push('return $export;');
