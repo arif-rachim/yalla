@@ -394,7 +394,7 @@ var yalla = (function () {
     IncrementalDOM.notifications.nodesCreated = function (nodes) {
         nodes.forEach(function (node) {
             if (node.oncreated) {
-                node.oncreated.call(node, node)
+                node.oncreated.call(node, {target:node,currentTarget:node});
             }
         });
     };
@@ -402,7 +402,7 @@ var yalla = (function () {
     IncrementalDOM.notifications.nodesDeleted = function (nodes) {
         nodes.forEach(function (node) {
             if (node.ondeleted) {
-                node.ondeleted.call(node, node);
+                node.ondeleted.call(node, {target:node,currentTarget:node});
             }
         });
     };

@@ -38,9 +38,9 @@ function convertAttributes(attributes) {
             selfWrapper.push("self.properties = _props;");
             selfWrapper.push("if('elements' in self.target) "+OPEN_BRACKET+"self.elements = self.target.elements;"+CLOSE_BRACKET);
             selfWrapper.push("self.currentTarget = this == event.target ? self.target : _parentComponent(event.currentTarget);");
-            selfWrapper.push("self.component = _parentComponent(self.currentTarget);");
-            selfWrapper.push("self.component.yallaComponentState = self.component.yallaComponentState || {};");
-            selfWrapper.push("self.state = self.component.yallaComponentState;");
+            selfWrapper.push("self.component = __component;");
+            selfWrapper.push("self.component.__state = self.component.__state || {};");
+            selfWrapper.push("self.state = self.component.__state;");
             selfWrapper.push("self.emitEvent = function(eventName,data)"+OPEN_BRACKET+" var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _props) "+OPEN_BRACKET+" _props['on'+eventName](event); "+CLOSE_BRACKET+' '+CLOSE_BRACKET+";");
             var value = value.substring(0,value.indexOf('('))+'.bind(self)'+value.substring(value.indexOf('('),value.length);
             var functionContent = (attribute.name !== 'submit.trigger' ? 'return '+value+';' : value+'; return false; ');
@@ -98,7 +98,8 @@ function textToExpression(text, replaceDoubleQuote) {
 
 function textToExpressionValue(match, encodeDoubleQuote) {
     if (match.indexOf('{{') == 0) {
-        var variable = match.substring(2, match.length - 2).replace(/\$/g, '_props.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
+        /// SHIT
+        var variable = match.substring(2, match.length - 2).replace(/\$/g, '_props.').replace(/@/g, '__state.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
         var isFunction = variable.indexOf('function') == 0;
         var isBinding = variable.indexOf('bind:') == 0;
         if (isBinding) {
@@ -251,7 +252,12 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
                     result.push('});');
+                } else if(node.nodeName === 'script'){
+                    lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
+                        result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
+                    });
                 } else {
+
                     var incrementalDomNode = '{element : IncrementalDOM.currentElement(), pointer : IncrementalDOM.currentPointer()}';
                     if (condition.beforePatchElement) {
                         result.push('(function (event){ return ' + condition.beforePatchElement + ' })(' + incrementalDomNode + ');');
@@ -269,6 +275,13 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('(function (event){ return ' + condition.afterPatchAttribute + ' })(' + incrementalDomNode + ');');
                     }
                     result.push('_elementOpenEnd("' + node.nodeName + '");');
+                    if(level == 0){
+                        result.push('// The component of this object');
+                        result.push('var __component = IncrementalDOM.currentElement();');
+                        result.push('__component.__state = __component.__state || initState.bind(__component)(_props);');
+                        result.push('var __state = __component.__state;');
+
+                    }
                     if (condition.beforePatchContent) {
                         result.push('(function (event){ return ' + condition.beforePatchContent + ' })(' + incrementalDomNode + ');');
                     }
@@ -282,9 +295,9 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push("self.properties = _props;");
                         result.push("if('elements' in self.target){ self.elements = self.target.elements;}");
                         result.push("self.currentTarget = self.target;");
-                        result.push("self.component = _parentComponent(self.currentTarget);");
-                        result.push("self.component.yallaComponentState = self.component.yallaComponentState || {};");
-                        result.push("self.state = self.component.yallaComponentState;");
+                        result.push("self.component = __component;");
+                        result.push("self.component.__state = self.component.__state || {};");
+                        result.push("self.state = self.component.__state;");
 
                         result.push('function asyncFunc__' + context.asyncFuncSequence + '(' + condition.dataName + '){');
                     }
@@ -303,7 +316,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('_skip();');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
                         result.push('asyncFunc__' + context.asyncFuncSequence + '.call(self,_result)');
-                        result.push('}); }); }else { ');
+                        result.push('}); }).catch(function(err){ console.log(err); }); }else { ');
                         result.push('asyncFunc__' + context.asyncFuncSequence + '.call(self,promise)');
                         result.push('}})(' + incrementalDomNode + ');');
                         context.asyncFuncSequence -= 1;
@@ -376,6 +389,7 @@ function convertHtmlToJavascript(file, originalUrl) {
         result.push('var _elementOpen = IncrementalDOM.elementOpen, _elementClose = IncrementalDOM.elementClose, ' +
             '_elementOpenStart = IncrementalDOM.elementOpenStart, _elementOpenEnd = IncrementalDOM.elementOpenEnd, ' +
             '_elementVoid = IncrementalDOM.elementVoid, _text = IncrementalDOM.text, _attr = IncrementalDOM.attr, _skip = IncrementalDOM.skip;');
+        result.push('function initState(props){ return {} };');
         var functionContent = [];
         functionContent.push('function $render(_props,_slotView){');
         var context = {};
