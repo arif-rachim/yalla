@@ -152,7 +152,6 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     cleanAttributes: [],
                     dataLoad: false,
                     dataName: 'data',
-                    refName: false,
                     beforePatchElement: false,
                     afterPatchElement: false,
                     beforePatchAttribute: false,
@@ -166,8 +165,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 }
 
                 var condition = attributesArray.reduce(function (condition, attribute) {
-                    if (['ref.name',
-                            'for.each',
+                    if (['for.each',
                             'if.bind',
                             'slot.name',
                             'data.load',
@@ -178,9 +176,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                             'after.patch-attribute',
                             'before.patch-content',
                             'after.patch-content'].indexOf(attribute.name) >= 0) {
-                        if (attribute.name == 'ref.name') {
-                            condition.refName = attribute.value;
-                        }
+
                         if (attribute.name == 'for.each') {
                             condition.foreach = attribute.value;
                             var foreachType = attribute.value.split(" in ");
@@ -275,19 +271,10 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('function asyncFunc__' + context.asyncFuncSequence + '(' + condition.dataName + '){');
                     }
 
-                    if (condition.refName) {
-                        result.push('var _ref = function(event){ return { node : event.element, render : function() {');
-                    }
-
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
 
-                    if (condition.refName) {
-                        result.push('} } }(' + incrementalDomNode + ');');
-                        result.push('$storeRef("'+condition.refName+'",_ref);');
-                        result.push('_ref.render();')
-                    }
 
                     if (condition.dataLoad) {
                         result.push('}');
@@ -408,7 +395,6 @@ var encapsulateScript = function (text, path) {
     result.push('yalla.framework.addComponent("' + componentPath + '",(function (){');
     result.push('var $path = "' + componentPath + '";');
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
-    result.push('var $storeRef = yalla.framework.storeRef;');
     result.push('var $export = {};');
     result.push('var $context = {};');
     result.push('var $patchRef = yalla.framework.patchRef;');

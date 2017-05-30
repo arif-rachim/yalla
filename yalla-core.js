@@ -5,8 +5,7 @@ var yalla = (function () {
         utils: {},
         framework: {},
         log: {},
-        components: {},
-        refs: {}
+        components: {}
     };
 
     var log = yalla.log;
@@ -154,26 +153,6 @@ var yalla = (function () {
         if (path in framework.componentLoadListener) {
             framework.componentLoadListener[path].call();
         }
-    };
-
-    framework.storeRef = function (refName, refObject) {
-        yalla.refs[refName] = yalla.refs[refName] || [];
-        var ref = yalla.refs[refName];
-        var hasRegistered = ref.reduce(function (checker, registeredRefObject) {
-            if (registeredRefObject.node == checker.node) {
-                checker.isRegistered = true;
-            }
-            return checker;
-        }, {isRegistered: false, node: refObject.node}).isRegistered;
-        if (!hasRegistered) {
-            ref.push(refObject);
-        }
-    };
-
-    framework.patchRef = function (refName) {
-        yalla.refs[refName].forEach(function (refObject) {
-            framework.renderToScreen(refObject.node, refObject.render);
-        });
     };
 
     framework.attachScriptToDocument = function (url) {
