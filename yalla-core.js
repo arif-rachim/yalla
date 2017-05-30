@@ -227,7 +227,7 @@ var yalla = (function () {
                 return _node;
             }
             _node = _node.parentNode;
-        }while(_node)
+        }while(_node);
         return null;
     };
 
