@@ -224,7 +224,7 @@ var yalla = (function () {
         var _node = node;
         while(_node.parentNode){
             var _parentNode = _node.parentNode;
-            if('element' in _parentNode.attributes){
+            if('element' in _parentNode.attributes || _parentNode.nodeName == 'BODY'){
                 return _parentNode;
             }
             _node = _node.parentNode;

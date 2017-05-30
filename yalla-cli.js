@@ -35,13 +35,13 @@ function convertAttributes(attributes) {
         if (attribute.name.indexOf('.trigger') >= 0) {
             convertedName = 'on' + name.substring(0, (name.length - '.trigger'.length));
             var selfWrapper = ["var self = "+OPEN_BRACKET+" target : event.target "+CLOSE_BRACKET+";"];
-            selfWrapper.push("self.properties = _data;");
+            selfWrapper.push("self.properties = _props;");
             selfWrapper.push("if('elements' in self.target) "+OPEN_BRACKET+"self.elements = self.target.elements;"+CLOSE_BRACKET);
             selfWrapper.push("self.currentTarget = this == event.target ? self.target : _parentComponent(event.currentTarget);");
             selfWrapper.push("self.component = _parentComponent(self.currentTarget);");
             selfWrapper.push("self.component.yallaComponentState = self.component.yallaComponentState || {};");
             selfWrapper.push("self.state = self.component.yallaComponentState;");
-            selfWrapper.push("self.emitEvent = function(eventName,data)"+OPEN_BRACKET+" var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _data) "+OPEN_BRACKET+" _data['on'+eventName](event); "+CLOSE_BRACKET+' '+CLOSE_BRACKET+";");
+            selfWrapper.push("self.emitEvent = function(eventName,data)"+OPEN_BRACKET+" var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _props) "+OPEN_BRACKET+" _props['on'+eventName](event); "+CLOSE_BRACKET+' '+CLOSE_BRACKET+";");
             var value = value.substring(0,value.indexOf('('))+'.bind(self)'+value.substring(value.indexOf('('),value.length);
             var functionContent = (attribute.name !== 'submit.trigger' ? 'return '+value+';' : value+'; return false; ');
             convertedValue = '{{function(event) %7B ' + selfWrapper.join('') +' '+ functionContent + ' %7D}}';
@@ -98,7 +98,7 @@ function textToExpression(text, replaceDoubleQuote) {
 
 function textToExpressionValue(match, encodeDoubleQuote) {
     if (match.indexOf('{{') == 0) {
-        var variable = match.substring(2, match.length - 2).replace(/\$/g, '_data.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
+        var variable = match.substring(2, match.length - 2).replace(/\$/g, '_props.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
         var isFunction = variable.indexOf('function') == 0;
         var isBinding = variable.indexOf('bind:') == 0;
         if (isBinding) {
@@ -279,14 +279,13 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('(function(domNode) { ');
                         result.push('var node = domNode.element;');
                         result.push("var self = {target:node};");
-                        result.push("self.properties = _data;");
+                        result.push("self.properties = _props;");
                         result.push("if('elements' in self.target){ self.elements = self.target.elements;}");
                         result.push("self.currentTarget = self.target;");
                         result.push("self.component = _parentComponent(self.currentTarget);");
                         result.push("self.component.yallaComponentState = self.component.yallaComponentState || {};");
                         result.push("self.state = self.component.yallaComponentState;");
 
-                        // ACHIM DO SOMETHING HERE !!!
                         result.push('function asyncFunc__' + context.asyncFuncSequence + '(' + condition.dataName + '){');
                     }
 
@@ -297,16 +296,15 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
 
                     if (condition.dataLoad) {
                         result.push('}');
-                        result.push('node = domNode.element;');
                         var functionName = condition.dataLoad.substring(0,condition.dataLoad.indexOf('('));
                         var functionParam = condition.dataLoad.substring(condition.dataLoad.indexOf('('),condition.dataLoad.length);
                         result.push('var promise = ' + functionName+'.bind(self)'+functionParam+ ';');
                         result.push('if(promise && typeof promise == "object" && "then" in promise){');
                         result.push('_skip();');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
-                        result.push('asyncFunc__' + context.asyncFuncSequence + '.call(node,_result)');
+                        result.push('asyncFunc__' + context.asyncFuncSequence + '.call(self,_result)');
                         result.push('}); }); }else { ');
-                        result.push('asyncFunc__' + context.asyncFuncSequence + '.call(node,promise)');
+                        result.push('asyncFunc__' + context.asyncFuncSequence + '.call(self,promise)');
                         result.push('}})(' + incrementalDomNode + ');');
                         context.asyncFuncSequence -= 1;
                     }
@@ -379,7 +377,7 @@ function convertHtmlToJavascript(file, originalUrl) {
             '_elementOpenStart = IncrementalDOM.elementOpenStart, _elementOpenEnd = IncrementalDOM.elementOpenEnd, ' +
             '_elementVoid = IncrementalDOM.elementVoid, _text = IncrementalDOM.text, _attr = IncrementalDOM.attr, _skip = IncrementalDOM.skip;');
         var functionContent = [];
-        functionContent.push('function $render(_data,_slotView){');
+        functionContent.push('function $render(_props,_slotView){');
         var context = {};
         var scriptTagContent = [];
         lengthableObjectToArray(doc.childNodes).forEach(function (node) {
