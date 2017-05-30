@@ -222,13 +222,12 @@ var yalla = (function () {
 
     framework.getParentComponent = function(node){
         var _node = node;
-        while(_node.parentNode){
-            var _parentNode = _node.parentNode;
-            if('element' in _parentNode.attributes || _parentNode.nodeName == 'BODY'){
-                return _parentNode;
+        do{
+            if('element' in _node.attributes || _node.nodeName == 'BODY'){
+                return _node;
             }
             _node = _node.parentNode;
-        }
+        }while(_node)
         return null;
     };
 
