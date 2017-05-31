@@ -279,7 +279,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     if(level == 0){
                         result.push('// The component of this object');
                         result.push('var __component = IncrementalDOM.currentElement();');
-                        result.push('__component.__state = __component.__state || initState.bind(__component)(_props);');
+                        result.push('__component.__state = initState.bind(__component)(_props,__component.__state);');
                         result.push('var __state = __component.__state;');
                         result.push("var __self = { component:__component, properties : _props, state : __component.__state}");
                     }
