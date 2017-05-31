@@ -100,7 +100,6 @@ function textToExpression(text, replaceDoubleQuote) {
 
 function textToExpressionValue(match, encodeDoubleQuote) {
     if (match.indexOf('{{') == 0) {
-        /// SHIT
         var variable = match.substring(2, match.length - 2).replace(/\$/g, '_props.').replace(/@/g, '__state.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
         var isFunction = variable.indexOf('function') == 0;
         var isBinding = variable.indexOf('bind:') == 0;
@@ -409,7 +408,7 @@ function compileHTML(file, originalUrl) {
     try{
         return beautify(encapsulateScript(convertHtmlToJavascript(file, originalUrl), originalUrl), {indent_size: 2});
     }catch(err){
-        console.warn(err)
+        console.warn(err);
         return '';
     }
 
