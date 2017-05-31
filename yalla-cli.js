@@ -42,12 +42,14 @@ function convertAttributes(attributes) {
             selfWrapper.push("self.component.__state = self.component.__state || {};");
             selfWrapper.push("self.state = self.component.__state;");
             selfWrapper.push("self.emitEvent = function(eventName,data)"+OPEN_BRACKET+" var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _props) "+OPEN_BRACKET+" _props['on'+eventName](event); "+CLOSE_BRACKET+' '+CLOSE_BRACKET+";");
-            var value = value.substring(0,value.indexOf('('))+'.bind(self)'+value.substring(value.indexOf('('),value.length);
+            value = value.substring(0,value.indexOf('('))+'.bind(self)'+value.substring(value.indexOf('('),value.length);
             var functionContent = (attribute.name !== 'submit.trigger' ? 'return '+value+';' : value+'; return false; ');
             convertedValue = '{{function(event) %7B ' + selfWrapper.join('') +' '+ functionContent + ' %7D}}';
         }
         else if (attribute.name.indexOf('.bind') >= 0) {
-
+            if(value.indexOf('(') > 0){
+                value = value.substring(0,value.indexOf('('))+'.bind(__self)'+value.substring(value.indexOf('('),value.length);
+            }
             convertedName = name.substring(0, (name.length - '.bind'.length));
             convertedValue = '{{bind:' + value + ' }}';
         }
@@ -280,7 +282,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('var __component = IncrementalDOM.currentElement();');
                         result.push('__component.__state = __component.__state || initState.bind(__component)(_props);');
                         result.push('var __state = __component.__state;');
-
+                        result.push("var __self = { component:__component, properties : _props, state : __component.__state}");
                     }
                     if (condition.beforePatchContent) {
                         result.push('(function (event){ return ' + condition.beforePatchContent + ' })(' + incrementalDomNode + ');');
