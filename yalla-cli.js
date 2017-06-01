@@ -276,7 +276,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('(function (event){ return ' + condition.afterPatchAttribute + ' })(' + incrementalDomNode + ');');
                     }
                     result.push('_elementOpenEnd("' + node.nodeName + '");');
-                    if(level == 0){
+                    if(level == 0 && node.nodeName !== 'style'){
                         result.push('// The component of this object');
                         result.push('var __component = IncrementalDOM.currentElement();');
                         result.push('__component.__state = __component.__state || initState.bind(__component)(_props);');

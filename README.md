@@ -440,6 +440,40 @@ The browser will render the output as follows :
 </div>
 ```
 
+## Listening property change with ```onPropertyChange```
+YallaJS component can listen property changes by implementing ```function onPropertyChange(event)``` in the component.
+
+YallaJS ```onPropertyChange``` event has 4 values (property,oldVal,newVal, and type)
+
+
+Example :
+/src/name-card.html
+```html
+<div>
+    My name is : {{ $firstName +' '+ $lastName }}
+</div>
+<script>
+    function onPropertyChange(event){
+        switch(event.type){
+            case 'add' : {
+                alert('property added '+event.property+' val '+event.newVal);
+                break;
+            }
+            case 'remove' : {
+                alert('property removed '+event.property+' val '+event.oldVal);
+                break;
+            }
+            case 'change' : {
+                alert('property changed '+event.property+' val '+event.newVal+' '+event.oldVal);
+                break;
+            }
+        }
+    }
+</script>
+```
+
+
+
 ## Accessing component state using prefix @
 
 YallaJS component can have its own local state.
