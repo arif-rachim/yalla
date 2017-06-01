@@ -279,9 +279,11 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     if(level == 0){
                         result.push('// The component of this object');
                         result.push('var __component = IncrementalDOM.currentElement();');
-                        result.push('__component.__state = initState.bind(__component)(_props,__component.__state);');
+                        result.push('__component.__state = __component.__state || initState.bind(__component)(_props);');
                         result.push('var __state = __component.__state;');
-                        result.push("var __self = { component:__component, properties : _props, state : __component.__state}");
+                        result.push("var __self = { component:__component, properties : _props, state : __component.__state};");
+                        result.push('yalla.framework.propertyCheckChanges(__component.__properties,_props,onPropertyChange.bind(__self));');
+                        result.push('__component.__properties = _props;');
                     }
                     if (condition.beforePatchContent) {
                         result.push('(function (event){ return ' + condition.beforePatchContent + ' })(' + incrementalDomNode + ');');
@@ -391,6 +393,7 @@ function convertHtmlToJavascript(file, originalUrl) {
             '_elementOpenStart = IncrementalDOM.elementOpenStart, _elementOpenEnd = IncrementalDOM.elementOpenEnd, ' +
             '_elementVoid = IncrementalDOM.elementVoid, _text = IncrementalDOM.text, _attr = IncrementalDOM.attr, _skip = IncrementalDOM.skip;');
         result.push('function initState(props){ return {} };');
+        result.push('function onPropertyChange(event){ return {} };');
         var functionContent = [];
         functionContent.push('function $render(_props,_slotView){');
         var context = {};

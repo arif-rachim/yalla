@@ -71,6 +71,8 @@ var yalla = (function () {
         return true;
     };
 
+
+
     utils.fetch = function (url, postData) {
 
         var XMLHttpFactories = [
@@ -241,6 +243,58 @@ var yalla = (function () {
                 });
             });
         }, Promise.resolve(false));
+    };
+
+    framework.propertyCheckChanges = function(oldProperties, newProperties, onPropertyChange){
+        if(oldProperties == null || newProperties == null || onPropertyChange == null){
+            return;
+        }
+        var result = {};
+        var comparedProps = [];
+        for (var prop in oldProperties) {
+            comparedProps.push(prop);
+            if(oldProperties.hasOwnProperty(prop)){
+                if(typeof oldProperties[prop] == 'function'){
+                    continue;
+                }
+                if(newProperties.hasOwnProperty(prop)){
+                    result[prop] = {
+                        leftValue : oldProperties[prop],
+                        rightValue : newProperties[prop]
+                    }
+                }else{
+                    result[prop] = {
+                        leftValue : oldProperties[prop],
+                        rightValue : null
+                    }
+                }
+
+            }
+        }
+        for (var prop in newProperties){
+            if(newProperties.hasOwnProperty(prop) && comparedProps.indexOf(prop) < 0){
+                if(typeof newProperties[prop] == 'function'){
+                    continue;
+                }
+                result[prop] = {
+                    leftValue : null,
+                    rightValue : newProperties[prop]
+                }
+            }
+        }
+        for (var prop in result){
+            if(result[prop].leftValue !== result[prop].rightValue){
+                var operation = '';
+                if(result[prop].leftValue == null){
+                    operation = 'add';
+                }else if(result[prop].rightValue == null){
+                    operation = 'remove';
+                }else{
+                    operation = 'change';
+                }
+                onPropertyChange({property:prop,type:operation,oldVal:result[prop].leftValue,newVal:result[prop].rightValue});
+            }
+        }
     };
 
 
