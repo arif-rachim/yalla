@@ -71,6 +71,21 @@ var yalla = (function () {
         return true;
     };
 
+    utils.merge = function(objectOne,objectTwo){
+        var result = {};
+        for(var prop in objectOne){
+            if(objectOne.hasOwnProperty(prop)){
+                result[prop] = objectOne[prop];
+            }
+        }
+        for(var prop in objectTwo){
+            if(objectTwo.hasOwnProperty(prop)){
+                result[prop] = objectTwo[prop];
+            }
+        }
+        return result;
+    };
+
 
 
     utils.fetch = function (url, postData) {

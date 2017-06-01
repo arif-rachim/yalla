@@ -125,13 +125,18 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
         switch (node.nodeName) {
             case 'slot-view' : {
                 // lets pass the name
-                var slotName = lengthableObjectToArray(attributes).reduce(function (name, node) {
+                var slot = lengthableObjectToArray(attributes).reduce(function (output, node) {
                     if (node.name == 'name') {
-                        return node.value;
+                        output.name = node.value;
+                    }else{
+                        if (node.name.indexOf('.bind') > 0) {
+                            var propName = node.name.substring(0,node.name.indexOf('.bind'));
+                            output.props[propName] = '#'+textToExpressionValue('{{bind:' + node.value + '}}')+'#';
+                        }
                     }
-                    return name;
-                }, 'default');
-                result.push('_slotView("' + slotName + '");');
+                    return output;
+                }, {name:'default',props:{}});
+                result.push('_slotView("' + slot.name + '",'+JSON.stringify(slot.props).replace(/"#/g,'').replace(/#"/g,'')+');');
                 break;
             }
             case 'skip-to-end' : {
@@ -144,11 +149,11 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     return labelValue;
                 }, {});
                 context[mapObject.name] = mapObject.from;
-                result.push('$context["' + mapObject.name + '"] = $inject("' + mapObject.from + '");');
+                result.push('_context["' + mapObject.name + '"] = $inject("' + mapObject.from + '");');
                 var camelCaseName = mapObject.name.split('-').map(function (word, index) {
                     return index == 0 ? word : (word.charAt(0).toUpperCase() + word.substring(1, word.length));
                 }).join('');
-                result.push('var ' + camelCaseName + ' = $context["' + mapObject.name + '"];');
+                result.push('var ' + camelCaseName + ' = _context["' + mapObject.name + '"];');
                 break;
             }
             default : {
@@ -247,8 +252,8 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 if (nodeIsComponent) {
                     var convertedAttributes = convertAttributes(condition.cleanAttributes);
                     var escapedBracketJson = escapeBracket(JSON.stringify(convertedAttributes));
-                    var expressionObjectInString = textToExpression(escapedBracketJson, true);
-                    result.push('$context["' + node.nodeName + '"].render(' + expressionObjectInString + ',function(slotName){');
+                    result.push('var __params = '+textToExpression(escapedBracketJson, true)+';');
+                    result.push('_context["' + node.nodeName + '"].render( typeof arguments[1] === "object" ? _merge(arguments[1],__params) : __params ,function(slotName,slotProps){');
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
@@ -434,8 +439,9 @@ var encapsulateScript = function (text, path) {
     result.push('var $path = "' + componentPath + '";');
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
     result.push('var $export = {};');
-    result.push('var $context = {};');
+    result.push('var _context = {};');
     result.push('var _parentComponent = yalla.framework.getParentComponent;');
+    result.push('var _merge = yalla.utils.merge;');
     result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
     result.push('function ComponentEvent(type,data,target,currentTarget){ this.data = data; this.target = target; this.type = type; this.currentTarget = currentTarget;}\n');
     result.push(text);
