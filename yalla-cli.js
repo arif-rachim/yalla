@@ -6,6 +6,7 @@ var path = require('path');
 var chokidar = require('chokidar');
 var beautify = require('js-beautify').js_beautify;
 var xmldom = require('xmldom');
+var pjson = require('./package.json');
 var endOfLine = require('os').EOL;
 
 var DOMParser = xmldom.DOMParser;
@@ -17,6 +18,7 @@ var PROMISE_JS = "yalla-promise.js";
 var IDOM_JS = "yalla-idom.js";
 var REDUX_JS = "yalla-redux.js";
 var CORE_JS = "yalla-core.js";
+
 
 String.prototype.isEmpty = function () {
     return (this.length === 0 || !this.trim());
@@ -474,11 +476,15 @@ var walk = function (dir) {
 
 function buildYallaJs() {
     var result = [];
+    result.push('/*');
+    result.push('version : '+pjson.version);
+    result.push('author  : '+pjson.author);
+    result.push('*/\n');
+
     result.push(fs.readFileSync(__dirname + '/' + PROMISE_JS, "utf-8"));
     result.push(fs.readFileSync(__dirname + '/' + IDOM_JS, "utf-8"));
-    result.push(fs.readFileSync(__dirname + '/' + REDUX_JS, "utf-8"));
     result.push(fs.readFileSync(__dirname + '/' + CORE_JS, "utf-8"));
-    return result.join('\n\n');
+    return result.join('\n');
 }
 function runServer(sourceDir, port) {
     var app = express();
@@ -605,6 +611,7 @@ var port = argv.p;
 var sourceDir = argv.s;
 var targetDir = argv.d;
 var help = argv.h;
+var version = argv.v;
 
 if(help){
     var helpDoc = [];
@@ -616,6 +623,7 @@ if(help){
     helpDoc.push('      -p 8080                                  port number when yalla run as server');
     helpDoc.push('      -s src                                   base directory for the source code');
     helpDoc.push('      -d dist                                  base directory for the compiled code');
+    helpDoc.push('      -v version                               version of yallajs library');
     helpDoc.push('');
     helpDoc.push('  Example : ');
     helpDoc.push('');
@@ -625,6 +633,8 @@ if(help){
     helpDoc.push('      yalla -m compiler -s source -d output    run yalla compiler, watch changes in "source" directory and compile result to "output" directory');
     helpDoc.push('');
     console.log(helpDoc.join('\n'));
+} else if(version){
+    console.log('YallaJS version : '+pjson.version);
 }else{
     if (!mode) {
         console.log('-m default set to "server"');
