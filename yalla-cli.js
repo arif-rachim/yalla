@@ -27,6 +27,16 @@ String.prototype.isEmpty = function () {
 var OPEN_BRACKET = '%7B';
 var CLOSE_BRACKET = '%7D';
 
+function wrapWithBind(value, s) {
+    var result = value.match(/[a-zA-Z]\(/g).reduce(function(current,matches){
+        current.pointerIndex = current.value.indexOf(matches,current.pointerIndex);
+        current.value = current.value.substring(0,current.pointerIndex+1)+'.bind('+s+')'+current.value.substring(current.pointerIndex+1,current.length);
+        current.pointerIndex = current.value.indexOf(')',current.pointerIndex);
+        return current;
+    },{value:value,pointerIndex:0});
+    return result.value;
+}
+
 function convertAttributes(attributes) {
     return attributes.reduce(function (result, attribute) {
         var name = attribute.name;
@@ -44,14 +54,12 @@ function convertAttributes(attributes) {
             selfWrapper.push("self.component._state = self.component._state || {};");
             selfWrapper.push("self.state = self.component._state;");
             selfWrapper.push("self.emitEvent = function(eventName,data)"+OPEN_BRACKET+" var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _props) "+OPEN_BRACKET+" _props['on'+eventName](event); "+CLOSE_BRACKET+' '+CLOSE_BRACKET+";");
-            value = value.substring(0,value.indexOf('('))+'.bind(self)'+value.substring(value.indexOf('('),value.length);
-            var functionContent = (attribute.name !== 'submit.trigger' ? 'return '+value+';' : value+'; return false; ');
+            value = wrapWithBind(value,'self');
+            var functionContent = (attribute.name !== 'submit.trigger' ?  value+';' : value+'; return false; ');
             convertedValue = '{{function(event) %7B ' + selfWrapper.join('') +' '+ functionContent + ' %7D}}';
         }
         else if (attribute.name.indexOf('.bind') >= 0) {
-            if(value.indexOf('(') > 0){
-                value = value.substring(0,value.indexOf('('))+'.bind(_self)'+value.substring(value.indexOf('('),value.length);
-            }
+            value = wrapWithBind(value,'self');
             convertedName = name.substring(0, (name.length - '.bind'.length));
             convertedValue = '{{bind:' + value + ' }}';
         }
@@ -284,7 +292,6 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     }
                     result.push('_elementOpenEnd("' + node.nodeName + '");');
                     if(level == 0 && node.nodeName !== 'style'){
-                        result.push('// The component of this object');
                         result.push('var _component = IncrementalDOM.currentElement();');
                         result.push('var _validComponent = yalla.framework.validComponentName(_component,_elementName)');
                         result.push('_component._state = _component._state && _validComponent ? _component._state : initState.bind(_component)(_props);');
@@ -323,7 +330,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('}');
                         var functionName = condition.dataLoad.substring(0,condition.dataLoad.indexOf('('));
                         var functionParam = condition.dataLoad.substring(condition.dataLoad.indexOf('('),condition.dataLoad.length);
-                        result.push('var promise = ' + functionName+'.bind(self)'+functionParam+ ';');
+                        result.push('var promise = ' + wrapWithBind(condition.dataLoad,self) + ';');
                         result.push('if(promise && typeof promise == "object" && "then" in promise){');
                         result.push('_skip();');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
@@ -443,6 +450,7 @@ var encapsulateScript = function (text, path) {
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
     result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
     result.push('var $export = {};');
+    result.push('var $path = "'+componentPath+'";');
     result.push('var _elementName = "' + componentPath.replace(/\//g,'.').substring(1,componentPath.length) + '";');
     result.push('var _context = {};');
     result.push('var _parentComponent = yalla.framework.getParentComponent;');
