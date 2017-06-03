@@ -248,6 +248,10 @@ var yalla = (function () {
         return null;
     };
 
+    framework.validComponentName = function(component,componentName){
+        return component._state && component._state._name == componentName;
+    };
+
     framework.renderChain = function (address) {
         return address.reduceRight(function (current, path) {
             return current.then(function () {

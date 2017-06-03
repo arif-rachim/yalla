@@ -40,9 +40,9 @@ function convertAttributes(attributes) {
             selfWrapper.push("self.properties = _props;");
             selfWrapper.push("if('elements' in self.target) "+OPEN_BRACKET+"self.elements = self.target.elements;"+CLOSE_BRACKET);
             selfWrapper.push("self.currentTarget = this == event.target ? self.target : _parentComponent(event.currentTarget);");
-            selfWrapper.push("self.component = __component;");
-            selfWrapper.push("self.component.__state = self.component.__state || {};");
-            selfWrapper.push("self.state = self.component.__state;");
+            selfWrapper.push("self.component = _component;");
+            selfWrapper.push("self.component._state = self.component._state || {};");
+            selfWrapper.push("self.state = self.component._state;");
             selfWrapper.push("self.emitEvent = function(eventName,data)"+OPEN_BRACKET+" var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _props) "+OPEN_BRACKET+" _props['on'+eventName](event); "+CLOSE_BRACKET+' '+CLOSE_BRACKET+";");
             value = value.substring(0,value.indexOf('('))+'.bind(self)'+value.substring(value.indexOf('('),value.length);
             var functionContent = (attribute.name !== 'submit.trigger' ? 'return '+value+';' : value+'; return false; ');
@@ -50,7 +50,7 @@ function convertAttributes(attributes) {
         }
         else if (attribute.name.indexOf('.bind') >= 0) {
             if(value.indexOf('(') > 0){
-                value = value.substring(0,value.indexOf('('))+'.bind(__self)'+value.substring(value.indexOf('('),value.length);
+                value = value.substring(0,value.indexOf('('))+'.bind(_self)'+value.substring(value.indexOf('('),value.length);
             }
             convertedName = name.substring(0, (name.length - '.bind'.length));
             convertedValue = '{{bind:' + value + ' }}';
@@ -102,7 +102,7 @@ function textToExpression(text, replaceDoubleQuote) {
 
 function textToExpressionValue(match, encodeDoubleQuote) {
     if (match.indexOf('{{') == 0) {
-        var variable = match.substring(2, match.length - 2).replace(/\$/g, '_props.').replace(/@/g, '__state.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
+        var variable = match.substring(2, match.length - 2).replace(/\$/g, '_props.').replace(/@/g, '_state.').replace(/%7B/g, '{').replace(/%7D/g, '}').trim();
         var isFunction = variable.indexOf('function') == 0;
         var isBinding = variable.indexOf('bind:') == 0;
         if (isBinding) {
@@ -254,8 +254,8 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 if (nodeIsComponent) {
                     var convertedAttributes = convertAttributes(condition.cleanAttributes);
                     var escapedBracketJson = escapeBracket(JSON.stringify(convertedAttributes));
-                    result.push('var __params = '+textToExpression(escapedBracketJson, true)+';');
-                    result.push('_context["' + node.nodeName + '"].render( typeof arguments[1] === "object" ? _merge(arguments[1],__params) : __params ,function(slotName,slotProps){');
+                    result.push('var _params = '+textToExpression(escapedBracketJson, true)+';');
+                    result.push('_context["' + node.nodeName + '"].render( typeof arguments[1] === "object" ? _merge(arguments[1],_params) : _params ,function(slotName,slotProps){');
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
@@ -285,12 +285,14 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     result.push('_elementOpenEnd("' + node.nodeName + '");');
                     if(level == 0 && node.nodeName !== 'style'){
                         result.push('// The component of this object');
-                        result.push('var __component = IncrementalDOM.currentElement();');
-                        result.push('__component.__state = __component.__state || initState.bind(__component)(_props);');
-                        result.push('var __state = __component.__state;');
-                        result.push("var __self = { component:__component, properties : _props, state : __component.__state};");
-                        result.push('yalla.framework.propertyCheckChanges(__component.__properties,_props,onPropertyChange.bind(__self));');
-                        result.push('__component.__properties = _props;');
+                        result.push('var _component = IncrementalDOM.currentElement();');
+                        result.push('var _validComponent = yalla.framework.validComponentName(_component,_elementName)');
+                        result.push('_component._state = _component._state && _validComponent ? _component._state : initState.bind(_component)(_props);');
+                        result.push('_component._state._name = _elementName;');
+                        result.push('var _state = _component._state;');
+                        result.push("var _self = { component:_component, properties : _props, state : _component._state};");
+                        result.push('if(_validComponent){yalla.framework.propertyCheckChanges(_component._properties,_props,onPropertyChange.bind(_self));}');
+                        result.push('_component._properties = _props;');
                     }
                     if (condition.beforePatchContent) {
                         result.push('(function (event){ return ' + condition.beforePatchContent + ' })(' + incrementalDomNode + ');');
@@ -305,11 +307,11 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push("self.properties = _props;");
                         result.push("if('elements' in self.target){ self.elements = self.target.elements;}");
                         result.push("self.currentTarget = self.target;");
-                        result.push("self.component = __component;");
-                        result.push("self.component.__state = self.component.__state || {};");
-                        result.push("self.state = self.component.__state;");
+                        result.push("self.component = _component;");
+                        result.push("self.component._state = self.component._state || {};");
+                        result.push("self.state = self.component._state;");
 
-                        result.push('function asyncFunc__' + context.asyncFuncSequence + '(' + condition.dataName + '){');
+                        result.push('function asyncFunc_' + context.asyncFuncSequence + '(' + condition.dataName + '){');
                     }
 
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
@@ -325,9 +327,9 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('if(promise && typeof promise == "object" && "then" in promise){');
                         result.push('_skip();');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
-                        result.push('asyncFunc__' + context.asyncFuncSequence + '.call(self,_result)');
+                        result.push('asyncFunc_' + context.asyncFuncSequence + '.call(self,_result)');
                         result.push('}); }).catch(function(err){ console.log(err); }); }else { ');
-                        result.push('asyncFunc__' + context.asyncFuncSequence + '.call(self,promise)');
+                        result.push('asyncFunc_' + context.asyncFuncSequence + '.call(self,promise)');
                         result.push('}})(' + incrementalDomNode + ');');
                         context.asyncFuncSequence -= 1;
                     }
@@ -396,11 +398,11 @@ function convertHtmlToJavascript(file, originalUrl) {
     var result = [];
     var elementName = path.replace(/\\/g, '.').replace(/\//g, '.');
     if (file && doc) {
-        result.push('var _elementOpen = IncrementalDOM.elementOpen, _elementClose = IncrementalDOM.elementClose, ' +
-            '_elementOpenStart = IncrementalDOM.elementOpenStart, _elementOpenEnd = IncrementalDOM.elementOpenEnd, ' +
-            '_elementVoid = IncrementalDOM.elementVoid, _text = IncrementalDOM.text, _attr = IncrementalDOM.attr, _skip = IncrementalDOM.skip;');
+        result.push('var _elementOpen = IncrementalDOM.elementOpen; var _elementClose = IncrementalDOM.elementClose; ' +
+            'var  _elementOpenStart = IncrementalDOM.elementOpenStart; var  _elementOpenEnd = IncrementalDOM.elementOpenEnd; ' +
+            'var _elementVoid = IncrementalDOM.elementVoid; var  _text = IncrementalDOM.text; var _attr = IncrementalDOM.attr; var  _skip = IncrementalDOM.skip;');
         result.push('function initState(props){ return {} };');
-        result.push('function onPropertyChange(event){ return {} };');
+        result.push('function onPropertyChange(event){};');
         var functionContent = [];
         functionContent.push('function $render(_props,_slotView){');
         var context = {};
@@ -438,13 +440,14 @@ var encapsulateScript = function (text, path) {
     var result = [];
 
     result.push('yalla.framework.addComponent("' + componentPath + '",(function (){');
-    result.push('var $path = "' + componentPath + '";');
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
+    result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
     result.push('var $export = {};');
+    result.push('var _elementName = "' + componentPath.replace(/\//g,'.').substring(1,componentPath.length) + '";');
     result.push('var _context = {};');
     result.push('var _parentComponent = yalla.framework.getParentComponent;');
     result.push('var _merge = yalla.utils.merge;');
-    result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
+
     result.push('function ComponentEvent(type,data,target,currentTarget){ this.data = data; this.target = target; this.type = type; this.currentTarget = currentTarget;}\n');
     result.push(text);
     result.push('if(typeof $render === "function"){$export.render = $render;}');
