@@ -398,7 +398,7 @@ var yalla = (function () {
                 var path = framework.composePathFromBase(component.componentPath);
                 var comp = yalla.components[path];
                 return function (slotName) {
-                    if (undefined == slotName || slotName == 'default') {
+                    if (comp && (undefined == slotName || slotName == 'default')) {
                         comp.render(component.params, slotView);
                     }
                 }
