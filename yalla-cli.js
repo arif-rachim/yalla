@@ -28,7 +28,7 @@ var OPEN_BRACKET = '%7B';
 var CLOSE_BRACKET = '%7D';
 
 function wrapWithBind(value, s) {
-    if(value && value.length > 0 && s && s.length > 0){
+    if(value && value.length > 0 && s && s.length > 0 && value.indexOf('(') > 0){
         var result = value.match(/[a-zA-Z]\(/g).reduce(function(current,matches){
             current.pointerIndex = current.value.indexOf(matches,current.pointerIndex);
             current.value = current.value.substring(0,current.pointerIndex+1)+'.bind('+s+')'+current.value.substring(current.pointerIndex+1,current.length);
@@ -333,7 +333,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('}');
                         var functionName = condition.dataLoad.substring(0,condition.dataLoad.indexOf('('));
                         var functionParam = condition.dataLoad.substring(condition.dataLoad.indexOf('('),condition.dataLoad.length);
-                        result.push('var promise = ' + wrapWithBind(condition.dataLoad,self) + ';');
+                        result.push('var promise = ' + wrapWithBind(condition.dataLoad,'self') + ';');
                         result.push('if(promise && typeof promise == "object" && "then" in promise){');
                         result.push('_skip();');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
@@ -427,7 +427,6 @@ function convertHtmlToJavascript(file, originalUrl) {
 }
 
 function compileHTML(file, originalUrl) {
-    console.log('COMPILING '+originalUrl);
     try{
         return beautify(encapsulateScript(convertHtmlToJavascript(file, originalUrl), originalUrl), {indent_size: 2});
     }catch(err){
@@ -439,7 +438,6 @@ function compileHTML(file, originalUrl) {
 }
 
 function compileJS(file, originalUrl) {
-    console.log('COMPILING '+originalUrl);
     try{
         return beautify(encapsulateScript(file, originalUrl), {indent_size: 2});
     }catch(err){
