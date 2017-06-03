@@ -28,13 +28,16 @@ var OPEN_BRACKET = '%7B';
 var CLOSE_BRACKET = '%7D';
 
 function wrapWithBind(value, s) {
-    var result = value.match(/[a-zA-Z]\(/g).reduce(function(current,matches){
-        current.pointerIndex = current.value.indexOf(matches,current.pointerIndex);
-        current.value = current.value.substring(0,current.pointerIndex+1)+'.bind('+s+')'+current.value.substring(current.pointerIndex+1,current.length);
-        current.pointerIndex = current.value.indexOf(')',current.pointerIndex);
-        return current;
-    },{value:value,pointerIndex:0});
-    return result.value;
+    if(value && value.length > 0 && s && s.length > 0){
+        var result = value.match(/[a-zA-Z]\(/g).reduce(function(current,matches){
+            current.pointerIndex = current.value.indexOf(matches,current.pointerIndex);
+            current.value = current.value.substring(0,current.pointerIndex+1)+'.bind('+s+')'+current.value.substring(current.pointerIndex+1,current.length);
+            current.pointerIndex = current.value.indexOf(')',current.pointerIndex);
+            return current;
+        },{value:value,pointerIndex:0});
+        return result.value;
+    }
+    return value;
 }
 
 function convertAttributes(attributes) {
