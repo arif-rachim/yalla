@@ -427,11 +427,11 @@ function convertHtmlToJavascript(file, originalUrl) {
 }
 
 function compileHTML(file, originalUrl) {
-    console.log('COMPILING '+file);
+    console.log('COMPILING '+originalUrl);
     try{
         return beautify(encapsulateScript(convertHtmlToJavascript(file, originalUrl), originalUrl), {indent_size: 2});
     }catch(err){
-        console.log('ERROR COMPILING '+file);
+        console.log('ERROR COMPILING '+originalUrl);
         console.warn(err);
         return '';
     }
@@ -439,11 +439,11 @@ function compileHTML(file, originalUrl) {
 }
 
 function compileJS(file, originalUrl) {
-    console.log('COMPILING '+file);
+    console.log('COMPILING '+originalUrl);
     try{
         return beautify(encapsulateScript(file, originalUrl), {indent_size: 2});
     }catch(err){
-        console.log('ERROR COMPILING '+file);
+        console.log('ERROR COMPILING '+originalUrl);
         console.warn(err);
         return '';
     }
