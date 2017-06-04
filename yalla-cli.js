@@ -7,7 +7,6 @@ var chokidar = require('chokidar');
 var beautify = require('js-beautify').js_beautify;
 var xmldom = require('xmldom');
 var pjson = require('./package.json');
-var endOfLine = require('os').EOL;
 
 var DOMParser = xmldom.DOMParser;
 
@@ -16,7 +15,6 @@ var JS_SUFFIX = ".js";
 var HTML_SUFFIX = ".html";
 var PROMISE_JS = "yalla-promise.js";
 var IDOM_JS = "yalla-idom.js";
-var REDUX_JS = "yalla-redux.js";
 var CORE_JS = "yalla-core.js";
 
 
@@ -28,13 +26,13 @@ var OPEN_BRACKET = '%7B';
 var CLOSE_BRACKET = '%7D';
 
 function wrapWithBind(value, s) {
-    if(value && value.length > 0 && s && s.length > 0 && value.indexOf('(') > 0){
-        var result = value.match(/[a-zA-Z]\(/g).reduce(function(current,matches){
-            current.pointerIndex = current.value.indexOf(matches,current.pointerIndex);
-            current.value = current.value.substring(0,current.pointerIndex+1)+'.bind('+s+')'+current.value.substring(current.pointerIndex+1,current.length);
-            current.pointerIndex = current.value.indexOf(')',current.pointerIndex);
+    if (value && value.length > 0 && s && s.length > 0 && value.indexOf('(') > 0) {
+        var result = value.match(/[a-zA-Z]\(/g).reduce(function (current, matches) {
+            current.pointerIndex = current.value.indexOf(matches, current.pointerIndex);
+            current.value = current.value.substring(0, current.pointerIndex + 1) + '.bind(' + s + ')' + current.value.substring(current.pointerIndex + 1, current.length);
+            current.pointerIndex = current.value.indexOf(')', current.pointerIndex);
             return current;
-        },{value:value,pointerIndex:0});
+        }, {value: value, pointerIndex: 0});
         return result.value;
     }
     return value;
@@ -43,26 +41,26 @@ function wrapWithBind(value, s) {
 function convertAttributes(attributes) {
     return attributes.reduce(function (result, attribute) {
         var name = attribute.name;
-        var value = attribute.value.replace(/"/g,"'");
+        var value = attribute.value.replace(/"/g, "'");
         var convertedName = name;
         var convertedValue = value;
 
         if (attribute.name.indexOf('.trigger') >= 0) {
             convertedName = 'on' + name.substring(0, (name.length - '.trigger'.length));
-            var selfWrapper = ["var self = "+OPEN_BRACKET+" target : event.target "+CLOSE_BRACKET+";"];
+            var selfWrapper = ["var self = " + OPEN_BRACKET + " target : event.target " + CLOSE_BRACKET + ";"];
             selfWrapper.push("self.properties = _props;");
-            selfWrapper.push("if('elements' in self.target) "+OPEN_BRACKET+"self.elements = self.target.elements;"+CLOSE_BRACKET);
+            selfWrapper.push("if('elements' in self.target) " + OPEN_BRACKET + "self.elements = self.target.elements;" + CLOSE_BRACKET);
             selfWrapper.push("self.currentTarget = this == event.target ? self.target : _parentComponent(event.currentTarget);");
             selfWrapper.push("self.component = _component;");
             selfWrapper.push("self.component._state = self.component._state || {};");
             selfWrapper.push("self.state = self.component._state;");
-            selfWrapper.push("self.emitEvent = function(eventName,data)"+OPEN_BRACKET+" var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _props) "+OPEN_BRACKET+" _props['on'+eventName](event); "+CLOSE_BRACKET+' '+CLOSE_BRACKET+";");
-            value = wrapWithBind(value,'self');
-            var functionContent = (attribute.name !== 'submit.trigger' ?  value+';' : value+'; return false; ');
-            convertedValue = '{{function(event) %7B ' + selfWrapper.join('') +' '+ functionContent + ' %7D}}';
+            selfWrapper.push("self.emitEvent = function(eventName,data)" + OPEN_BRACKET + " var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _props) " + OPEN_BRACKET + " _props['on'+eventName](event); " + CLOSE_BRACKET + ' ' + CLOSE_BRACKET + ";");
+            value = wrapWithBind(value, 'self');
+            var functionContent = (attribute.name !== 'submit.trigger' ? value + ';' : value + '; return false; ');
+            convertedValue = '{{function(event) %7B ' + selfWrapper.join('') + ' ' + functionContent + ' %7D}}';
         }
         else if (attribute.name.indexOf('.bind') >= 0) {
-            value = wrapWithBind(value,'self');
+            value = wrapWithBind(value, 'self');
             convertedName = name.substring(0, (name.length - '.bind'.length));
             convertedValue = '{{bind:' + value + ' }}';
         }
@@ -74,7 +72,7 @@ function convertAttributes(attributes) {
 
 function lengthableObjectToArray(object) {
     var result = [];
-    if(object && object.length > 0){
+    if (object && object.length > 0) {
         for (var i = 0; i < object.length; i++) {
             var item = object[i];
             result.push(item);
@@ -141,15 +139,15 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 var slot = lengthableObjectToArray(attributes).reduce(function (output, node) {
                     if (node.name == 'name') {
                         output.name = node.value;
-                    }else{
+                    } else {
                         if (node.name.indexOf('.bind') > 0) {
-                            var propName = node.name.substring(0,node.name.indexOf('.bind'));
-                            output.props[propName] = '#'+textToExpressionValue('{{bind:' + node.value + '}}')+'#';
+                            var propName = node.name.substring(0, node.name.indexOf('.bind'));
+                            output.props[propName] = '#' + textToExpressionValue('{{bind:' + node.value + '}}') + '#';
                         }
                     }
                     return output;
-                }, {name:'default',props:{}});
-                result.push('_slotView("' + slot.name + '",'+JSON.stringify(slot.props).replace(/"#/g,'').replace(/#"/g,'')+');');
+                }, {name: 'default', props: {}});
+                result.push('_slotView("' + slot.name + '",' + JSON.stringify(slot.props).replace(/"#/g, '').replace(/#"/g, '') + ');');
                 break;
             }
             case 'skip-to-end' : {
@@ -161,8 +159,8 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     labelValue[node.name] = node.value;
                     return labelValue;
                 }, {});
-                context[mapObject.name] = mapObject.from;
-                result.push('_context["' + mapObject.name + '"] = $inject("' + mapObject.from + '");');
+                context[mapObject.name] = mapObject['from'];
+                result.push('_context["' + mapObject.name + '"] = $inject("' + mapObject['from'] + '");');
                 var camelCaseName = mapObject.name.split('-').map(function (word, index) {
                     return index == 0 ? word : (word.charAt(0).toUpperCase() + word.substring(1, word.length));
                 }).join('');
@@ -173,6 +171,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 var nodeIsComponent = node.nodeName in context;
                 var attributesArray = lengthableObjectToArray(attributes);
                 var initialValue = {
+                    refName: false,
                     foreach: false,
                     foreachArray: false,
                     foreachItem: false,
@@ -180,13 +179,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     slotName: false,
                     cleanAttributes: [],
                     dataLoad: false,
-                    dataName: 'data',
-                    beforePatchElement: false,
-                    afterPatchElement: false,
-                    beforePatchAttribute: false,
-                    afterPatchAttribute: false,
-                    beforePatchContent: false,
-                    afterPatchContent: false
+                    dataName: 'data'
                 };
 
                 if (level == 0 && (['script', 'style'].indexOf(node.nodeName) < 0)) {
@@ -194,19 +187,19 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 }
 
                 var condition = attributesArray.reduce(function (condition, attribute) {
-                    if (['for.each',
+                    if ([
+                            'ref.name',
+                            'for.each',
                             'if.bind',
                             'slot.name',
                             'data.load',
-                            'data.name',
-                            'before.patch-element',
-                            'after.patch-element',
-                            'before.patch-attribute',
-                            'after.patch-attribute',
-                            'before.patch-content',
-                            'after.patch-content'].indexOf(attribute.name) >= 0) {
+                            'data.name'].indexOf(attribute.name) >= 0) {
 
-                        if (attribute.name == 'for.each') {
+                        if(attribute.name === 'ref.name'){
+                            condition.refName = attribute.value;
+                        }
+
+                        if (attribute.name === 'for.each') {
                             condition.foreach = attribute.value;
                             var foreachType = attribute.value.split(" in ");
                             condition.foreachArray = textToExpressionValue('{{bind:' + foreachType[1] + '}}');
@@ -215,34 +208,16 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         if (attribute.name == 'slot.name') {
                             condition.slotName = attribute.value;
                         }
-                        if (attribute.name == 'if.bind') {
+                        if (attribute.name === 'if.bind') {
                             condition.if = textToExpressionValue('{{bind:' + attribute.value + '}}');
                         }
-                        if (attribute.name == 'data.load') {
+                        if (attribute.name === 'data.load') {
                             condition.dataLoad = textToExpressionValue('{{bind:' + attribute.value + '}}');
                         }
-                        if (attribute.name == 'data.name') {
+                        if (attribute.name === 'data.name') {
                             condition.dataName = attribute.value;
                         }
-                        //before patch element start
-                        if (attribute.name == 'before.patch-element') {
-                            condition.beforePatchElement = attribute.value;
-                        }
-                        if (attribute.name == 'before.patch-attribute') {
-                            condition.beforePatchAttribute = attribute.value;
-                        }
-                        if (attribute.name == 'after.patch-attribute') {
-                            condition.afterPatchAttribute = attribute.value;
-                        }
-                        if (attribute.name == 'before.patch-content') {
-                            condition.beforePatchContent = attribute.value;
-                        }
-                        if (attribute.name == 'after.patch-content') {
-                            condition.afterPatchContent = attribute.value;
-                        }
-                        if (attribute.name == 'after.patch-element') {
-                            condition.afterPatchElement = attribute.value;
-                        }
+
                     } else {
                         condition.cleanAttributes.push(attribute);
                     }
@@ -254,7 +229,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 }
 
                 if (condition.slotName && condition.slotName != 'default') {
-                    result.push('if(slotName == "' + condition.slotName + '"){');
+                    result.push('if(slotName === "' + condition.slotName + '"){');
                 }
 
                 if (condition.foreach) {
@@ -265,36 +240,27 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 if (nodeIsComponent) {
                     var convertedAttributes = convertAttributes(condition.cleanAttributes);
                     var escapedBracketJson = escapeBracket(JSON.stringify(convertedAttributes));
-                    result.push('var _params = '+textToExpression(escapedBracketJson, true)+';');
+                    result.push('var _params = ' + textToExpression(escapedBracketJson, true) + ';');
                     result.push('_context["' + node.nodeName + '"].render( typeof arguments[1] === "object" ? _merge(arguments[1],_params) : _params ,function(slotName,slotProps){');
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
                     result.push('});');
-                } else if(node.nodeName === 'script'){
+                } else if (node.nodeName === 'script') {
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
                 } else {
-
                     var incrementalDomNode = '{element : IncrementalDOM.currentElement(), pointer : IncrementalDOM.currentPointer()}';
-                    if (condition.beforePatchElement) {
-                        result.push('(function (event){ return ' + condition.beforePatchElement + ' })(' + incrementalDomNode + ');');
-                    }
                     result.push('_elementOpenStart("' + node.nodeName + '","");');
-                    if (condition.beforePatchAttribute) {
-                        result.push('(function (event){ return ' + condition.beforePatchAttribute + ' })(' + incrementalDomNode + ');');
-                    }
                     var attributesObject = convertAttributes(condition.cleanAttributes);
                     for (var key in attributesObject) {
-                        result.push('_attr("' + key + '", ' + textToExpressionValue(attributesObject[key]) + ');');
-                    }
-
-                    if (condition.afterPatchAttribute) {
-                        result.push('(function (event){ return ' + condition.afterPatchAttribute + ' })(' + incrementalDomNode + ');');
+                        if(attributesObject.hasOwnProperty(key)){
+                            result.push('_attr("' + key + '", ' + textToExpressionValue(attributesObject[key]) + ');');
+                        }
                     }
                     result.push('_elementOpenEnd("' + node.nodeName + '");');
-                    if(level == 0 && node.nodeName !== 'style'){
+                    if (level == 0 && node.nodeName !== 'style') {
                         result.push('var _component = IncrementalDOM.currentElement();');
                         result.push('var _validComponent = yalla.framework.validComponentName(_component,_elementName)');
                         result.push('_component._state = _component._state && _validComponent ? _component._state : initState.bind(_component)(_props);');
@@ -304,8 +270,9 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('if(_validComponent){yalla.framework.propertyCheckChanges(_component._properties,_props,onPropertyChange.bind(_self));}');
                         result.push('_component._properties = _props;');
                     }
-                    if (condition.beforePatchContent) {
-                        result.push('(function (event){ return ' + condition.beforePatchContent + ' })(' + incrementalDomNode + ');');
+
+                    if(condition.refName){
+                        result.push('yalla.framework.registerRef("'+condition.refName+'",IncrementalDOM.currentElement(),function(){');
                     }
 
                     if (condition.dataLoad) {
@@ -320,7 +287,6 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push("self.component = _component;");
                         result.push("self.component._state = self.component._state || {};");
                         result.push("self.state = self.component._state;");
-
                         result.push('function asyncFunc_' + context.asyncFuncSequence + '(' + condition.dataName + '){');
                     }
 
@@ -331,9 +297,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
 
                     if (condition.dataLoad) {
                         result.push('}');
-                        var functionName = condition.dataLoad.substring(0,condition.dataLoad.indexOf('('));
-                        var functionParam = condition.dataLoad.substring(condition.dataLoad.indexOf('('),condition.dataLoad.length);
-                        result.push('var promise = ' + wrapWithBind(condition.dataLoad,'self') + ';');
+                        result.push('var promise = ' + wrapWithBind(condition.dataLoad, 'self') + ';');
                         result.push('if(promise && typeof promise == "object" && "then" in promise){');
                         result.push('_skip();');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
@@ -344,14 +308,10 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         context.asyncFuncSequence -= 1;
                     }
 
-                    if (condition.afterPatchContent) {
-                        result.push('(function (event){ return ' + condition.afterPatchContent + ' })(' + incrementalDomNode + ');');
+                    if(condition.refName){
+                        result.push('})()');
                     }
-
                     result.push('_elementClose("' + node.nodeName + '");');
-                    if (condition.afterPatchElement) {
-                        result.push('(function (event){ return ' + condition.afterPatchElement + ' })(' + incrementalDomNode + ');');
-                    }
                 }
 
                 if (condition.foreach) {
@@ -374,25 +334,25 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
         if (!node.nodeValue.isEmpty()) {
             var isStyle = node.parentNode.nodeName == 'style';
             var isScript = node.parentNode.nodeName == 'script';
-            var isRawText =  lengthableObjectToArray(node.parentNode.attributes).reduce(function(rawText,attribute){
-                if(attribute.name == 'raw.text'){
+            var isRawText = lengthableObjectToArray(node.parentNode.attributes).reduce(function (rawText, attribute) {
+                if (attribute.name == 'raw.text') {
                     return true;
                 }
                 return rawText;
-            },false);
+            }, false);
 
             if (isStyle) {
                 var elementSelector = "[element='" + elementName.trim() + "'] ";
-                var text = node.nodeValue.replace(/\r\n/g, '').replace(/\n/g,'').replace(/  /g, '').replace(/"/g,'\'');
+                var text = node.nodeValue.replace(/\r\n/g, '').replace(/\n/g, '').replace(/  /g, '').replace(/"/g, '\'');
                 var cleanScript = text.match(/([^\n,{}]+)(,(?=[^}]*\{)|\s*\{)/g).reduce(function (script, match) {
                     return script.replace(match, '\\n' + elementSelector + match);
                 }, text).replace("[element='" + elementName.trim() + "'] root", "[element='" + elementName.trim() + "']");
                 result.push('_text("' + cleanScript + '");');
             } else if (isScript) {
                 scriptTagContent.push(node.nodeValue);
-            } else if (isRawText){
+            } else if (isRawText) {
                 result.push('_text("' + node.nodeValue.replace(/\r\n/g, '\\r\\n') + '");');
-            }else {
+            } else {
                 var cleanText = node.nodeValue.replace(/[\r\n]/g, "");
                 var replaceExpression = textToExpression(cleanText);
                 result.push('_text("' + replaceExpression + '");');
@@ -427,10 +387,10 @@ function convertHtmlToJavascript(file, originalUrl) {
 }
 
 function compileHTML(file, originalUrl) {
-    try{
+    try {
         return beautify(encapsulateScript(convertHtmlToJavascript(file, originalUrl), originalUrl), {indent_size: 2});
-    }catch(err){
-        console.log('ERROR COMPILING '+originalUrl);
+    } catch (err) {
+        console.log('ERROR COMPILING ' + originalUrl);
         console.warn(err);
         return '';
     }
@@ -438,10 +398,10 @@ function compileHTML(file, originalUrl) {
 }
 
 function compileJS(file, originalUrl) {
-    try{
+    try {
         return beautify(encapsulateScript(file, originalUrl), {indent_size: 2});
-    }catch(err){
-        console.log('ERROR COMPILING '+originalUrl);
+    } catch (err) {
+        console.log('ERROR COMPILING ' + originalUrl);
         console.warn(err);
         return '';
     }
@@ -455,8 +415,8 @@ var encapsulateScript = function (text, path) {
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
     result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
     result.push('var $export = {};');
-    result.push('var $path = "'+componentPath+'";');
-    result.push('var _elementName = "' + componentPath.replace(/\//g,'.').substring(1,componentPath.length) + '";');
+    result.push('var $path = "' + componentPath + '";');
+    result.push('var _elementName = "' + componentPath.replace(/\//g, '.').substring(1, componentPath.length) + '";');
     result.push('var _context = {};');
     result.push('var _parentComponent = yalla.framework.getParentComponent;');
     result.push('var _merge = yalla.utils.merge;');
@@ -493,8 +453,7 @@ var walk = function (dir) {
 function buildYallaJs() {
     var result = [];
     result.push('/*');
-    result.push('version : '+pjson.version);
-    result.push('author  : '+pjson.author);
+    result.push('version : ' + pjson.version);
     result.push('*/\n');
 
     result.push(fs.readFileSync(__dirname + '/' + PROMISE_JS, "utf-8"));
@@ -542,10 +501,10 @@ function runServer(sourceDir, port) {
 }
 
 function runCompiler(sourceDir, targetDir) {
-    if(!fs.existsSync(sourceDir)){
+    if (!fs.existsSync(sourceDir)) {
         fs.mkdirSync(sourceDir);
     }
-    if(!fs.existsSync(targetDir)){
+    if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir);
     }
     var files = walk(sourceDir);
@@ -565,7 +524,7 @@ function runCompiler(sourceDir, targetDir) {
 
     function compileSource(event) {
         var validExtension = event.indexOf(HTML_SUFFIX) === (event.length - HTML_SUFFIX.length) || event.indexOf(JS_SUFFIX) === (event.length - JS_SUFFIX.length);
-        if(!validExtension){
+        if (!validExtension) {
             return false;
         }
         event = './' + event.replace('\\', '/');
@@ -586,33 +545,33 @@ function runCompiler(sourceDir, targetDir) {
 
     chokidar.watch(sourceDir, {persistent: true})
         .on('add', function (event) {
-            if(compileSource(event)){
+            if (compileSource(event)) {
                 console.log('[+]', event);
             }
         })
         .on('change', function (event) {
-            if(compileSource(event)){
+            if (compileSource(event)) {
                 console.log('[#]', event);
             }
         })
         .on('unlink', function (event, path) {
             var validExtension = event.indexOf(HTML_SUFFIX) === (event.length - HTML_SUFFIX.length) || event.indexOf(JS_SUFFIX) === (event.length - JS_SUFFIX.length);
-            if(!validExtension){
+            if (!validExtension) {
                 return;
             }
 
             var cleanEvent = './' + event.replace('\\', '/');
             var targetFile = cleanEvent.replace(sourceDir, targetDir).replace(HTML_SUFFIX, YALLA_SUFFIX).replace(JS_SUFFIX, YALLA_SUFFIX);
-            fs.unlink(targetFile,function(err){
-                if(!err){
-                    console.log('[-]',event);
-                    setTimeout(function(){
-                        if(fs.existsSync(event)){
-                            if(compileSource(event)){
+            fs.unlink(targetFile, function (err) {
+                if (!err) {
+                    console.log('[-]', event);
+                    setTimeout(function () {
+                        if (fs.existsSync(event)) {
+                            if (compileSource(event)) {
                                 console.log('[+]', event);
                             }
                         }
-                    },100);
+                    }, 100);
                 }
 
             });
@@ -629,7 +588,7 @@ var targetDir = argv.d;
 var help = argv.h;
 var version = argv.v;
 
-if(help){
+if (help) {
     var helpDoc = [];
     helpDoc.push('');
     helpDoc.push('  Usage : yalla [options]');
@@ -649,9 +608,9 @@ if(help){
     helpDoc.push('      yalla -m compiler -s source -d output    run yalla compiler, watch changes in "source" directory and compile result to "output" directory');
     helpDoc.push('');
     console.log(helpDoc.join('\n'));
-} else if(version){
-    console.log('YallaJS version : '+pjson.version);
-}else{
+} else if (version) {
+    console.log('YallaJS version : ' + pjson.version);
+} else {
     if (!mode) {
         console.log('-m default set to "server"');
         mode = 'server';

@@ -150,6 +150,7 @@ var yalla = (function () {
     framework.filePrefix = '.js';
     framework.base = 'src';
     framework.componentLoadListener = {};
+    framework.refs = [];
     framework.createInjector = function (componentPath) {
         var relativePath = componentPath.substring(0, componentPath.lastIndexOf("/"));
 
@@ -316,6 +317,42 @@ var yalla = (function () {
         }
     };
 
+    framework.registerRef = function(refName,component,renderFunction){
+        component._refName = refName;
+        if(!refsRegistered(refName,component)){
+            framework.refs.push({
+                name : refName,
+                component : component,
+                render : renderFunction
+            })
+        }
+        return renderFunction;
+    };
+
+    function refsRegistered (refName,component){
+        for (var i = 0;i<framework.refs.length;i++){
+            var refInfo = framework.refs[i];
+            if(refInfo.name == refName && refInfo.component == component){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function unregisterRef(refName,component){
+        var index = -1;
+        for (var i = 0;i<framework.refs.length;i++){
+            var refInfo = framework.refs[i];
+            if(refInfo.name == refName && refInfo.component == component){
+                index = i;
+            }
+        }
+        if(index >=0){
+            framework.refs.splice(index,1);
+            console.log('unregistered component');
+        }
+    }
+
 
     framework.start = function () {
         var scripts = document.querySelector("script[src$='yalla.js']") || [];
@@ -412,19 +449,41 @@ var yalla = (function () {
         });
     }
 
+    function lengthableObjectToArray(object) {
+        var result = [];
+        if (object && object.length > 0) {
+            for (var i = 0; i < object.length; i++) {
+                var item = object[i];
+                result.push(item);
+            }
+        }
+        return result;
+    }
+
     framework.renderToScreen = function () {
         var args = arguments;
         framework.beforeRenderToScreen().then(function (ok) {
             if(!ok){
                 return;
             }
-            if (args.length == 2) {
-                IncrementalDOM.patch(args[0], args[1]);
-            } else {
+            if(args.length == 0){
                 patchGlobal();
+            } else if (args.length == 2 && (typeof args[1] === 'function')) {
+                IncrementalDOM.patch(args[0], args[1]);
+            } else if(args.length > 0){
+                // this must be an array
+                var changesToPatch = lengthableObjectToArray(args);
+                changesToPatch.forEach(function(refName){
+                   yalla.framework.refs.filter(function(refInfo){
+                       return refInfo.name === refName;
+                   }).forEach(function(refInfo){
+                       IncrementalDOM.patch(refInfo.component,function(){refInfo.render()});
+                   })
+                });
             }
         });
     };
+
 
     framework.beforeRenderToScreen = function () {
         return Promise.resolve(true);
@@ -473,7 +532,11 @@ var yalla = (function () {
     };
 
     IncrementalDOM.notifications.nodesDeleted = function (nodes) {
+        console.log('nodes deleted');
         nodes.forEach(function (node) {
+            if(node._refName){
+                unregisterRef(node._refName,node);
+            }
             if (node.ondeleted) {
                 node.ondeleted.call(node, {target:node,currentTarget:node});
             }
