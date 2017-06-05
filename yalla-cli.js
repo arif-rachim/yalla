@@ -172,6 +172,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 var attributesArray = lengthableObjectToArray(attributes);
                 var initialValue = {
                     refName: false,
+                    refNameBind: false,
                     foreach: false,
                     foreachArray: false,
                     foreachItem: false,
@@ -189,6 +190,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                 var condition = attributesArray.reduce(function (condition, attribute) {
                     if ([
                             'ref.name',
+                            'ref.name.bind',
                             'for.each',
                             'if.bind',
                             'slot.name',
@@ -197,6 +199,10 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
 
                         if(attribute.name === 'ref.name'){
                             condition.refName = attribute.value;
+                        }
+
+                        if(attribute.name === 'ref.name.bind'){
+                            condition.refNameBind = textToExpressionValue('{{bind:'+attribute.value+'}}');
                         }
 
                         if (attribute.name === 'for.each') {
@@ -275,6 +281,10 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('yalla.framework.registerRef("'+condition.refName+'",IncrementalDOM.currentElement(),function(){');
                     }
 
+                    if(condition.refNameBind){
+                        result.push('yalla.framework.registerRef('+condition.refNameBind+',IncrementalDOM.currentElement(),function(){');
+                    }
+
                     if (condition.dataLoad) {
                         context.asyncFuncSequence = context.asyncFuncSequence || 0;
                         context.asyncFuncSequence += 1;
@@ -308,7 +318,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         context.asyncFuncSequence -= 1;
                     }
 
-                    if(condition.refName){
+                    if(condition.refName || condition.refNameBind){
                         result.push('})()');
                     }
                     result.push('_elementClose("' + node.nodeName + '");');
