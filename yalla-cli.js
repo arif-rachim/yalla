@@ -265,8 +265,10 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                             result.push('_attr("' + key + '", ' + textToExpressionValue(attributesObject[key]) + ');');
                         }
                     }
+
                     result.push('_elementOpenEnd("' + node.nodeName + '");');
-                    if (level == 0 && node.nodeName !== 'style') {
+                    var nonComponentNode = ['title','style','base','link','meta','script','noscript','head'];
+                    if (level == 0 && nonComponentNode.indexOf(node.nodeName) < 0) {
                         result.push('var _component = IncrementalDOM.currentElement();');
                         result.push('var _validComponent = yalla.framework.validComponentName(_component,_elementName)');
                         result.push('_component._state = _component._state && _validComponent ? _component._state : initState.bind(_component)(_props);');
