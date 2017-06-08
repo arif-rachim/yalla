@@ -26,6 +26,7 @@ var OPEN_BRACKET = '%7B';
 var CLOSE_BRACKET = '%7D';
 
 function wrapWithBind(value, s) {
+    value = value.replace(/this\./g,'self.');
     if (value && value.length > 0 && s && s.length > 0 && value.indexOf('(') > 0) {
         var result = value.match(/[a-zA-Z]\(/g).reduce(function (current, matches) {
             current.pointerIndex = current.value.indexOf(matches, current.pointerIndex);
