@@ -373,7 +373,6 @@ var yalla = (function () {
                         rightValue : null
                     }
                 }
-
             }
         }
         for (var prop in newProperties){
@@ -488,38 +487,64 @@ var yalla = (function () {
         var address = [framework.defaultComponent];
         var addressString = '';
         var googleEscapedFragment = '?_escaped_fragment_=';
+        // in future we need to check from the yalla.framework.base
         if (window.location.hash != "") {
             addressString = window.location.hash.substring(1, window.location.hash.length);
         }else if(window.location.search.indexOf(googleEscapedFragment) == 0){
             addressString = decodeURIComponent(window.location.search.substring(googleEscapedFragment.length,window.location.search.length));
         }
+
+        var html5addressStyle = addressString.indexOf('/_')>=0;
         if(addressString && addressString.length > 0){
-            address = addressString.split("/").map(function(addr){
-                if(addr && addr.indexOf('!') == 0 && addr.length > 1){
-                    addr = addr.substring(1,addr.length);
+
+            if(html5addressStyle){
+                address = addressString.split("/_");
+                if(address[0].indexOf('!')==0){
+                    address.splice(0,1);
                 }
-                return addr;
-            }).filter(function(addr){
-                if(addr && addr.length > 0 && addr.indexOf('!') < 0){
-                    return true;
-                }
-                return false;
-            });
+            }else{
+                // this style need to be deprecated soon, its not compatible with html5 !
+                address = addressString.split("/").map(function(addr){
+                    if(addr && addr.indexOf('!') == 0 && addr.length > 1){
+                        addr = addr.substring(1,addr.length);
+                    }
+                    return addr;
+                }).filter(function(addr){
+                    if(addr && addr.length > 0 && addr.indexOf('!') < 0){
+                        return true;
+                    }
+                    return false;
+                });
+            }
         }
 
         var componentAndParams = address.map(function (pathQuery) {
-            var valParams = pathQuery.split(':');
-            var path = valParams[0].replace(/\./g, '/');
-            valParams.splice(0, 1);
-            var params = valParams.reduce(function (current, param) {
-                var parVal = param.split('=');
-                current[parVal[0]] = parVal[1];
-                return current;
-            }, {});
-            return {
-                componentPath: path,
-                params: params
+            if(html5addressStyle){
+                var componentParams = pathQuery.split('/').reduce(function(result,query,index,array){
+                    if(index == 0){
+                        result.componentPath = query;
+                    }else if(index % 2 == 1){
+                        result.params[query] = array[index+1];
+                    }
+                    return result;
+                },{componentPath:'',params:{}});
+                return componentParams;
+            }else{
+                // this line soon will be removed because it does not follow html5 complience
+                var valParams = pathQuery.split(':');
+                var path = valParams[0].replace(/\./g, '/');
+                valParams.splice(0, 1);
+                var params = valParams.reduce(function (current, param) {
+                    var parVal = param.split('=');
+                    current[parVal[0]] = parVal[1];
+                    return current;
+                }, {});
+                return {
+                    componentPath: path,
+                    params: params
+                }
             }
+
         });
         var addressToChain = componentAndParams.map(function (item) {
             return item.componentPath;
@@ -585,6 +610,35 @@ var yalla = (function () {
         return Promise.resolve(true);
     };
 
+    framework.navigateTo = function(address,param){
+        var locationAddress = '';
+        if(typeof address === 'string'){
+            locationAddress = address.match(/{(.*?)\}/g).reduce(function(output,param){
+                var paramName = param.substring(1,param.length-1);
+                output.url = output.url.replace(param,output.param[paramName]);
+                return output;
+            },{url:address,param:param}).url;
+
+        }else if(typeof address === 'object'){
+            var index = 0;
+            for(var key in address){
+                if(address.hasOwnProperty(key)){
+                    locationAddress += ( index++ >0 ? '/_' : '_')+key;
+                    if(typeof address[key] === 'object'){
+                        for(var paramKey in address[key]){
+                            if(address[key].hasOwnProperty(paramKey)){
+                                locationAddress += '/'+paramKey+'/'+address[key][paramKey]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // once we have pushState, we can change location address to pushState
+        window.location.hash = '#!/'+locationAddress;
+        // history.pushState('','',locationAddress);
+    };
+
 
     var attributes = IncrementalDOM.attributes;
     // html5 boolean attributes
@@ -628,7 +682,6 @@ var yalla = (function () {
     };
 
     IncrementalDOM.notifications.nodesDeleted = function (nodes) {
-        console.log('nodes deleted');
         nodes.forEach(function (node) {
             if(node._refName){
                 unregisterRef(node._refName,node);

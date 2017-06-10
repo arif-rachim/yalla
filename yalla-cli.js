@@ -426,6 +426,8 @@ var encapsulateScript = function (text, path) {
 
     result.push('yalla.framework.addComponent("' + componentPath + '",(function (){');
     result.push('var $patchChanges = yalla.framework.renderToScreen;');
+    result.push('var $navigateTo = yalla.framework.navigateTo;');
+
     result.push('var $inject = yalla.framework.createInjector("' + componentPath + '");');
     result.push('var $export = {};');
     result.push('var $path = "' + componentPath + '";');
