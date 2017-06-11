@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-var express = require('express');
 var fs = require('fs');
 var path = require('path');
 var chokidar = require('chokidar');
@@ -381,11 +380,16 @@ function convertHtmlToJavascript(file, originalUrl) {
     var result = [];
     var elementName = path.replace(/\\/g, '.').replace(/\//g, '.');
     if (file && doc) {
-        result.push('var _elementOpen = IncrementalDOM.elementOpen; var _elementClose = IncrementalDOM.elementClose; ' +
-            'var  _elementOpenStart = IncrementalDOM.elementOpenStart; var  _elementOpenEnd = IncrementalDOM.elementOpenEnd; ' +
-            'var _elementVoid = IncrementalDOM.elementVoid; var  _text = IncrementalDOM.text; var _attr = IncrementalDOM.attr; var  _skip = IncrementalDOM.skip;');
+        result.push('var _elementOpen = IncrementalDOM.elementOpen;');
+        result.push('var _elementClose = IncrementalDOM.elementClose;');
+        result.push('var _elementOpenStart = IncrementalDOM.elementOpenStart;');
+        result.push('var _elementOpenEnd = IncrementalDOM.elementOpenEnd;');
+        result.push('var _elementVoid = IncrementalDOM.elementVoid;');
+        result.push('var _skip = IncrementalDOM.skip;');
+        result.push('var _text = IncrementalDOM.text;');
+        result.push('var _attr = IncrementalDOM.attr;');
         result.push('function initState(props){ return {} };');
-        result.push('function onPropertyChange(event){};');
+        result.push('function onPropertyChange(props){};');
         var functionContent = [];
         functionContent.push('function $render(_props,_slotView){');
         var context = {};
@@ -435,7 +439,6 @@ var encapsulateScript = function (text, path) {
     result.push('var _context = {};');
     result.push('var _parentComponent = yalla.framework.getParentComponent;');
     result.push('var _merge = yalla.utils.merge;');
-
     result.push('function ComponentEvent(type,data,target,currentTarget){ this.data = data; this.target = target; this.type = type; this.currentTarget = currentTarget;}\n');
     result.push(text);
     result.push('if(typeof $render === "function"){$export.render = $render;}');
@@ -476,44 +479,6 @@ function buildYallaJs() {
     result.push(fs.readFileSync(__dirname + '/' + CORE_JS, "utf-8"));
     return result.join('\n');
 }
-function runServer(sourceDir, port) {
-    var app = express();
-    app.use(function (req, res, next) {
-        var url = req.originalUrl;
-        var isRequestingYallaComponent = url.indexOf(sourceDir.substring(1, sourceDir.length)) >= 0;
-        var isRequestingYallaLib = url.indexOf('yalla.js') >= 0;
-        if (isRequestingYallaLib) {
-            res.writeHead(200, {"Content-Type": "application/javascript"});
-            res.write(buildYallaJs());
-            res.end();
-        } else if (isRequestingYallaComponent) {
-            var path = url.substring(1, url.length - YALLA_SUFFIX.length);
-            var pathJS = path + JS_SUFFIX;
-            var pathHTML = path + HTML_SUFFIX;
-            fs.readFile(pathJS, "utf-8", function (err, file) {
-                if (err) {
-                    return err;
-                }
-                console.log('PATH:' + pathJS);
-                res.send(compileJS(file, url));
-            });
-            fs.readFile(pathHTML, "utf-8", function (err, file) {
-                if (err) {
-                    return err;
-                }
-                console.log('PATH:' + pathHTML);
-                res.send(compileHTML(file, url));
-            });
-        } else {
-            next();
-        }
-    });
-
-    app.use(express.static('.'));
-    app.listen(port, function () {
-        console.log('\n\nYallaJS Running on port ' + port);
-    });
-}
 
 function runCompiler(sourceDir, targetDir) {
     if (!fs.existsSync(sourceDir)) {
@@ -548,10 +513,10 @@ function runCompiler(sourceDir, targetDir) {
         fs.readFile(event, 'utf8', function (err, data) {
             if (!err) {
                 if (event.indexOf(".html") >= 0) {
-                    fs.writeFile(targetFile, compileHTML(data, targetFile.substring(1, targetFile.length)));
+                    fs.writeFile(targetFile, compileHTML(data, targetFile.substring(targetDir.length, targetFile.length)));
                 }
                 if (event.indexOf(".js") >= 0) {
-                    fs.writeFile(targetFile, compileJS(data, targetFile.substring(1, targetFile.length)));
+                    fs.writeFile(targetFile, compileJS(data, targetFile.substring(targetDir.length, targetFile.length)));
                 }
             }
         });
@@ -588,7 +553,6 @@ function runCompiler(sourceDir, targetDir) {
                         }
                     }, 100);
                 }
-
             });
         });
 }
@@ -608,49 +572,27 @@ if (help) {
     helpDoc.push('');
     helpDoc.push('  Usage : yalla [options]');
     helpDoc.push('');
-    helpDoc.push('      -m compiler                              run yalla as compiler mode (watch source dir and generate result in dist dir) or as server ');
-    helpDoc.push('      -m server                                run yalla as server mode (watch http request, pull code from source dir and return compiled code to client)');
-    helpDoc.push('      -p 8080                                  port number when yalla run as server');
     helpDoc.push('      -s src                                   base directory for the source code');
     helpDoc.push('      -d dist                                  base directory for the compiled code');
     helpDoc.push('      -v version                               version of yallajs library');
     helpDoc.push('');
     helpDoc.push('  Example : ');
     helpDoc.push('');
-    helpDoc.push('      yalla -p 9090                            run yalla server in port 9090 with source directory name "src"');
-    helpDoc.push('      yalla -p 9090 -s source                  run yalla server in port 9090 with source directory name "source"');
-    helpDoc.push('      yalla -m compiler                        run yalla compiler, watch changes in "src" directory and compile result to "dist" directory');
-    helpDoc.push('      yalla -m compiler -s source -d output    run yalla compiler, watch changes in "source" directory and compile result to "output" directory');
+    helpDoc.push('      yalla -s source -d build                 run yalla compiler watch directory source and generate result in build directory"');
     helpDoc.push('');
     console.log(helpDoc.join('\n'));
 } else if (version) {
     console.log('YallaJS version : ' + pjson.version);
 } else {
-    if (!mode) {
-        console.log('-m default set to "server"');
-        mode = 'server';
-    }
-    if (mode === 'server' && !port) {
-        console.log('-p default set to "8080"');
-        port = '8080';
-    }
-
     if (!sourceDir) {
         console.log('-s default set to "src"');
         sourceDir = 'src';
     }
-
-    if (mode === 'compiler' && !targetDir) {
+    if (!targetDir) {
         console.log('-d default set to "dist"');
         targetDir = 'dist';
     }
-
     sourceDir = './' + sourceDir;
     targetDir = './' + targetDir;
-
-    if (mode == 'server') {
-        runServer(sourceDir, parseInt(port));
-    } else {
-        runCompiler(sourceDir, targetDir);
-    }
+    runCompiler(sourceDir, targetDir);
 }

@@ -174,7 +174,6 @@ var yalla = (function () {
     };
 
     utils.fetch = function (url, postData) {
-
         var XMLHttpFactories = [
             function () {
                 return new XMLHttpRequest()
@@ -251,6 +250,7 @@ var yalla = (function () {
     };
 
     framework.addComponent = function (name, component) {
+        name = framework.composePathFromBase(name);
         yalla.components[name] = component;
         var path = name + framework.filePrefix;
         if (path in framework.componentLoadListener) {
@@ -268,7 +268,7 @@ var yalla = (function () {
         }
         return new Promise(function (resolve) {
             var s = document.createElement('script');
-            s.setAttribute("src", '.' + url);
+            s.setAttribute("src", url);
             document.head.appendChild(s);
             framework.componentLoadListener[url] = function () {
                 resolve(url);
@@ -279,7 +279,11 @@ var yalla = (function () {
 
     framework.composePathFromBase = function (component) {
         var fromRoot = (component.charAt(0) == '/');
-        return "/" + framework.base + (fromRoot ? '' : '/') + component;
+        var path = framework.base + (fromRoot ? '' : '/') + component;
+        if(path.charAt(0) !== '/'){
+            path = '/'+path;
+        }
+        return path;
     };
 
     framework.loadScriptAndDependency = function (component) {
@@ -295,7 +299,7 @@ var yalla = (function () {
 
         var relativePath = component.substring(0, component.lastIndexOf("/") + 1);
         return new Promise(function (resolve) {
-            utils.fetch('.' + url).then(function (req) {
+            utils.fetch(url).then(function (req) {
                 var injects = (req.responseText.match(/\$inject\(.*?\)/g) || []).map(function (inject) {
                     return inject.substring('$inject("'.length, inject.length - 2);
                 });
@@ -451,11 +455,12 @@ var yalla = (function () {
 
     framework.start = function () {
         var scripts = document.querySelector("script[src$='yalla.js']") || [];
-        if (!utils.assertNotNull(scripts.attributes['yalla-component'], scripts.attributes['yalla-base'], scripts.attributes['yalla-domtarget'])) {
-            throw new Error("script tag should contain attributes 'yalla-component', 'yalla-base' and 'yalla-domtarget'");
+        if (!utils.assertNotNull(scripts.attributes['yalla-component'], scripts.attributes['yalla-domtarget'])) {
+            throw new Error("script tag should contain attributes 'yalla-component' and 'yalla-domtarget'");
         }
+        var yallaJsPath = scripts.attributes['src'].nodeValue;
         var component = scripts.attributes['yalla-component'].nodeValue;
-        var base = scripts.attributes['yalla-base'].nodeValue;
+        var base = yallaJsPath.substring(0,yallaJsPath.lastIndexOf('/'));
         var domTarget = scripts.attributes['yalla-domtarget'].nodeValue;
         var routingCallback = scripts.attributes['yalla-routing'] ? scripts.attributes['yalla-routing'].nodeValue : false;
 
@@ -680,6 +685,8 @@ var yalla = (function () {
             }
         });
     };
+
+
 
     IncrementalDOM.notifications.nodesDeleted = function (nodes) {
         nodes.forEach(function (node) {

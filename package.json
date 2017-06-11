@@ -1,6 +1,6 @@
 {
   "name": "yallajs",
-  "version": "0.0.59",
+  "version": "0.0.60",
   "description": "HTML component with zero boiler plate",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -27,7 +27,6 @@
   "homepage": "http://yallajs.io",
   "dependencies": {
     "chokidar": "^1.6.1",
-    "express": "^4.15.2",
     "js-beautify": "^1.6.12",
     "minimist": "^1.2.0",
     "xmldom": "^0.1.27"
