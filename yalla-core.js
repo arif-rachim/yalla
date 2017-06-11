@@ -235,6 +235,8 @@ var yalla = (function () {
     framework.base = 'src';
     framework.componentLoadListener = {};
     framework.refs = [];
+    framework.usingPushState = false;
+    framework.pushStateBase = '/';
     framework.createInjector = function (componentPath) {
         var relativePath = componentPath.substring(0, componentPath.lastIndexOf("/"));
 
@@ -458,15 +460,28 @@ var yalla = (function () {
         if (!utils.assertNotNull(scripts.attributes['yalla-component'], scripts.attributes['yalla-domtarget'])) {
             throw new Error("script tag should contain attributes 'yalla-component' and 'yalla-domtarget'");
         }
+
         var yallaJsPath = scripts.attributes['src'].nodeValue;
         var component = scripts.attributes['yalla-component'].nodeValue;
         var base = yallaJsPath.substring(0,yallaJsPath.lastIndexOf('/'));
+        if(document.getElementsByTagName('base').length > 0 && base.indexOf(0) !== '/'){
+            var ref = document.getElementsByTagName('base')[0].attributes.href.nodeValue;
+            base = ref + base;
+        }
         var domTarget = scripts.attributes['yalla-domtarget'].nodeValue;
         var routingCallback = scripts.attributes['yalla-routing'] ? scripts.attributes['yalla-routing'].nodeValue : false;
+        var isPushState = scripts.attributes['yalla-pushstate'] ? scripts.attributes['yalla-pushstate'].nodeValue == 'true' : false;
 
         framework.base = base;
         framework.domTarget = domTarget;
         framework.defaultComponent = component;
+        framework.usingPushState = isPushState;
+        if(isPushState){
+            if(document.getElementsByTagName('base').length == 0){
+                throw new Error("PushState requires base element in html head.");
+            }
+            framework.pushStateBase = document.getElementsByTagName('base')[0].attributes.href.nodeValue;
+        }
         framework.beforeRenderToScreen = function(){
             return new Promise(function (resolve){
                 if(routingCallback && typeof window[routingCallback] == 'function'){
@@ -493,20 +508,23 @@ var yalla = (function () {
         var addressString = '';
         var googleEscapedFragment = '?_escaped_fragment_=';
         // in future we need to check from the yalla.framework.base
-        if (window.location.hash != "") {
-            addressString = window.location.hash.substring(1, window.location.hash.length);
-        }else if(window.location.search.indexOf(googleEscapedFragment) == 0){
-            addressString = decodeURIComponent(window.location.search.substring(googleEscapedFragment.length,window.location.search.length));
+        if(framework.usingPushState){
+            addressString = window.location.pathname.substring(framework.pushStateBase.length-1,window.location.pathname.length);
+            debugger;
+        }else{
+            if (window.location.hash != "") {
+                addressString = window.location.hash.substring(1, window.location.hash.length);
+            }else if(window.location.search.indexOf(googleEscapedFragment) == 0){
+                addressString = decodeURIComponent(window.location.search.substring(googleEscapedFragment.length,window.location.search.length));
+            }
         }
 
         var html5addressStyle = addressString.indexOf('/_')>=0;
-        if(addressString && addressString.length > 0){
+        if(addressString && addressString.length > 0 && addressString !== '/'){
 
             if(html5addressStyle){
                 address = addressString.split("/_");
-                if(address[0].indexOf('!')==0){
-                    address.splice(0,1);
-                }
+                address.splice(0,1);
             }else{
                 // this style need to be deprecated soon, its not compatible with html5 !
                 address = addressString.split("/").map(function(addr){
@@ -527,7 +545,7 @@ var yalla = (function () {
             if(html5addressStyle){
                 var componentParams = pathQuery.split('/').reduce(function(result,query,index,array){
                     if(index == 0){
-                        result.componentPath = query;
+                        result.componentPath = query.replace(/\./g, '/');
                     }else if(index % 2 == 1){
                         result.params[query] = array[index+1];
                     }
@@ -600,11 +618,11 @@ var yalla = (function () {
                 // this must be an array
                 var changesToPatch = lengthableObjectToArray(args);
                 changesToPatch.forEach(function(refName){
-                   yalla.framework.refs.filter(function(refInfo){
-                       return refInfo.name === refName;
-                   }).forEach(function(refInfo){
-                       IncrementalDOM.patch(refInfo.component,function(){refInfo.render()});
-                   })
+                    yalla.framework.refs.filter(function(refInfo){
+                        return refInfo.name === refName;
+                    }).forEach(function(refInfo){
+                        IncrementalDOM.patch(refInfo.component,function(){refInfo.render()});
+                    })
                 });
             }
         });
@@ -639,9 +657,12 @@ var yalla = (function () {
                 }
             }
         }
-        // once we have pushState, we can change location address to pushState
-        window.location.hash = '#!/'+locationAddress;
-        // history.pushState('','',locationAddress);
+        if(framework.usingPushState){
+            history.pushState('','',locationAddress);
+            framework.renderToScreen();
+        }else{
+            window.location.hash = '#!/'+locationAddress;
+        }
     };
 
 
@@ -707,10 +728,10 @@ window.onload = function () {
     yalla.framework.start();
 };
 
-if ("onhashchange" in window) {
-    window.onhashchange = function () {
-        yalla.framework.renderToScreen();
-    }
-} else {
-    alert('Browser not supported');
+window.onhashchange = function () {
+    yalla.framework.renderToScreen();
 }
+
+window.onpopstate = function(event) {
+    yalla.framework.renderToScreen();
+};
