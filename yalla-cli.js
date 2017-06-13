@@ -299,6 +299,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push("self.component = _component;");
                         result.push("self.component._state = self.component._state || {};");
                         result.push("self.state = self.component._state;");
+                        result.push("self.emitEvent = function(eventName,data) { var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _props) { _props['on'+eventName](event); }} ;");
                         result.push('function asyncFunc_' + context.asyncFuncSequence + '(' + condition.dataName + '){');
                     }
 
@@ -310,6 +311,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     if (condition.dataLoad) {
                         result.push('}');
                         result.push('var promise = ' + wrapWithBind(condition.dataLoad, 'self') + ';');
+                        result.push('promise = typeof promise === "function" ? new Promise(promise) : promise; ');
                         result.push('if(promise && typeof promise == "object" && "then" in promise){');
                         result.push('_skip();');
                         result.push('promise.then(function(_result){ $patchChanges(node,function(){ ');
@@ -354,11 +356,12 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
             }, false);
 
             if (isStyle) {
-                var elementSelector = "[element='" + elementName.trim() + "'] ";
+                var elementSelector = "[element='" + elementName.trim() + "']";
                 var text = node.nodeValue.replace(/\r\n/g, '').replace(/\n/g, '').replace(/  /g, '').replace(/"/g, '\'');
                 var cleanScript = text.match(/([^\n,{}]+)(,(?=[^}]*\{)|\s*\{)/g).reduce(function (script, match) {
-                    return script.replace(match, '\\n' + elementSelector + match);
-                }, text).replace("[element='" + elementName.trim() + "'] root", "[element='" + elementName.trim() + "']");
+                    var selector = match.substring(0,match.length-1);
+                    return script.replace(match, '\\n' + elementSelector + selector+','+ elementSelector +' '+ match);
+                }, text);
                 result.push('_text("' + cleanScript + '");');
             } else if (isScript) {
                 scriptTagContent.push(node.nodeValue);

@@ -510,7 +510,6 @@ var yalla = (function () {
         // in future we need to check from the yalla.framework.base
         if(framework.usingPushState){
             addressString = window.location.pathname.substring(framework.pushStateBase.length-1,window.location.pathname.length);
-            debugger;
         }else{
             if (window.location.hash != "") {
                 addressString = window.location.hash.substring(1, window.location.hash.length);
