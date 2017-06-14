@@ -52,7 +52,6 @@ function convertAttributes(attributes) {
             selfWrapper.push("if('elements' in self.target) " + OPEN_BRACKET + "self.elements = self.target.elements;" + CLOSE_BRACKET);
             selfWrapper.push("self.currentTarget = this == event.target ? self.target : _parentComponent(event.currentTarget);");
             selfWrapper.push("self.component = _component;");
-            selfWrapper.push("self.component._state = self.component._state || {};");
             selfWrapper.push("self.state = self.component._state;");
             selfWrapper.push("self.emitEvent = function(eventName,data)" + OPEN_BRACKET + " var event = new ComponentEvent(eventName,data,self.target,self.currentTarget); if('on'+eventName in _props) " + OPEN_BRACKET + " _props['on'+eventName](event); " + CLOSE_BRACKET + ' ' + CLOSE_BRACKET + ";");
             value = wrapWithBind(value, 'self');
@@ -247,6 +246,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     var convertedAttributes = convertAttributes(condition.cleanAttributes);
                     var escapedBracketJson = escapeBracket(JSON.stringify(convertedAttributes));
                     result.push('var _params = ' + textToExpression(escapedBracketJson, true) + ';');
+                    result.push('_params.key = '+(Math.random()* 10000000000000000).toFixed(0)+';');
                     result.push('_context["' + node.nodeName + '"].render( typeof arguments[1] === "object" ? _merge(arguments[1],_params) : _params ,function(slotName,slotProps){');
                     lengthableObjectToArray(node.childNodes).forEach(function (childNode) {
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
@@ -257,8 +257,16 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
                 } else {
+                    var nonComponentNode = ['title','style','base','link','meta','script','noscript','head'];
+                    if (level == 0 && nonComponentNode.indexOf(node.nodeName) < 0) {
+                        result.push('var _nextComponent = IncrementalDOM.currentPointer();');
+                        result.push('var _validComponent = yalla.framework.validComponentName(_nextComponent,_elementName,_props.key)');
+                        result.push('var _state = {};');
+                        result.push('if(_validComponent ){ _state = _nextComponent._state }else{ _state = initState(_props)}');
+                    }
+
                     var incrementalDomNode = '{element : IncrementalDOM.currentElement(), pointer : IncrementalDOM.currentPointer()}';
-                    result.push('_elementOpenStart("' + node.nodeName + '","");');
+                    result.push('_elementOpenStart("' + node.nodeName + '",_props.key);');
                     var attributesObject = convertAttributes(condition.cleanAttributes);
                     for (var key in attributesObject) {
                         if(attributesObject.hasOwnProperty(key)){
@@ -267,13 +275,14 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     }
 
                     result.push('_elementOpenEnd("' + node.nodeName + '");');
-                    var nonComponentNode = ['title','style','base','link','meta','script','noscript','head'];
+
                     if (level == 0 && nonComponentNode.indexOf(node.nodeName) < 0) {
                         result.push('var _component = IncrementalDOM.currentElement();');
-                        result.push('var _validComponent = yalla.framework.validComponentName(_component,_elementName)');
-                        result.push('_component._state = _component._state && _validComponent ? _component._state : initState.bind(_component)(_props);');
+                        result.push('_component._state = _state;');
                         result.push('_component._state._name = _elementName;');
-                        result.push('var _state = _component._state;');
+                        result.push('_component._state._key = _props.key;');
+                        result.push('_component._state._onCreated = onCreated;');
+                        result.push('_component._state._onDeleted = onDeleted;');
                         result.push("var _self = { component:_component, properties : _props, state : _component._state};");
                         result.push('if(_validComponent){yalla.framework.propertyCheckChanges(_component._properties,_props,onPropertyChange.bind(_self));}');
                         result.push('_component._properties = _props;');
@@ -392,7 +401,9 @@ function convertHtmlToJavascript(file, originalUrl) {
         result.push('var _text = IncrementalDOM.text;');
         result.push('var _attr = IncrementalDOM.attr;');
         result.push('function initState(props){ return {} };');
+        result.push('function onCreated(){};');
         result.push('function onPropertyChange(props){};');
+        result.push('function onDeleted(){};');
         var functionContent = [];
         functionContent.push('function $render(_props,_slotView){');
         var context = {};

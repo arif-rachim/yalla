@@ -340,8 +340,8 @@ var yalla = (function () {
         return null;
     };
 
-    framework.validComponentName = function(component,componentName){
-        return component._state && component._state._name == componentName;
+    framework.validComponentName = function(component,componentName,key){
+        return component && component._state && component._state._name == componentName && component._state._key == key;
     };
 
     framework.renderChain = function (address) {
@@ -703,6 +703,25 @@ var yalla = (function () {
             if (node.oncreated) {
                 node.oncreated.call(node, {target:node,currentTarget:node});
             }
+            if(node._state && node._state._onCreated){
+                node._state._onCreated.call({
+                    target:node,
+                    currentTarget:node,
+                    state:node._state,
+                    properties:node._properties,
+                    emitEvent : function(eventName,data){
+                        var event = {
+                            data : data,
+                            target : node,
+                            currentTarget: node,
+                            type : eventName
+                        };
+                        if('on'+eventName in node._properties){
+                            node._properties['on'+eventName](event);
+                        }
+                    }
+                });
+            }
         });
     };
 
@@ -715,6 +734,25 @@ var yalla = (function () {
             }
             if (node.ondeleted) {
                 node.ondeleted.call(node, {target:node,currentTarget:node});
+            }
+            if(node._state && node._state._onDeleted){
+                node._state._onDeleted.call({
+                    target:node,
+                    currentTarget:node,
+                    state:node._state,
+                    properties:node._properties,
+                    emitEvent : function(eventName,data){
+                        var event = {
+                            data : data,
+                            target : node,
+                            currentTarget: node,
+                            type : eventName
+                        };
+                        if('on'+eventName in node._properties){
+                            node._properties['on'+eventName](event);
+                        }
+                    }
+                });
             }
         });
     };
