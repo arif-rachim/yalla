@@ -59,7 +59,7 @@ function convertAttributes(attributes) {
             convertedValue = '{{function(event) %7B ' + selfWrapper.join('') + ' ' + functionContent + ' %7D}}';
         }
         else if (attribute.name.indexOf('.bind') >= 0) {
-            value = wrapWithBind(value, 'self');
+            value = wrapWithBind(value, '_self');
             convertedName = name.substring(0, (name.length - '.bind'.length));
             convertedValue = '{{bind:' + value + ' }}';
         }
@@ -229,8 +229,17 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                     return condition;
                 }, initialValue);
 
+                var nonComponentNode = ['title','style','base','link','meta','script','noscript','head'];
+                if (level == 0 && nonComponentNode.indexOf(node.nodeName) < 0) {
+                    result.push('var _nextComponent = IncrementalDOM.currentPointer();');
+                    result.push('var _validComponent = yalla.framework.validComponentName(_nextComponent,_elementName,_props.key)');
+                    result.push('var _state = {};');
+                    result.push('if(_validComponent ){ _state = _nextComponent._state }else{ _state = initState(_props)}');
+                    result.push("var _self = {properties : _props, state : _state};");
+                }
+                
                 if (condition.if) {
-                    result.push('if(' + condition.if + '){');
+                    result.push('if(' + wrapWithBind(condition.if, '_self') + '){');
                 }
 
                 if (condition.slotName && condition.slotName != 'default') {
@@ -257,13 +266,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result = result.concat(convertToIdomString(childNode, context, elementName, scriptTagContent, ++level));
                     });
                 } else {
-                    var nonComponentNode = ['title','style','base','link','meta','script','noscript','head'];
-                    if (level == 0 && nonComponentNode.indexOf(node.nodeName) < 0) {
-                        result.push('var _nextComponent = IncrementalDOM.currentPointer();');
-                        result.push('var _validComponent = yalla.framework.validComponentName(_nextComponent,_elementName,_props.key)');
-                        result.push('var _state = {};');
-                        result.push('if(_validComponent ){ _state = _nextComponent._state }else{ _state = initState(_props)}');
-                    }
+
 
                     var incrementalDomNode = '{element : IncrementalDOM.currentElement(), pointer : IncrementalDOM.currentPointer()}';
                     result.push('_elementOpenStart("' + node.nodeName + '",_props.key);');
@@ -283,7 +286,7 @@ function convertToIdomString(node, context, elementName, scriptTagContent, level
                         result.push('_component._state._key = _props.key;');
                         result.push('_component._state._onCreated = onCreated;');
                         result.push('_component._state._onDeleted = onDeleted;');
-                        result.push("var _self = { component:_component, properties : _props, state : _component._state};");
+                        result.push('_self.emitEvent = function(eventName,data) { var event = new ComponentEvent(eventName,data,_component,_component); if("on"+eventName in _props) { _props["on"+eventName](event); }} ;');
                         result.push('if(_validComponent){yalla.framework.propertyCheckChanges(_component._properties,_props,onPropertyChange.bind(_self));}');
                         result.push('_component._properties = _props;');
                     }
