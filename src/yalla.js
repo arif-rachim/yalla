@@ -1,4 +1,5 @@
 (function (module) {
+    "use strict";
 
     const isTextNode = el => el.nodeType === 3;
     const isAttributeNode = el => el.nodeType === 2;
