@@ -1,9 +1,8 @@
 {
   "name": "yallajs",
-  "version": "2.0.0",
-  "description": "Web Application with zero boiler plate",
+  "version": "0.0.64",
+  "description": "HTML component with zero boiler plate",
   "scripts": {
-    "build": "babel src -d lib",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
@@ -27,7 +26,9 @@
   },
   "homepage": "http://yallajs.io",
   "dependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-preset-env": "^1.6.0"
+    "chokidar": "^1.6.1",
+    "js-beautify": "^1.6.12",
+    "minimist": "^1.2.0",
+    "xmldom": "^0.1.27"
   }
 }

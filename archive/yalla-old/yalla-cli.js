@@ -5,7 +5,7 @@ var path = require('path');
 var chokidar = require('chokidar');
 var beautify = require('js-beautify').js_beautify;
 var xmldom = require('xmldom');
-var pjson = require('./package.json');
+var pjson = require('./../../package.json');
 
 var DOMParser = xmldom.DOMParser;
 

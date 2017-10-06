@@ -1,6 +1,5 @@
 /node_modules
 /.idea
-/src
 /dist
 /npm-debug.log
-/index.html
+/archive/yalla-old/index.html
