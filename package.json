@@ -6,6 +6,7 @@
     "commit": "git-cz",
     "build": "babel src -d lib",
     "test": "mocha src/yalla.test.js -w",
+    "test:single": "mocha src/yalla.test.js",
     "karma": "karma start --single-run --browsers ChromeHeadless karma.conf.js",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },

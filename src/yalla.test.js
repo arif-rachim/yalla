@@ -16,13 +16,6 @@ describe('yalla',function(){
                 return template instanceof HtmlTemplate
             });
         })
-        it('Should generate Button',function () {
-            let node = document.createElement('div');
-            expect(render(html`<input type="button">`,node)).to.satisfy(function(template){
-                return node.childElementCount = 1;
-
-            });
-        })
 
     });
 
