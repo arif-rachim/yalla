@@ -1,8 +1,10 @@
 /**
  * Created by arif on 10/6/2017.
  */
+
+"use strict";
 var expect = require('chai').expect;
-var yalla = require('./../src/yalla');
+var yalla = require('../lib/yalla');
 var HtmlTemplate = yalla.HtmlTemplate;
 var HtmlTemplateCollections = yalla.HtmlTemplateCollections;
 var render = yalla.render;
@@ -16,14 +18,6 @@ describe('yalla',function(){
                 return template instanceof HtmlTemplate
             });
         })
-        it('Should generate Button',function () {
-            let node = document.createElement('div');
-            expect(render(html`<input type="button">`,node)).to.satisfy(function(template){
-                return node.childElementCount = 1;
-
-            });
-        })
-
     });
 
 });
