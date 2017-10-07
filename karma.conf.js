@@ -4,16 +4,14 @@ module.exports = function(config) {
         files: ['src/yalla.js','test/**/*.js'],
         reporters: ['progress','coverage'],
         preprocessors: {
-            // source files, that you wanna generate coverage for
-            // do not include tests or libraries
-            // (these files will be instrumented by Istanbul)
             'src/**/*.js': ['coverage']
-            //'src/yalla.js': ['coverage']
         },
-        // optionally, configure the reporter
         coverageReporter: {
-            type : 'html',
-            dir : 'coverage/'
+            dir: 'coverage/',
+            reporters: [
+                { type: 'html', subdir: 'report-html' },
+                { type: 'lcov', subdir: 'report-lcov' }
+            ]
         },
         port: 9876,  // karma web server port
         colors: true,
