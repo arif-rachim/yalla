@@ -12,7 +12,7 @@ node_js:
 install:
   - yarn
 before_script:
-  - yarn prune
+  - npm prune
 script:
   - yarn test
 after_success:
