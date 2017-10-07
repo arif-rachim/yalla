@@ -6,6 +6,8 @@
 
 describe('yalla',function(){
     describe('html',function () {
+        
+
 
         it('Should generate HtmlTemplate',function () {
             expect(html`Hello World`).to.satisfy(function(template){
@@ -59,6 +61,27 @@ describe('yalla',function(){
                 return dom.innerText == 'Hello World Yay !!';
             });
         });
+
+        it('Should generate Component and replace with non Component',function () {
+            let dom = document.createElement('dom');
+            let toggleComponent = true;
+            render(html`Hello ${toggleComponent ? html`World` : 'World'} Yay !!`,dom);
+            expect(dom).to.satisfy(function(dom){
+                return dom.innerText == 'Hello World Yay !!';
+            });
+            toggleComponent = false;
+            render(html`Hello ${toggleComponent ? html`World` : 'World'} Yay !!`,dom);
+            expect(dom).to.satisfy(function(dom){
+                return dom.innerText == 'Hello World Yay !!';
+            });
+            toggleComponent = true;
+            render(html`Hello ${toggleComponent ? html`World` : 'World'} Yay !!`,dom);
+            expect(dom).to.satisfy(function(dom){
+                return dom.innerText == 'Hello World Yay !!';
+            });
+        });
+
+
 
         it('Should generate list of collections',function () {
             let dom = document.createElement('div');
@@ -191,6 +214,157 @@ describe('yalla',function(){
                 return dom.firstElementChild.onclick == onclick;
             });
         });
+
+        it('should validate attribute minimization',function(){
+            let dom = document.createElement('div');
+            let checked = true;
+            render(html`<input type="checkbox" checked=" ${checked} ">`,dom);
+            expect(dom).to.satisfy(function (dom) {
+                return dom.firstElementChild.checked == true;
+            });
+
+            checked = false;
+            render(html`<input type="checkbox" checked=" ${checked} ">`,dom);
+            expect(dom).to.satisfy(function (dom) {
+                return dom.firstElementChild.checked == false;
+            });
+        });
+
+        it('should validate swapped collections',function(){
+            let dom = document.createElement('div');
+            let items = [
+                {key:'one',label:'one',value:'one'},
+                {key:'two',label:'two',value:'two'},
+                {key:'three',label:'three',value:'three'},
+            ];
+            function update(){
+                render(html`
+                ${htmlMap(items,i => i.key, (item,index) => html`
+                    <li>${item.label}</li>
+                `)}
+            `,dom);
+            }
+            update();
+            let tags = dom.getElementsByTagName('li');
+            items.forEach((item,index) => {
+                expect(item).to.satisfy(function (item) {
+                    return tags[index].innerText == item.label;
+                });
+            });
+            let t = items[1];
+            items[1] = items[0];
+            items[0] = t;
+            update();
+            tags = dom.getElementsByTagName('li');
+            items.forEach((item,index) => {
+                expect(item).to.satisfy(function (item) {
+                    return tags[index].innerText == item.label;
+                });
+            });
+        });
+
+        it('should validate swapped content inside',function(){
+            let dom = document.createElement('div');
+            let items = [
+                {key:'one',label:'one',value:'one',hasInputField:false},
+                {key:'two',label:'two',value:'two',hasInputField:true},
+                {key:'three',label:'three',value:'three',hasInputField:false},
+            ];
+            function update(){
+                render(html`
+                ${htmlMap(items,i => i.key, (item,index) => html`
+                    <li>${item.label}${item.hasInputField ? html`<input type='text'>` : ''}</li>
+                `)}
+            `,dom);
+            }
+            update();
+            let tags = dom.getElementsByTagName('li');
+            expect(tags[0]).to.satisfy(function (tag) {
+                return tag.getElementsByTagName('input').length == 0;
+            });
+            expect(tags[1]).to.satisfy(function (tag) {
+                return tag.getElementsByTagName('input').length == 1;
+            });
+            let t = items[1];
+            items[1] = items[0];
+            items[0] = t;
+            update();
+            tags = dom.getElementsByTagName('li');
+            expect(tags[0]).to.satisfy(function (tag) {
+                return tag.getElementsByTagName('input').length == 1;
+            });
+            expect(tags[1]).to.satisfy(function (tag) {
+                return tag.getElementsByTagName('input').length == 0;
+            });
+        });
+
+        it('should validate swapped content inside and removed',function(){
+            let dom = document.createElement('div');
+            let items = [
+                {key:'one',label:'one',value:'one',hasInputField:false},
+                {key:'two',label:'two',value:'two',hasInputField:true},
+                {key:'three',label:'three',value:'three',hasInputField:false},
+            ];
+            function update(){
+                render(html`${htmlMap(items,i => i.key, (item,index) => {return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:  html`Hello Yalla!`;})}`,dom);
+            }
+            update();
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `Hello Yalla!<li><input type="text">${SEPARATOR}</li>Hello Yalla!${SEPARATOR}`;
+            });
+            let t = items[1];
+            items[1] = items[0];
+            items[0] = t;
+            update();
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `<li><input type="text">${SEPARATOR}</li>Hello Yalla!Hello Yalla!${SEPARATOR}`;
+            });
+        });
+
+        it('should validate swapped content inside and replace with string',function(){
+            let dom = document.createElement('div');
+            let items = [
+                {key:'one',label:'one',value:'one',hasInputField:false},
+                {key:'two',label:'two',value:'two',hasInputField:true},
+                {key:'three',label:'three',value:'three',hasInputField:false},
+            ];
+            function update(){
+                render(html`${htmlMap(items,i => i.key, (item,index) => {return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:  `Hello Yalla!`;})}`,dom);
+            }
+            update();
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `Hello Yalla!<li><input type="text">${SEPARATOR}</li>Hello Yalla!${SEPARATOR}`;
+            });
+            let t = items[1];
+            items[1] = items[0];
+            items[0] = t;
+            update();
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `<li><input type="text">${SEPARATOR}</li>Hello Yalla!Hello Yalla!${SEPARATOR}`;
+            });
+        });
+
+        it('Should not throw exception',function () {
+            render(null,null);
+        });
+
+        /*
+        //HEY WE HAVE BUGS HERE !!
+        it('Should render array',function () {
+            let dom = document.createElement('dom');
+            let items = [{label:'one'},{label:'two'},{label:'three'}];
+            //render(html`${items.map(i => `${i.label}`)}`,dom);
+            render(html`${htmlMap(items,'label',i => html`${i.label}`) }`,dom);
+            console.log(dom.innerHTML);
+
+
+            items = [{label:'three'},{label:'two'},{label:'one'}];
+            //render(html`${items.map(i => `${i.label}`)}`,dom);
+            render(html`${htmlMap(items,'label',i =>html`${i.label}`) }`,dom);
+            console.log(dom.innerHTML);
+        });
+        */
+
 
     });
 });

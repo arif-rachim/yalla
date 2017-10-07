@@ -166,6 +166,9 @@ class HtmlTemplateCollections {
             let {templateCollections, keyFunction, mapFunction, orders} = token;
             let key = keyFunction.apply(token.templateCollections, [item, index, source]);
             templateCollections.dictionary[key] = mapFunction.apply(templateCollections, [item, index, source]);
+            if(!(templateCollections.dictionary[key] instanceof HtmlTemplate)){
+                templateCollections.dictionary[key] = new HtmlTemplate([templateCollections.dictionary[key]],[])
+            }
             orders.push(key);
             return token;
         }, {
@@ -240,6 +243,7 @@ function html(string, ...values) {
 function render(htmlTemplate, rootNode) {
     if (!rootNode || !htmlTemplate) {
         console.error('render(htmlTemplate,node) : htmlTemplate and node are mandatory');
+        return;
     }
     let {yallaTemplate} = rootNode;
     if (!yallaTemplate) {
