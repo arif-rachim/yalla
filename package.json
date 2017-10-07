@@ -6,7 +6,7 @@
     "commit": "git-cz",
     "build": "babel src -d lib",
     "test:classic": "babel src -d lib && mocha test/yalla.test.js",
-    "test" : "babel src -d lib && karma start --single-run --browsers ChromeHeadless karma.conf.js",
+    "test": "babel src -d lib && karma start --single-run --browsers ChromeHeadless karma.conf.js",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
   "repository": "https://github.com/yallajs/yalla.git",
@@ -29,6 +29,7 @@
     "chai": "^4.1.2",
     "commitizen": "^2.9.6",
     "cz-conventional-changelog": "^2.0.0",
+    "ghooks": "^2.0.0",
     "karma": "^1.7.1",
     "karma-chai": "^0.1.0",
     "karma-chrome-launcher": "^2.2.0",
@@ -38,6 +39,11 @@
   },
   "czConfig": {
     "path": "node_modules/cz-conventional-changelog"
+  },
+  "config" : {
+    "ghooks" : {
+      "pre-commit" : "yarn test"
+    }
   },
   "main": "index.js"
 }
