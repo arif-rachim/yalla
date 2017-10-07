@@ -38,7 +38,8 @@ class HtmlTemplate {
             if (node.attributes) {
                 Array.from(node.attributes).reduce((results, attribute) => {
                     if (attribute.nodeValue.indexOf(SEPARATOR) >= 0) {
-                        results.push(attribute);
+                        let dynamicLength = attribute.nodeValue.split(SEPARATOR).length - 1;
+                        for(let i = 0;i<dynamicLength;i++)results.push(attribute);
                     }
                     return results;
                 }, results);
@@ -96,7 +97,7 @@ class HtmlTemplate {
                         node.yallaTemplate = value.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
                     }
                 } else {
-                    node.parentElement().removeChild(node.yallaTemplate);
+                    node.parentElement.removeChild(node.yallaTemplate);
                     node.yallaTemplate = value.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
                 }
 
@@ -121,6 +122,9 @@ class HtmlTemplate {
         let text = document.createTextNode(value.toString());
         if (node.yallaTemplate && isTextNode(node.yallaTemplate)) {
             node.parentElement.removeChild(node.yallaTemplate);
+        }
+        if (node.yallaTemplate && node.yallaTemplate instanceof HtmlTemplate) {
+            node.yallaTemplate.destroy();
         }
         node.parentElement.insertBefore(text, node);
         node.yallaTemplate = text;

@@ -7,7 +7,6 @@
 describe('yalla',function(){
     describe('html',function () {
 
-
         it('Should generate HtmlTemplate',function () {
             expect(html`Hello World`).to.satisfy(function(template){
                 return template instanceof HtmlTemplate
@@ -90,7 +89,27 @@ describe('yalla',function(){
             });
         });
 
-        it('Should perform updates on collections',function () {
+        it('Should perform addition on collections',function () {
+            let dom = document.createElement('div');
+            let items = [];
+
+
+            function update(){
+                render(html`
+                    ${htmlMap(items,'id',i => html`<label>${i.label} ${i.value}</label>`)}
+                `,dom);
+            }
+
+            for(let i = 0;i < 10;i++){
+                items.push({id : i,label:`LABEL-${i}`,value:`VALUE-${i}`});
+                update();
+                expect(dom).to.satisfy(function (dom) {
+                    return dom.childElementCount == i+1;
+                });
+            }
+        });
+
+        it('Should perform deletion on collections',function () {
             let dom = document.createElement('div');
             let items = [];
 
@@ -109,8 +128,69 @@ describe('yalla',function(){
                 });
             }
 
+            for(let i = 0;i < 10;i++){
+                items.splice(0,1);
+                update();
+                expect(dom).to.satisfy(function (dom) {
+                    return dom.childElementCount == (9-i);
+                });
+            }
         });
 
+        // perform update and remove update
+
+        it('Should promote component from text to html',function(){
+            let dom = document.createElement('div');
+            let state = {
+                displayHtml : false
+            };
+            let update = () => {
+                render(html`<div>${state.displayHtml ? html`<div>Hello World</div>` : ''}</div>`,dom);
+            }
+            update();
+            expect(dom).to.satisfy(function (dom) {
+                return dom.innerText == '';
+            });
+            state.displayHtml=true;
+            update();
+            expect(dom).to.satisfy(function (dom) {
+                return dom.innerText == `Hello World`;
+            });
+            state.displayHtml=false;
+
+            update();
+            expect(dom).to.satisfy(function (dom) {
+                return dom.innerText == ``;
+            });
+
+            state.displayHtml=true;
+            update();
+            expect(dom).to.satisfy(function (dom) {
+                return dom.innerText == `Hello World`;
+            });
+        });
+
+        it('should bind with attribute whitespace',function(){
+            let dom = document.createElement('div');
+            let color = 'blue';
+
+            render(html`<div style="display: ${'block'};color: ${color}"></div>`,dom);
+            expect(dom).to.satisfy(function (dom) {
+                return dom.firstElementChild.style.color == 'blue';
+            });
+        });
+
+        it('should bind to event listener',function(){
+            let dom = document.createElement('div');
+            let color = 'blue';
+            let onclick = function(){
+                alert('Hello World');
+            };
+            render(html`<button style="display: ${'block'};color: ${color}" onclick="${onclick}"></button>`,dom);
+            expect(dom).to.satisfy(function (dom) {
+                return dom.firstElementChild.onclick == onclick;
+            });
+        });
 
     });
 });
