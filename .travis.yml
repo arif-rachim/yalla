@@ -16,6 +16,7 @@ before_script:
 script:
   - yarn test
 after_success:
+  - yarn report-coverage
   - yarn semantic-release
 branches:
   except:

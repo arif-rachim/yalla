@@ -6,6 +6,7 @@
     "commit": "git-cz",
     "build": "babel src -d lib",
     "test:classic": "babel src -d lib && mocha test/**/*.js",
+    "report-coverage" : "cat ./coverage/lcov.info | codecov",
     "test": "babel src -d lib && karma start --single-run --browsers ChromeHeadless karma.conf.js",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
@@ -27,6 +28,7 @@
     "babel-cli": "^6.26.0",
     "babel-preset-env": "^1.6.0",
     "chai": "^4.1.2",
+    "codecov.io": "^0.1.6",
     "commitizen": "^2.9.6",
     "cz-conventional-changelog": "^2.0.0",
     "ghooks": "^2.0.0",
