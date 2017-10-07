@@ -5,7 +5,7 @@
   "scripts": {
     "commit": "git-cz",
     "build": "babel src -d lib",
-    "test:classic": "babel src -d lib && mocha test/yalla.test.js",
+    "test:classic": "babel src -d lib && mocha test/**/*.js",
     "test": "babel src -d lib && karma start --single-run --browsers ChromeHeadless karma.conf.js",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
@@ -33,6 +33,7 @@
     "karma": "^1.7.1",
     "karma-chai": "^0.1.0",
     "karma-chrome-launcher": "^2.2.0",
+    "karma-coverage": "^1.1.1",
     "karma-mocha": "^1.3.0",
     "mocha": "^4.0.1",
     "semantic-release": "^8.0.3"
@@ -40,9 +41,9 @@
   "czConfig": {
     "path": "node_modules/cz-conventional-changelog"
   },
-  "config" : {
-    "ghooks" : {
-      "pre-commit" : "yarn test"
+  "config": {
+    "ghooks": {
+      "pre-commit": "yarn test"
     }
   },
   "main": "index.js"
