@@ -12,7 +12,7 @@ const DATA_SEPARATOR = '↭';
 const SEPARATOR = `<!--${DATA_SEPARATOR}-->`;
 
 
-export class HtmlTemplate {
+class HtmlTemplate {
     constructor(string = [], values = []) {
         this.templateStatics = string;
         this.templateStaticString = string.join(SEPARATOR);
@@ -152,7 +152,7 @@ export class HtmlTemplate {
     }
 }
 
-export class HtmlTemplateCollections {
+class HtmlTemplateCollections {
     constructor(keyFunction, mapFunction, source) {
         this.dictionary = {};
         this.keyFunction = keyFunction;
@@ -221,7 +221,7 @@ export class HtmlTemplateCollections {
 
 }
 
-export function htmlMap(source, keyFunction, mapFunction) {
+function htmlMap(source, keyFunction, mapFunction) {
     let keyFunc = typeof keyFunction === 'string' ? i => i[keyFunction] : keyFunction;
     if (typeof keyFunc !== 'function') {
         throw new Error('Please provide keyFunction in htmlMap')
@@ -229,11 +229,11 @@ export function htmlMap(source, keyFunction, mapFunction) {
     return new HtmlTemplateCollections(keyFunc, mapFunction, source);
 }
 
-export function html(string, ...values) {
+function html(string, ...values) {
     return new HtmlTemplate(string, values);
 }
 
-export function render(htmlTemplate, rootNode) {
+function render(htmlTemplate, rootNode) {
     if (!rootNode || !htmlTemplate) {
         console.error('render(htmlTemplate,node) : htmlTemplate and node are mandatory');
     }
