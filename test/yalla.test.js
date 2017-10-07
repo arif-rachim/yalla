@@ -6,8 +6,6 @@
 
 describe('yalla',function(){
     describe('html',function () {
-        
-
 
         it('Should generate HtmlTemplate',function () {
             expect(html`Hello World`).to.satisfy(function(template){
@@ -348,22 +346,46 @@ describe('yalla',function(){
             render(null,null);
         });
 
-        /*
+
         //HEY WE HAVE BUGS HERE !!
         it('Should render array',function () {
             let dom = document.createElement('dom');
             let items = [{label:'one'},{label:'two'},{label:'three'}];
             //render(html`${items.map(i => `${i.label}`)}`,dom);
             render(html`${htmlMap(items,'label',i => html`${i.label}`) }`,dom);
-            console.log(dom.innerHTML);
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `one${SEPARATOR}two${SEPARATOR}three${SEPARATOR}${SEPARATOR}`;
+            });
+
+
+            items = [{label:'four'},{label:'five'},{label:'six'}];
+            //render(html`${items.map(i => `${i.label}`)}`,dom);
+            render(html`${htmlMap(items,'label',i =>html`${i.label}`) }`,dom);
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `four${SEPARATOR}five${SEPARATOR}six${SEPARATOR}${SEPARATOR}`;
+            });
+        });
+
+        // i think we have bug here !!
+        it('Should render array two',function () {
+            let dom = document.createElement('dom');
+            let items = [{label:'one'},{label:'two'},{label:'three'}];
+            //render(html`${items.map(i => `${i.label}`)}`,dom);
+            render(html`${htmlMap(items,'label',i => html`${i.label}`) }`,dom);
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `one${SEPARATOR}two${SEPARATOR}three${SEPARATOR}${SEPARATOR}`;
+            });
 
 
             items = [{label:'three'},{label:'two'},{label:'one'}];
             //render(html`${items.map(i => `${i.label}`)}`,dom);
             render(html`${htmlMap(items,'label',i =>html`${i.label}`) }`,dom);
             console.log(dom.innerHTML);
+            // expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+            //     return innerHtml == `four${SEPARATOR}five${SEPARATOR}six${SEPARATOR}${SEPARATOR}`;
+            // });
         });
-        */
+
 
 
     });

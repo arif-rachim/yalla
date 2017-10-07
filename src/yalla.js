@@ -52,7 +52,7 @@ class HtmlTemplate {
 
     appendSiblingFrom(node) {
         this.nodeTree.forEach(n => {
-            return node.parentElement.insertBefore(n, node);
+            return node.parentNode.insertBefore(n, node);
         });
         return this;
     }
@@ -97,7 +97,7 @@ class HtmlTemplate {
                         node.yallaTemplate = value.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
                     }
                 } else {
-                    node.parentElement.removeChild(node.yallaTemplate);
+                    node.parentNode.removeChild(node.yallaTemplate);
                     node.yallaTemplate = value.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
                 }
 
@@ -121,12 +121,12 @@ class HtmlTemplate {
         value = value || '';
         let text = document.createTextNode(value.toString());
         if (node.yallaTemplate && isTextNode(node.yallaTemplate)) {
-            node.parentElement.removeChild(node.yallaTemplate);
+            node.parentNode.removeChild(node.yallaTemplate);
         }
         if (node.yallaTemplate && node.yallaTemplate instanceof HtmlTemplate) {
             node.yallaTemplate.destroy();
         }
-        node.parentElement.insertBefore(text, node);
+        node.parentNode.insertBefore(text, node);
         node.yallaTemplate = text;
     }
 
@@ -152,7 +152,12 @@ class HtmlTemplate {
     }
 
     destroy() {
-        this.nodeTree.forEach(n => n.parentElement.removeChild(n));
+        this.nodeTree.forEach(n =>{
+            if(n instanceof Comment && isTextNode(n.yallaTemplate)){
+                n.yallaTemplate.parentNode.removeChild(n.yallaTemplate);
+            }
+            n.parentNode.removeChild(n);
+        });
     }
 }
 
@@ -204,7 +209,7 @@ class HtmlTemplateCollections {
                 dict = currentDict[key];
                 dict.applyValues(newDict[key].templateValues);
                 if (dict.nodeTree[dict.nodeTree.length - 1].nextSibling != node) {
-                    dict.nodeTree.forEach(n => node.parentElement.insertBefore(n, node));
+                    dict.nodeTree.forEach(n => node.parentNode.insertBefore(n, node));
                 }
                 token.node = dict.nodeTree[0];
                 newDict[key] = dict;
@@ -212,6 +217,9 @@ class HtmlTemplateCollections {
                 dict.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
             }
             token.node = dict.nodeTree[0];
+            if(token.node instanceof Comment && token.node.yallaTemplate instanceof Text){
+                token.node = token.node.yallaTemplate;
+            }
             return token;
         }, {
             currentDict: this.dictionary,
