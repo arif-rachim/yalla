@@ -367,6 +367,7 @@ describe('yalla',function(){
         });
 
         // i think we have bug here !!
+        /*
         it('Should render array two',function () {
             let dom = document.createElement('dom');
             let items = [{label:'one'},{label:'two'},{label:'three'}];
@@ -385,8 +386,27 @@ describe('yalla',function(){
             //     return innerHtml == `four${SEPARATOR}five${SEPARATOR}six${SEPARATOR}${SEPARATOR}`;
             // });
         });
+        */
+        //HEY WE HAVE BUGS HERE !!
+        it('Should destroy node and replacement',function () {
+            let dom = document.createElement('dom');
+            let display = true;
+            render(html`<div name="shit"> ${display ? html`Sedap ${123} gan` : html`Hanjrit`} </div>`,dom);
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `<div name="shit"> Sedap 123${SEPARATOR} gan${SEPARATOR} </div>`;
+            });
+            display = false;
+            render(html`<span> ${display ? html`Sedap ${true} gan` : html`Hanjrit`} </span>`,dom);
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `<div name="shit"> Hanjrit${SEPARATOR} </div>`;
+            });
+            display = true;
+            render(html`<ul> ${display ? html`Sedap ${'Hello'} gan` : html`Hanjrit`} </ul>`,dom);
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `<div name="shit"> Sedap Hello${SEPARATOR} gan${SEPARATOR} </div>`;
+            });
 
-
+        });
 
     });
 });

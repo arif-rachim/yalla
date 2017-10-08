@@ -1,23 +1,21 @@
 language: node_js
 addons:
   chrome: stable # have Travis install chrome stable.
-notifications:
-  email: false
 cache:
   yarn: true
   directories:
     - node_modules
+notifications:
+  email: false
 node_js:
   - '7'
-install:
-  - yarn
 before_script:
   - npm prune
 script:
   - yarn test
 after_success:
   - yarn report-coverage
-  - yarn semantic-release
+  - npm run semantic-release
 branches:
   except:
     - /^v\d+\.\d+\.\d+$/

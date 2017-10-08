@@ -6,7 +6,7 @@
     "commit": "git-cz",
     "build": "babel src -d lib",
     "test:classic": "babel src -d lib && mocha test/**/*.js",
-    "report-coverage" : "cat ./coverage/report-lcov/lcov.info | codecov",
+    "report-coverage": "cat ./coverage/report-lcov/lcov.info | codecov",
     "test": "babel src -d lib && karma start --single-run --browsers ChromeHeadless karma.conf.js",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
