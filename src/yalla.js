@@ -10,7 +10,7 @@ const isMinimizationAttribute = node => {
 
 const DATA_SEPARATOR = '↭';
 const SEPARATOR = `<!--${DATA_SEPARATOR}-->`;
-
+const _mapExistingNode = {};
 
 class HtmlTemplate {
     constructor(string = [], values = []) {
@@ -20,10 +20,15 @@ class HtmlTemplate {
     }
 
     buildNodeTree() {
-        let el = document.createElement('div');
-        let innerHtml = this.templateStaticString;
-        el.innerHTML = innerHtml;
-        this.nodeTree = Array.from(el.childNodes);
+        let el = null;
+        if(this.templateStaticString in _mapExistingNode){
+            el = _mapExistingNode[this.templateStaticString];
+        }else{
+            el = document.createElement('template');
+            el.innerHTML = this.templateStaticString;
+            _mapExistingNode[this.templateStaticString] = el;
+        }
+        this.nodeTree = Array.from(el.content.cloneNode(true).childNodes);
         return this;
     }
 

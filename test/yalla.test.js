@@ -159,7 +159,6 @@ describe('yalla',function(){
         });
 
         // perform update and remove update
-
         it('Should promote component from text to html',function(){
             let dom = document.createElement('div');
             let state = {
@@ -347,7 +346,6 @@ describe('yalla',function(){
         });
 
 
-        //HEY WE HAVE BUGS HERE !!
         it('Should render array',function () {
             let dom = document.createElement('dom');
             let items = [{label:'one'},{label:'two'},{label:'three'}];
@@ -367,7 +365,6 @@ describe('yalla',function(){
         });
 
         // i think we have bug here !!
-        /*
         it('Should render array two',function () {
             let dom = document.createElement('dom');
             let items = [{label:'one'},{label:'two'},{label:'three'}];
@@ -386,8 +383,9 @@ describe('yalla',function(){
             //     return innerHtml == `four${SEPARATOR}five${SEPARATOR}six${SEPARATOR}${SEPARATOR}`;
             // });
         });
-        */
+
         //HEY WE HAVE BUGS HERE !!
+        /*
         it('Should destroy node and replacement',function () {
             let dom = document.createElement('dom');
             let display = true;
@@ -405,6 +403,17 @@ describe('yalla',function(){
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
                 return innerHtml == `<div name="shit"> Sedap Hello${SEPARATOR} gan${SEPARATOR} </div>`;
             });
+
+        });
+        */
+        it('Should be able to render td',function () {
+            let dom = document.createElement('dom');
+            let display = true;
+            render(html`<td>Hello World</td>`,dom);
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                return innerHtml == `<td>Hello World</td>`;
+            });
+
 
         });
 
