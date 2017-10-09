@@ -21,9 +21,9 @@ class HtmlTemplate {
 
     buildNodeTree() {
         let el = null;
-        if(this.templateStaticString in _mapExistingNode){
+        if (this.templateStaticString in _mapExistingNode) {
             el = _mapExistingNode[this.templateStaticString];
-        }else{
+        } else {
             el = document.createElement('template');
             el.innerHTML = this.templateStaticString;
             _mapExistingNode[this.templateStaticString] = el;
@@ -36,43 +36,49 @@ class HtmlTemplate {
         if (!nodes) {
             throw new Error('nodeTree does not exist in HtmlTemplate probably you need to call buildNodeTree');
         }
-        this.dynamicNodes = nodes.reduce((results, node) => {
+        for (let iNode = 0, len = nodes.length; iNode < len; iNode++) {
+            let node = nodes[iNode];
             if (node instanceof Comment && node.textContent == DATA_SEPARATOR) {
                 results.push(node);
             }
             if (node.attributes) {
-                Array.from(node.attributes).reduce((results, attribute) => {
+                let nodeAttributes = Array.from(node.attributes);
+                for (let iNodeAttributes = 0, _len = nodeAttributes.length; iNodeAttributes < _len; iNodeAttributes++) {
+                    let attribute = nodeAttributes[iNodeAttributes];
                     if (attribute.nodeValue.indexOf(SEPARATOR) >= 0) {
                         let dynamicLength = attribute.nodeValue.split(SEPARATOR).length - 1;
-                        for(let i = 0;i<dynamicLength;i++)results.push(attribute);
+                        for (let i = 0; i < dynamicLength; i++)results.push(attribute);
                     }
-                    return results;
-                }, results);
+                }
                 this.lookupDynamicNodes(Array.from(node.childNodes), results);
             }
-            return results;
-        }, results);
+        }
+        this.dynamicNodes = results;
         return this;
     }
 
     appendSiblingFrom(node) {
-        this.nodeTree.forEach(n => {
-            return node.parentNode.insertBefore(n, node);
-        });
+        for (let i = 0, len = this.nodeTree.length; i < len; i++) {
+            let n = this.nodeTree[i];
+            node.parentNode.insertBefore(n, node)
+        }
         return this;
     }
 
     appendChildrenTo(node) {
-        this.nodeTree.forEach(n => node.appendChild(n));
+        for (let i = 0, len = this.nodeTree.length; i < len; i++) {
+            let n = this.nodeTree[i];
+            node.appendChild(n);
+        }
         return this;
     }
 
     applyValues(templateValues = this.templateValues) {
-        this.dynamicNodes.reduce((templateValues, dynamicNode, index) => {
+        for (let index = 0, len = this.dynamicNodes.length; index < len; index++) {
             let value = templateValues[index];
+            let dynamicNode = this.dynamicNodes[index];
             HtmlTemplate._applyValue(dynamicNode, value);
-            return templateValues;
-        }, templateValues);
+        }
         return this;
     }
 
@@ -95,6 +101,7 @@ class HtmlTemplate {
                 value.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues().saveTemplateToNode(node);
             } else {
                 if (node.yallaTemplate instanceof HtmlTemplate) {
+
                     if (node.yallaTemplate.templateStaticString == value.templateStaticString) {
                         node.yallaTemplate.applyValues(value.templateValues);
                     } else {
@@ -149,20 +156,25 @@ class HtmlTemplate {
             if (isMinimizationAttribute(node)) {
                 node.ownerElement[node.nodeName] = value;
             } else {
-                node.value = node.value.split(SEPARATOR).reduce((result, data, index)=> {
-                    return index == 0 ? data : `${result}${index == 1 ? value : SEPARATOR}${data}`;
-                }, '');
+                let values = node.value.split(SEPARATOR);
+                let result = '';
+                for (let index = 0, len = values.length; index < len; index++) {
+                    let data = values[index];
+                    result = index == 0 ? data : `${result}${index == 1 ? value : SEPARATOR}${data}`;
+                }
+                node.value = result;
             }
         }
     }
 
     destroy() {
-        this.nodeTree.forEach(n =>{
-            if(n instanceof Comment && isTextNode(n.yallaTemplate)){
+        for (let i = 0, len = this.nodeTree.length; i < len; i++) {
+            let n = this.nodeTree[i];
+            if (n instanceof Comment && isTextNode(n.yallaTemplate)) {
                 n.yallaTemplate.parentNode.removeChild(n.yallaTemplate);
             }
             n.parentNode.removeChild(n);
-        });
+        }
     }
 }
 
@@ -172,73 +184,71 @@ class HtmlTemplateCollections {
         this.keyFunction = keyFunction;
         this.mapFunction = mapFunction;
         this.keyOrders = [];
-        source.reduce(function (token, item, index, source) {
-            let {templateCollections, keyFunction, mapFunction, orders} = token;
-            let key = keyFunction.apply(token.templateCollections, [item, index, source]);
-            templateCollections.dictionary[key] = mapFunction.apply(templateCollections, [item, index, source]);
-            if(!(templateCollections.dictionary[key] instanceof HtmlTemplate)){
-                templateCollections.dictionary[key] = new HtmlTemplate([templateCollections.dictionary[key]],[])
+
+        for (let index = 0, len = source.length; index < len; index++) {
+            let item = source[index];
+            let key = this.keyFunction.apply(this, [item, index, source]);
+            this.dictionary[key] = this.mapFunction.apply(this, [item, index, source]);
+            if (!(this.dictionary[key] instanceof HtmlTemplate)) {
+                this.dictionary[key] = new HtmlTemplate([this.dictionary[key]], [])
             }
-            orders.push(key);
-            return token;
-        }, {
-            templateCollections: this,
-            keyFunction: this.keyFunction,
-            mapFunction: this.mapFunction,
-            orders: this.keyOrders
-        });
+            this.keyOrders.push(key);
+        }
+
     }
 
     initializeCollections(node) {
-        this.keyOrders.forEach(key => {
+        for (let i = 0, len = this.keyOrders.length; i < len; i++) {
+            let key = this.keyOrders[i];
             let v = this.dictionary[key];
             v.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
-        });
+        }
         node.yallaTemplate = this;
         this.node = node;
     }
 
     applyValues(newTemplateCollections) {
-        this.keyOrders.filter(key => newTemplateCollections.keyOrders.indexOf(key) < 0).forEach(key => {
-            this.keyOrders.splice(this.keyOrders.indexOf(key), 1);
-            let dict = this.dictionary;
-            dict[key].destroy();
-            delete dict[key];
-        });
-
-        newTemplateCollections.keyOrders.reduceRight((token, key) => {
-            let {currentDict, newDict, node} = token;
+        let newKeyOrders = [];
+        for (let j = 0, len = this.keyOrders.length; j < len; j++) {
+            let key = this.keyOrders[j];
+            if (newTemplateCollections.keyOrders.indexOf(key) < 0) {
+                let dict = this.dictionary;
+                dict[key].destroy();
+                delete dict[key];
+            } else {
+                newKeyOrders.push(key);
+            }
+        }
+        this.keyOrders = newKeyOrders;
+        let currentDict = this.dictionary;
+        let newDict = newTemplateCollections.dictionary;
+        let node = this.node;
+        for (let i = newTemplateCollections.keyOrders.length - 1; i >= 0; i--) {
+            let key = newTemplateCollections.keyOrders[i];
             let dict = newDict[key];
-
             if (key in currentDict) {
                 dict = currentDict[key];
                 dict.applyValues(newDict[key].templateValues);
                 if (dict.nodeTree[dict.nodeTree.length - 1].nextSibling != node) {
-                    dict.nodeTree.forEach(n => node.parentNode.insertBefore(n, node));
+
+                    for (let i = 0, len = dict.nodeTree.length; i < len; i++) {
+                        let n = dict.nodeTree[i];
+                        node.parentNode.insertBefore(n, node);
+                    }
                 }
-                token.node = dict.nodeTree[0];
+                node = dict.nodeTree[0];
                 newDict[key] = dict;
             } else {
                 dict.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
             }
-            token.node = dict.nodeTree[0];
-            if(token.node instanceof Comment && token.node.yallaTemplate instanceof Text){
-                token.node = token.node.yallaTemplate;
+            node = dict.nodeTree[0];
+            if (node instanceof Comment && node.yallaTemplate instanceof Text) {
+                node = node.yallaTemplate;
             }
-            return token;
-        }, {
-            currentDict: this.dictionary,
-            newDict: newTemplateCollections.dictionary,
-            keyOrderPos: this.keyOrders.map(function (key) {
-                return {key: key, pos: newTemplateCollections.keyOrders.indexOf(key)};
-            }).sort((a, b) => a.pos - b.pos),
-            node: this.node
-        });
-
+        }
         this.dictionary = newTemplateCollections.dictionary;
         this.keyOrders = newTemplateCollections.keyOrders;
     }
-
 }
 
 function htmlMap(source, keyFunction, mapFunction) {
@@ -269,4 +279,3 @@ function render(htmlTemplate, rootNode) {
         rootNode.yallaTemplate.applyValues(htmlTemplate.templateValues)
     }
 }
-
