@@ -399,7 +399,7 @@ describe('yalla',function(){
             render(html`<button onclick="${clickme}"></button>`,dom);
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
                 console.log(innerHtml);
-                return innerHtml == `<button onclick="${PLACEHOLDER}"></button>${PLACEHOLDER}`;
+                return innerHtml == `<button onclick="${PLACEHOLDER_CONTENT}"></button>${PLACEHOLDER}`;
             });
         });
 

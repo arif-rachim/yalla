@@ -1,4 +1,4 @@
-const PLACEHOLDER_CONTENT = 'place-holder';
+const PLACEHOLDER_CONTENT = '∞';
 const PLACEHOLDER = `<!--${PLACEHOLDER_CONTENT}-->`;
 
 const isMinimizationAttribute = node => {
@@ -219,7 +219,7 @@ class HtmlTemplate{
 
     _lookDynamicNodes(childNodes, results) {
         childNodes.forEach(node => {
-            if(node instanceof Comment){
+            if(node instanceof Comment && node.nodeValue == PLACEHOLDER_CONTENT){
                 results.push(node);
             }
             else if (node.attributes) {
@@ -256,7 +256,7 @@ class HtmlTemplate{
 
     static _applyAttributeNode(node, value) {
         if (typeof value === 'function' && node.name.indexOf('on') === 0) {
-            node.nodeValue = PLACEHOLDER;
+            node.nodeValue = PLACEHOLDER_CONTENT;
             node.ownerElement[node.name] = value;
         } else {
             if (!node.$valueOriginal) {
