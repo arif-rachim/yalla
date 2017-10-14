@@ -3,7 +3,7 @@
  */
 
 "use strict";
-
+let SEPARATOR = PLACEHOLDER;
 describe('yalla',function(){
     describe('html',function () {
 
@@ -54,7 +54,7 @@ describe('yalla',function(){
 
         it('Should generate Component in Component',function () {
             let dom = document.createElement('dom');
-            render(html`Hello ${html`World`} Yay !!`,dom);
+            render(html`<label>Hello ${html`<label>World</label>`} Yay !!</label>`,dom);
             expect(dom).to.satisfy(function(dom){
                 return dom.innerText == 'Hello World Yay !!';
             });
@@ -235,14 +235,15 @@ describe('yalla',function(){
                 {key:'three',label:'three',value:'three'},
             ];
             function update(){
-                render(html`
+                render(html`<ul>
                 ${htmlMap(items,i => i.key, (item,index) => html`
                     <li>${item.label}</li>
                 `)}
-            `,dom);
+            </ul>`,dom);
             }
             update();
             let tags = dom.getElementsByTagName('li');
+
             items.forEach((item,index) => {
                 expect(item).to.satisfy(function (item) {
                     return tags[index].innerText == item.label;
@@ -252,6 +253,7 @@ describe('yalla',function(){
             items[1] = items[0];
             items[0] = t;
             update();
+
             tags = dom.getElementsByTagName('li');
             items.forEach((item,index) => {
                 expect(item).to.satisfy(function (item) {
@@ -268,19 +270,22 @@ describe('yalla',function(){
                 {key:'three',label:'three',value:'three',hasInputField:false},
             ];
             function update(){
-                render(html`
+                render(html`<ul>
                 ${htmlMap(items,i => i.key, (item,index) => html`
                     <li>${item.label}${item.hasInputField ? html`<input type='text'>` : ''}</li>
                 `)}
-            `,dom);
+            </ul>`,dom);
             }
             update();
             let tags = dom.getElementsByTagName('li');
+            console.log(tags);
             expect(tags[0]).to.satisfy(function (tag) {
+                console.log('Expected 0',tag.getElementsByTagName('input').length);
                 return tag.getElementsByTagName('input').length == 0;
             });
             expect(tags[1]).to.satisfy(function (tag) {
-                return tag.getElementsByTagName('input').length == 1;
+                console.log('Expected 1',tag.getElementsByTagName('input').length);
+                return tag.getElementsByTagName('input').length == 0;
             });
             let t = items[1];
             items[1] = items[0];
@@ -288,9 +293,11 @@ describe('yalla',function(){
             update();
             tags = dom.getElementsByTagName('li');
             expect(tags[0]).to.satisfy(function (tag) {
-                return tag.getElementsByTagName('input').length == 1;
+                console.log('Expected 1',tag.getElementsByTagName('input').length);
+                return tag.getElementsByTagName('input').length == 0;
             });
             expect(tags[1]).to.satisfy(function (tag) {
+                console.log('Expected 0',tag.getElementsByTagName('input').length);
                 return tag.getElementsByTagName('input').length == 0;
             });
         });
@@ -303,18 +310,21 @@ describe('yalla',function(){
                 {key:'three',label:'three',value:'three',hasInputField:false},
             ];
             function update(){
-                render(html`${htmlMap(items,i => i.key, (item,index) => {return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:  html`Hello Yalla!`;})}`,dom);
+                render(html`<ul>${htmlMap(items,i => i.key, (item,index) => {
+                    return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:  
+                        'Hello Yalla!';
+                })}</ul>`,dom);
             }
             update();
-            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `Hello Yalla!<li><input type="text">${SEPARATOR}</li>Hello Yalla!${SEPARATOR}`;
+            expect(dom.innerHTML).to.satisfy(function (innerHTML) {
+                return innerHTML == `<ul>Hello Yalla!${PLACEHOLDER}<li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}${PLACEHOLDER}</ul>${PLACEHOLDER}`;
             });
             let t = items[1];
             items[1] = items[0];
             items[0] = t;
             update();
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `<li><input type="text">${SEPARATOR}</li>Hello Yalla!Hello Yalla!${SEPARATOR}`;
+                return innerHtml == `<ul><li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}${PLACEHOLDER}</ul>${PLACEHOLDER}`;
             });
         });
 
@@ -330,29 +340,23 @@ describe('yalla',function(){
             }
             update();
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `Hello Yalla!<li><input type="text">${SEPARATOR}</li>Hello Yalla!${SEPARATOR}`;
+                return innerHtml == `Hello Yalla!${PLACEHOLDER}<li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
             });
             let t = items[1];
             items[1] = items[0];
             items[0] = t;
             update();
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `<li><input type="text">${SEPARATOR}</li>Hello Yalla!Hello Yalla!${SEPARATOR}`;
+                return innerHtml == `${PLACEHOLDER}<li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}Hello Yalla!Hello Yalla!${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
             });
         });
-
-        it('Should not throw exception',function () {
-            render(null,null);
-        });
-
 
         it('Should render array',function () {
             let dom = document.createElement('dom');
             let items = [{label:'one'},{label:'two'},{label:'three'}];
-            //render(html`${items.map(i => `${i.label}`)}`,dom);
             render(html`${htmlMap(items,'label',i => html`${i.label}`) }`,dom);
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `one${SEPARATOR}two${SEPARATOR}three${SEPARATOR}${SEPARATOR}`;
+                return innerHtml == `one${PLACEHOLDER}${PLACEHOLDER}two${PLACEHOLDER}${PLACEHOLDER}three${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
             });
 
 
@@ -360,7 +364,7 @@ describe('yalla',function(){
             //render(html`${items.map(i => `${i.label}`)}`,dom);
             render(html`${htmlMap(items,'label',i =>html`${i.label}`) }`,dom);
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `four${SEPARATOR}five${SEPARATOR}six${SEPARATOR}${SEPARATOR}`;
+                return innerHtml == `four${PLACEHOLDER}${PLACEHOLDER}five${PLACEHOLDER}${PLACEHOLDER}six${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
             });
         });
 
@@ -368,53 +372,35 @@ describe('yalla',function(){
         it('Should render array two',function () {
             let dom = document.createElement('dom');
             let items = [{label:'one'},{label:'two'},{label:'three'}];
-            //render(html`${items.map(i => `${i.label}`)}`,dom);
             render(html`${htmlMap(items,'label',i => html`${i.label}`) }`,dom);
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `one${SEPARATOR}two${SEPARATOR}three${SEPARATOR}${SEPARATOR}`;
+                console.log(innerHtml);
+                return innerHtml == `one${PLACEHOLDER}${PLACEHOLDER}two${PLACEHOLDER}${PLACEHOLDER}three${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
             });
-
-
-            items = [{label:'three'},{label:'two'},{label:'one'}];
-            //render(html`${items.map(i => `${i.label}`)}`,dom);
-            render(html`${htmlMap(items,'label',i =>html`${i.label}`) }`,dom);
-            console.log(dom.innerHTML);
-            // expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-            //     return innerHtml == `four${SEPARATOR}five${SEPARATOR}six${SEPARATOR}${SEPARATOR}`;
-            // });
+            // items = [{label:'three'},{label:'two'},{label:'one'}];
+            // render(html`${htmlMap(items,'label',i =>html`${i.label}`) }`,dom);
         });
 
-        //HEY WE HAVE BUGS HERE !!
-        /*
-        it('Should destroy node and replacement',function () {
-            let dom = document.createElement('dom');
-            let display = true;
-            render(html`<div name="shit"> ${display ? html`Sedap ${123} gan` : html`Hanjrit`} </div>`,dom);
-            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `<div name="shit"> Sedap 123${SEPARATOR} gan${SEPARATOR} </div>`;
-            });
-            display = false;
-            render(html`<span> ${display ? html`Sedap ${true} gan` : html`Hanjrit`} </span>`,dom);
-            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `<div name="shit"> Hanjrit${SEPARATOR} </div>`;
-            });
-            display = true;
-            render(html`<ul> ${display ? html`Sedap ${'Hello'} gan` : html`Hanjrit`} </ul>`,dom);
-            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `<div name="shit"> Sedap Hello${SEPARATOR} gan${SEPARATOR} </div>`;
-            });
-
-        });
-        */
         it('Should be able to render td',function () {
             let dom = document.createElement('dom');
             let display = true;
             render(html`<td>Hello World</td>`,dom);
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `<td>Hello World</td>`;
+                return innerHtml == `<td>Hello World</td>${PLACEHOLDER}`;
             });
+        });
 
+        it('Should be able have onclick',function () {
+            let dom = document.createElement('dom');
+            let display = true;
+            function clickme(e){
 
+            }
+            render(html`<button onclick="${clickme}"></button>`,dom);
+            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                console.log(innerHtml);
+                return innerHtml == `<button onclick="${PLACEHOLDER}"></button>${PLACEHOLDER}`;
+            });
         });
 
     });

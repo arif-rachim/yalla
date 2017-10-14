@@ -6,6 +6,7 @@ var startMeasure = function(name) {
     startTime = performance.now();
     lastMeasure = name;
 }
+
 var stopMeasure = function() {
     var last = lastMeasure;
     if (lastMeasure) {
@@ -237,7 +238,7 @@ let app = () => html`
 `;
 
 function updateDisplay(){
-    render(app(),document.getElementById('main'));
+    render(app(),document.getElementsByTagName('body')[0]);
 }
 
 updateDisplay();

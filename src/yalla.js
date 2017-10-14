@@ -1,281 +1,284 @@
-"use strict";
+const PLACEHOLDER_CONTENT = 'place-holder';
+const PLACEHOLDER = `<!--${PLACEHOLDER_CONTENT}-->`;
 
-const isTextNode = el => el.nodeType === 3;
-const isAttributeNode = el => el.nodeType === 2;
-const itIsNotInitialized = node => !node.yallaTemplate;
 const isMinimizationAttribute = node => {
     return ['checked', 'compact', 'declare', 'defer', 'disabled', 'ismap',
             'noresize', 'noshade', 'nowrap', 'selected'].indexOf(node.nodeName) >= 0;
 };
 
-const DATA_SEPARATOR = '↭';
-const SEPARATOR = `<!--${DATA_SEPARATOR}-->`;
-const _mapExistingNode = {};
+function render(val,node){
+    if(!node.$content){
+        let placeHolder = document.createComment(PLACEHOLDER_CONTENT);
+        node.appendChild(placeHolder);
+        _render(val,placeHolder);
+        node.$content = placeHolder;
+    }else{
+        _render(val,node.$content);
+    }
+}
 
-class HtmlTemplate {
-    constructor(string = [], values = []) {
-        this.templateStatics = string;
-        this.templateStaticString = string.join(SEPARATOR);
-        this.templateValues = values;
+function destroy(val){
+    if(val instanceof HtmlTemplate){
+        val.destroy();
+    }else if(val instanceof HtmlTemplateCollection){
+        val.destroy();
+    }else if(val.parentNode){
+        val.parentNode.removeChild(val);
+    }
+}
+
+function _render(val, node){
+    if(val instanceof HtmlTemplate){
+        _renderHtmlTemplate(val,node);
+    }else if(val instanceof HtmlTemplateCollection){
+        _renderHtmlTemplateCollection(val,node);
+    }else{
+        _renderText(val,node);
+    }
+}
+
+function getFirstNodeFromTemplate(template,placeHolder) {
+    if(template instanceof HtmlTemplate){
+        return template.nodeTree[0];
+    }else if(template instanceof HtmlTemplateCollection){
+        return getFirstNodeFromTemplate(template.htmlTemplates[template.keys[0]],placeHolder);
+    }else{
+        return placeHolder.$content;
+    }
+}
+function _renderHtmlTemplateCollection(newTemplateCollection, newPlaceHolder){
+
+    let placeHolders = {};
+    let oldPlaceHolders = {};
+    let oldKeys = [];
+    let oldHtmlTemplateCollection = newPlaceHolder.$content;
+
+    if(oldHtmlTemplateCollection && (!(oldHtmlTemplateCollection instanceof HtmlTemplateCollection))){
+        destroy(oldHtmlTemplateCollection);
+        oldHtmlTemplateCollection = null;
     }
 
-    buildNodeTree() {
-        let el = null;
-        if (this.templateStaticString in _mapExistingNode) {
-            el = _mapExistingNode[this.templateStaticString];
-        } else {
-            el = document.createElement('template');
-            el.innerHTML = this.templateStaticString;
-            _mapExistingNode[this.templateStaticString] = el;
-        }
-        this.nodeTree = Array.from(el.content.cloneNode(true).childNodes);
-        return this;
+    if(oldHtmlTemplateCollection){
+        oldKeys = oldHtmlTemplateCollection.keys;
+        oldPlaceHolders = oldHtmlTemplateCollection.placeHolders;
     }
 
-    lookupDynamicNodes(nodes = this.nodeTree, results = []) {
-        if (!nodes) {
-            throw new Error('nodeTree does not exist in HtmlTemplate probably you need to call buildNodeTree');
+    oldKeys.forEach(oldKey => {
+        if(newTemplateCollection.keys.indexOf(oldKey) < 0){
+            let oldPlaceHolder = oldPlaceHolders[oldKey];
+            removePlaceholder(oldPlaceHolder);
         }
-        for (let iNode = 0, len = nodes.length; iNode < len; iNode++) {
-            let node = nodes[iNode];
-            if (node instanceof Comment && node.textContent == DATA_SEPARATOR) {
+    });
+
+    newTemplateCollection.keys.reduceRight((prev,key,index,array) => {
+        let htmlTemplate = newTemplateCollection.htmlTemplates[key];
+
+        let placeHolder = document.createComment(PLACEHOLDER_CONTENT);
+        if(oldPlaceHolders[key]){
+            placeHolder = oldPlaceHolders[key];
+        }
+        if(placeHolder.nextSibling){
+            if(placeHolder.nextSibling != prev){
+                newPlaceHolder.parentNode.insertBefore(placeHolder,prev);
+            }
+        }else{
+            newPlaceHolder.parentNode.insertBefore(placeHolder,prev);
+        }
+        placeHolders[key] = placeHolder;
+        if(oldPlaceHolders[key]){
+            let oldHtmlTemplate = oldHtmlTemplateCollection.htmlTemplates[key];
+            _render(htmlTemplate,placeHolder);
+            if(oldHtmlTemplate instanceof HtmlTemplate && htmlTemplate instanceof HtmlTemplate && oldHtmlTemplate.key == htmlTemplate.key){
+                newTemplateCollection.htmlTemplates[key] = oldHtmlTemplate;
+            }
+        }else{
+            _render(htmlTemplate,placeHolder);
+        }
+        let firstNode = getFirstNodeFromTemplate(newTemplateCollection.htmlTemplates[key],placeHolder);
+        return firstNode;
+
+    },newPlaceHolder);
+    newTemplateCollection.placeHolders = placeHolders;
+    newPlaceHolder.$content = newTemplateCollection;
+}
+
+function removePlaceholder(placeHolder){
+    if(placeHolder.$content instanceof HtmlTemplate){
+        placeHolder.$content.nodeTree.forEach(n => n.parentNode.removeChild(n));
+    }else if(Array.isArray(placeHolder.$content)) {
+        placeHolder.$content.forEach(pc => removePlaceholder(pc));
+    }
+    placeHolder.parentNode.removeChild(placeHolder);
+}
+
+function _renderHtmlTemplate(htmlTemplate, node) {
+    if(node.$content){
+        if(node.$content instanceof  HtmlTemplate){
+            node.$content.applyValues(htmlTemplate.values);
+            node.$content.nodeTree.reduceRight(function(next,item,index){
+                if(item.nextSibling && item.nextSibling != next && next.parentNode){
+                    next.parentNode.insertBefore(item,next);
+                }
+                return item;
+            },node);
+        }else {
+            destroy(node.$content);
+            htmlTemplate.generateNodeTree().forEach(n => node.parentNode.insertBefore(n,node));
+            node.$content = htmlTemplate;
+        }
+    }else{
+        htmlTemplate.generateNodeTree().forEach(n => node.parentNode.insertBefore(n,node));
+        node.$content = htmlTemplate;
+    }
+}
+
+function _renderText(val, node){
+    if(node.parentNode == null){
+        return;
+    }
+    if(node.$content){
+        destroy(node.$content);
+    }
+    let textNode = document.createTextNode(val);
+    node.parentNode.insertBefore(textNode,node);
+    node.$content = textNode;
+}
+
+function html(strings,...values){
+    return new HtmlTemplate(strings,values);
+}
+function htmlMap(items,keyFn,templateFn){
+    return new HtmlTemplateCollection(items,keyFn,templateFn);
+}
+
+const _cache = {};
+
+class HtmlTemplateCollection{
+    constructor(items,keyFn,templateFn){
+        this.items = items;
+        this.keyFn = typeof keyFn === 'function' ? keyFn : (i) => i[keyFn];
+        this.templateFn = templateFn;
+
+        this.keys = [];
+        this.htmlTemplates = {};
+
+        this._init();
+    }
+
+    _init(){
+        this.items.forEach((item,index,array) => {
+            let key = this.keyFn.apply(this,[item]);
+            let htmlTemplate = this.templateFn.apply(this,[item,index,array]);
+            this.htmlTemplates[key] = htmlTemplate;
+            this.keys.push(key);
+        });
+    }
+
+    destroy(){
+        this.keys.forEach(key => {
+            if(this.htmlTemplates[key] instanceof HtmlTemplate){
+                this.htmlTemplates[key].destroy();
+                this.placeHolders[key].parentNode.removeChild(this.placeHolders[key]);
+            }
+        });
+
+        this.keys = [];
+        this.htmlTemplates = {};
+        this.items = {};
+        delete this.placeHolders;
+    }
+
+}
+
+class HtmlTemplate{
+    constructor(strings,values){
+        this.strings = strings;
+        this.values = values;
+        this.key = this.strings.join('');
+    }
+
+    generateNodeTree(){
+        let key = this.key;
+        if(!(key in _cache)){
+            let template = document.createElement('template');
+            template.innerHTML = this.strings.join(PLACEHOLDER);
+            _cache[key] = template;
+        }
+        this.content = _cache[key].content.cloneNode(true);
+        this._init();
+        this.nodeTree = Array.from(this.content.childNodes);
+        return this.nodeTree;
+    }
+
+    _init(){
+        let results = [];
+        this._lookDynamicNodes(Array.from(this.content.childNodes),results);
+        this.dynamicNodes = results;
+        this.applyValues(this.values);
+    }
+
+    _lookDynamicNodes(childNodes, results) {
+        childNodes.forEach(node => {
+            if(node instanceof Comment){
                 results.push(node);
             }
-            if (node.attributes) {
-                let nodeAttributes = Array.from(node.attributes);
-                for (let iNodeAttributes = 0, _len = nodeAttributes.length; iNodeAttributes < _len; iNodeAttributes++) {
-                    let attribute = nodeAttributes[iNodeAttributes];
-                    if (attribute.nodeValue.indexOf(SEPARATOR) >= 0) {
-                        let dynamicLength = attribute.nodeValue.split(SEPARATOR).length - 1;
-                        for (let i = 0; i < dynamicLength; i++)results.push(attribute);
+            else if (node.attributes) {
+                Array.from(node.attributes).reduce((results, attribute) => {
+                    if (attribute.nodeValue.indexOf(PLACEHOLDER) >= 0) {
+                        let dynamicLength = attribute.nodeValue.split(PLACEHOLDER).length - 1;
+                        for(let i = 0;i<dynamicLength;i++){
+                            attribute.$dynamicAttributeLength = dynamicLength;
+                            attribute.$dynamicAttributeLengthPos = 0;
+                            results.push(attribute);
+                        }
                     }
-                }
-                this.lookupDynamicNodes(Array.from(node.childNodes), results);
+                    return results;
+                }, results);
+                this._lookDynamicNodes(Array.from(node.childNodes), results);
             }
-        }
-        this.dynamicNodes = results;
-        return this;
+        });
     }
 
-    appendSiblingFrom(node) {
-        for (let i = 0, len = this.nodeTree.length; i < len; i++) {
-            let n = this.nodeTree[i];
-            node.parentNode.insertBefore(n, node)
-        }
-        return this;
-    }
-
-    appendChildrenTo(node) {
-        for (let i = 0, len = this.nodeTree.length; i < len; i++) {
-            let n = this.nodeTree[i];
-            node.appendChild(n);
-        }
-        return this;
-    }
-
-    applyValues(templateValues = this.templateValues) {
-        for (let index = 0, len = this.dynamicNodes.length; index < len; index++) {
-            let value = templateValues[index];
-            let dynamicNode = this.dynamicNodes[index];
-            HtmlTemplate._applyValue(dynamicNode, value);
-        }
-        return this;
-    }
-
-    static _applyValue(node, value) {
-        if (isAttributeNode(node)) {
-            HtmlTemplate._applyAttributeNode(node, value);
-        } else {
-            HtmlTemplate._applyComponentNode(node, value);
-        }
-    }
-
-    saveTemplateToNode(node) {
-        node.yallaTemplate = this;
-    }
-
-    static _applyComponentNode(node, value) {
-        value = value || '';
-        if (value instanceof HtmlTemplate) {
-            if (itIsNotInitialized(node)) {
-                value.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues().saveTemplateToNode(node);
+    applyValues(values){
+        this.dynamicNodes.forEach((dn,index) => {
+            if (dn.nodeType === Node.ATTRIBUTE_NODE) {
+                HtmlTemplate._applyAttributeNode(dn, values[index]);
             } else {
-                if (node.yallaTemplate instanceof HtmlTemplate) {
-
-                    if (node.yallaTemplate.templateStaticString == value.templateStaticString) {
-                        node.yallaTemplate.applyValues(value.templateValues);
-                    } else {
-                        node.yallaTemplate.destroy();
-                        node.yallaTemplate = value.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
-                    }
-                } else {
-                    node.parentNode.removeChild(node.yallaTemplate);
-                    node.yallaTemplate = value.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
-                }
-
+                _render(values[index],dn);
             }
-        } else if (value instanceof HtmlTemplateCollections) {
-            if (itIsNotInitialized(node)) {
-                value.initializeCollections(node);
-            } else {
-                if (node.yallaTemplate instanceof HtmlTemplateCollections) {
-                    node.yallaTemplate.applyValues(value);
-                } else {
-                    throw new Error('You seems to have different template !!');
-                }
-            }
-        } else {
-            HtmlTemplate._applyTextToNode(value, node);
-        }
+        });
     }
 
-    static _applyTextToNode(value, node) {
-        value = value || '';
-        let text = document.createTextNode(value.toString());
-        if (node.yallaTemplate && isTextNode(node.yallaTemplate)) {
-            node.parentNode.removeChild(node.yallaTemplate);
-        }
-        if (node.yallaTemplate && node.yallaTemplate instanceof HtmlTemplate) {
-            node.yallaTemplate.destroy();
-        }
-        node.parentNode.insertBefore(text, node);
-        node.yallaTemplate = text;
+    destroy(){
+        this.nodeTree.forEach(n => n.parentNode.removeChild(n));
+        this.content = null;
     }
 
     static _applyAttributeNode(node, value) {
         if (typeof value === 'function' && node.name.indexOf('on') === 0) {
-            node.nodeValue = DATA_SEPARATOR;
+            node.nodeValue = PLACEHOLDER;
             node.ownerElement[node.name] = value;
         } else {
-            if (!node.valueOriginal) {
-                node.valueOriginal = node.value;
+            if (!node.$valueOriginal) {
+                node.$valueOriginal = node.value;
             }
-            if (node.value.indexOf(SEPARATOR) < 0) {
-                node.value = node.valueOriginal;
+            if(node.$dynamicAttributeLengthPos == node.$dynamicAttributeLength){
+                node.$dynamicAttributeLengthPos = 0;
+            }
+            if(node.$dynamicAttributeLengthPos == 0) {
+                node.$value = node.$valueOriginal;
             }
             if (isMinimizationAttribute(node)) {
                 node.ownerElement[node.nodeName] = value;
             } else {
-                let values = node.value.split(SEPARATOR);
-                let result = '';
-                for (let index = 0, len = values.length; index < len; index++) {
-                    let data = values[index];
-                    result = index == 0 ? data : `${result}${index == 1 ? value : SEPARATOR}${data}`;
+                node.$value = node.$value.split(PLACEHOLDER).reduce((result, data, index)=> {
+                    return index == 0 ? data : `${result}${index == 1 ? value : PLACEHOLDER}${data}`;
+                }, '');
+                node.$dynamicAttributeLengthPos++;
+                if(node.$dynamicAttributeLengthPos == node.$dynamicAttributeLength && node.value != node.$value){
+                    node.value = node.$value;
                 }
-                node.value = result;
             }
         }
-    }
-
-    destroy() {
-        for (let i = 0, len = this.nodeTree.length; i < len; i++) {
-            let n = this.nodeTree[i];
-            if (n instanceof Comment && isTextNode(n.yallaTemplate)) {
-                n.yallaTemplate.parentNode.removeChild(n.yallaTemplate);
-            }
-            n.parentNode.removeChild(n);
-        }
-    }
-}
-
-class HtmlTemplateCollections {
-    constructor(keyFunction, mapFunction, source) {
-        this.dictionary = {};
-        this.keyFunction = keyFunction;
-        this.mapFunction = mapFunction;
-        this.keyOrders = [];
-
-        for (let index = 0, len = source.length; index < len; index++) {
-            let item = source[index];
-            let key = this.keyFunction.apply(this, [item, index, source]);
-            this.dictionary[key] = this.mapFunction.apply(this, [item, index, source]);
-            if (!(this.dictionary[key] instanceof HtmlTemplate)) {
-                this.dictionary[key] = new HtmlTemplate([this.dictionary[key]], [])
-            }
-            this.keyOrders.push(key);
-        }
-
-    }
-
-    initializeCollections(node) {
-        for (let i = 0, len = this.keyOrders.length; i < len; i++) {
-            let key = this.keyOrders[i];
-            let v = this.dictionary[key];
-            v.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
-        }
-        node.yallaTemplate = this;
-        this.node = node;
-    }
-
-    applyValues(newTemplateCollections) {
-        let newKeyOrders = [];
-        for (let j = 0, len = this.keyOrders.length; j < len; j++) {
-            let key = this.keyOrders[j];
-            if (newTemplateCollections.keyOrders.indexOf(key) < 0) {
-                let dict = this.dictionary;
-                dict[key].destroy();
-                delete dict[key];
-            } else {
-                newKeyOrders.push(key);
-            }
-        }
-        this.keyOrders = newKeyOrders;
-        let currentDict = this.dictionary;
-        let newDict = newTemplateCollections.dictionary;
-        let node = this.node;
-        for (let i = newTemplateCollections.keyOrders.length - 1; i >= 0; i--) {
-            let key = newTemplateCollections.keyOrders[i];
-            let dict = newDict[key];
-            if (key in currentDict) {
-                dict = currentDict[key];
-                dict.applyValues(newDict[key].templateValues);
-                if (dict.nodeTree[dict.nodeTree.length - 1].nextSibling != node) {
-
-                    for (let i = 0, len = dict.nodeTree.length; i < len; i++) {
-                        let n = dict.nodeTree[i];
-                        node.parentNode.insertBefore(n, node);
-                    }
-                }
-                node = dict.nodeTree[0];
-                newDict[key] = dict;
-            } else {
-                dict.buildNodeTree().lookupDynamicNodes().appendSiblingFrom(node).applyValues();
-            }
-            node = dict.nodeTree[0];
-            if (node instanceof Comment && node.yallaTemplate instanceof Text) {
-                node = node.yallaTemplate;
-            }
-        }
-        this.dictionary = newTemplateCollections.dictionary;
-        this.keyOrders = newTemplateCollections.keyOrders;
-    }
-}
-
-function htmlMap(source, keyFunction, mapFunction) {
-    let keyFunc = typeof keyFunction === 'string' ? i => i[keyFunction] : keyFunction;
-    if (typeof keyFunc !== 'function') {
-        throw new Error('Please provide keyFunction in htmlMap')
-    }
-    return new HtmlTemplateCollections(keyFunc, mapFunction, source);
-}
-
-function html(string, ...values) {
-    return new HtmlTemplate(string, values);
-}
-
-function render(htmlTemplate, rootNode) {
-    if (!rootNode || !htmlTemplate) {
-        console.error('render(htmlTemplate,node) : htmlTemplate and node are mandatory');
-        return;
-    }
-    let {yallaTemplate} = rootNode;
-    if (!yallaTemplate) {
-        htmlTemplate
-            .buildNodeTree()
-            .lookupDynamicNodes()
-            .appendChildrenTo(rootNode)
-            .applyValues().saveTemplateToNode(rootNode);
-    } else {
-        rootNode.yallaTemplate.applyValues(htmlTemplate.templateValues)
     }
 }

@@ -9,6 +9,20 @@
 </body>
 <script src="src/yalla.js"></script>
 <script>
-    render(html`<td>Hello World</td>`,document.getElementById('test'));
+    let toggle = false;
+    let items =[
+        {key:'one',label:'one',value:'one',hasInputField:false},
+        {key:'two',label:'two',value:'two',hasInputField:true},
+        {key:'three',label:'three',value:'three',hasInputField:false},
+    ];
+    function update(){
+        render(html`<ul>
+                ${htmlMap(items,i => i.key, (item,index) => html`
+                    <li>${item.label}${item.hasInputField ? html`<input type='text'>` : ''}</li>
+                `)}</ul>`,document.getElementById('test'));
+    }
+
+    update();
+    setInterval(update,1000);
 </script>
 </html>
