@@ -15,10 +15,13 @@
         {key:'two',label:'two',value:'two',hasInputField:true},
         {key:'three',label:'three',value:'three',hasInputField:false},
     ];
+    function clickMe(){
+
+    }
     function update(){
         render(html`<ul>
                 ${htmlMap(items,i => i.key, (item,index) => html`
-                    <li>${item.label}${item.hasInputField ? html`<input type='text'>` : ''}</li>
+                    <li>${item.label}${item.hasInputField ? html`<input type='text' onclick="${clickMe}" style="color:${`blue`}">` : ''}</li>
                 `)}</ul>`,document.getElementById('test'));
     }
 

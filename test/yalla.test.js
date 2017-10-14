@@ -310,21 +310,18 @@ describe('yalla',function(){
                 {key:'three',label:'three',value:'three',hasInputField:false},
             ];
             function update(){
-                render(html`<ul>${htmlMap(items,i => i.key, (item,index) => {
-                    return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:  
-                        'Hello Yalla!';
-                })}</ul>`,dom);
+                render(html`<ul>${htmlMap(items,i => i.key, (item,index) => {return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:'Hello Yalla!';})}</ul>`,dom);
             }
             update();
-            expect(dom.innerHTML).to.satisfy(function (innerHTML) {
-                return innerHTML == `<ul>Hello Yalla!${PLACEHOLDER}<li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}${PLACEHOLDER}</ul>${PLACEHOLDER}`;
+            expect(dom.innerHTML.replace(/\s/g, '')).to.satisfy(function (innerHTML) {
+                return innerHTML ==  `<ul>Hello Yalla!${PLACEHOLDER}<li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}${PLACEHOLDER}</ul>${PLACEHOLDER}`.replace(/\s/g, '');
             });
             let t = items[1];
             items[1] = items[0];
             items[0] = t;
             update();
-            expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `<ul><li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}${PLACEHOLDER}</ul>${PLACEHOLDER}`;
+            expect(dom.innerHTML.replace(/\s/g, '')).to.satisfy(function (innerHtml) {
+                return innerHtml == `<ul><li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}${PLACEHOLDER}</ul>${PLACEHOLDER}`.replace(/\s/g, '');
             });
         });
 

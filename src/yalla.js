@@ -190,11 +190,25 @@ class HtmlTemplateCollection{
 
 }
 
+function getPath(node) {
+    var i = 0;
+    let child = node;
+    while ((child = child.previousSibling) != null){
+        i++;
+    }
+    let path = [];
+    path.push(i);
+    if(node.parentNode && node.parentNode.nodeType != Node.DOCUMENT_FRAGMENT_NODE){
+        return path.concat(getPath(node.parentNode));
+    }
+    return path;
+}
+
 class HtmlTemplate{
     constructor(strings,values){
         this.strings = strings;
         this.values = values;
-        this.key = this.strings.join('');
+        this.key = this.strings.join('').replace(/\s/g,'');
     }
 
     generateNodeTree(){
@@ -205,22 +219,57 @@ class HtmlTemplate{
             _cache[key] = template;
         }
         this.content = _cache[key].content.cloneNode(true);
-        this._init();
+        if(!_cache[key].dynamicNodesPath){
+            this._init();
+            _cache[key].dynamicNodesPath = this.dynamicNodesPath;
+        }else{
+            this.dynamicNodesPath = _cache[key].dynamicNodesPath;
+            this._warmStart();
+        }
+
         this.nodeTree = Array.from(this.content.childNodes);
         return this.nodeTree;
     }
 
     _init(){
         let results = [];
-        this._lookDynamicNodes(Array.from(this.content.childNodes),results);
+        let resultsPath = [];
+        this._lookDynamicNodes(Array.from(this.content.childNodes),results,resultsPath);
         this.dynamicNodes = results;
+        this.dynamicNodesPath = resultsPath.map(path => {
+            return path.reverse();
+        });
         this.applyValues(this.values);
     }
 
-    _lookDynamicNodes(childNodes, results) {
+    _warmStart(){
+        this._lookDynamicNodesFromPath();
+        this.applyValues(this.values);
+    }
+
+    _lookDynamicNodesFromPath(){
+        let dynamicNodes = this.dynamicNodesPath.map((path) =>{
+            return path.reduce(function(content,path){
+                if(typeof path == 'number'){
+                    return content.childNodes[path];
+                }else{
+                    let attribute = content.attributes[path.name];
+                    attribute.$dynamicAttributeLength = path.dynamicLength;
+                    attribute.$dynamicAttributeLengthPos = 0;
+                    return attribute;
+                }
+
+            },this.content)
+        });
+
+        this.dynamicNodes = dynamicNodes;
+    }
+
+    _lookDynamicNodes(childNodes, results,resultsPath) {
         childNodes.forEach(node => {
             if(node instanceof Comment && node.nodeValue == PLACEHOLDER_CONTENT){
                 results.push(node);
+                resultsPath.push(getPath(node));
             }
             else if (node.attributes) {
                 Array.from(node.attributes).reduce((results, attribute) => {
@@ -230,11 +279,13 @@ class HtmlTemplate{
                             attribute.$dynamicAttributeLength = dynamicLength;
                             attribute.$dynamicAttributeLengthPos = 0;
                             results.push(attribute);
+                            let path = [{name:attribute.nodeName,dynamicLength:dynamicLength}].concat(getPath(attribute.ownerElement));
+                            resultsPath.push(path);
                         }
                     }
                     return results;
                 }, results);
-                this._lookDynamicNodes(Array.from(node.childNodes), results);
+                this._lookDynamicNodes(Array.from(node.childNodes), results,resultsPath);
             }
         });
     }
