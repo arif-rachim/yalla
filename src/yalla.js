@@ -50,7 +50,6 @@ function _renderHtmlTemplateCollection(newTemplateCollection, newPlaceHolder){
 
     let placeHolders = {};
     let oldPlaceHolders = {};
-    let oldKeys = [];
     let oldHtmlTemplateCollection = newPlaceHolder.$content;
 
     if(oldHtmlTemplateCollection && (!(oldHtmlTemplateCollection instanceof HtmlTemplateCollection))){
@@ -59,16 +58,16 @@ function _renderHtmlTemplateCollection(newTemplateCollection, newPlaceHolder){
     }
 
     if(oldHtmlTemplateCollection){
-        oldKeys = oldHtmlTemplateCollection.keys;
         oldPlaceHolders = oldHtmlTemplateCollection.placeHolders;
+        oldHtmlTemplateCollection.keys.forEach(oldKey => {
+            if(newTemplateCollection.keys.indexOf(oldKey) < 0){
+                let oldPlaceHolder = oldPlaceHolders[oldKey];
+                removePlaceholder(oldPlaceHolder);
+            }
+        });
     }
 
-    oldKeys.forEach(oldKey => {
-        if(newTemplateCollection.keys.indexOf(oldKey) < 0){
-            let oldPlaceHolder = oldPlaceHolders[oldKey];
-            removePlaceholder(oldPlaceHolder);
-        }
-    });
+
 
     newTemplateCollection.keys.reduceRight((prev,key,index,array) => {
         let htmlTemplate = newTemplateCollection.htmlTemplates[key];
@@ -174,15 +173,16 @@ class HtmlTemplateCollection{
     }
 
     _init(){
-        let index = this.items.length;
+        let newTemplateCollection = this;
+        let index = newTemplateCollection.items.length;
         while(index--){
-            let item = this.items[index];
-            let key = this.keyFn.apply(this,[item]);
-            let htmlTemplate = this.templateFn.apply(this,[item,index,this.items]);
-            this.htmlTemplates[key] = htmlTemplate;
-            this.keys.push(key);
+            let item = newTemplateCollection.items[index];
+            let key = newTemplateCollection.keyFn.apply(newTemplateCollection,[item]);
+            let htmlTemplate = newTemplateCollection.templateFn.apply(newTemplateCollection,[item,index,newTemplateCollection.items]);
+            newTemplateCollection.htmlTemplates[key] = htmlTemplate;
+            newTemplateCollection.keys.push(key);
         }
-        this.keys.reverse();
+        newTemplateCollection.keys.reverse();
     }
 
     destroy(){
