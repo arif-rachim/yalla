@@ -67,8 +67,6 @@ function _renderHtmlTemplateCollection(newTemplateCollection, newPlaceHolder){
         });
     }
 
-
-
     newTemplateCollection.keys.reduceRight((prev,key,index,array) => {
         let htmlTemplate = newTemplateCollection.htmlTemplates[key];
 
@@ -93,8 +91,7 @@ function _renderHtmlTemplateCollection(newTemplateCollection, newPlaceHolder){
         }else{
             _render(htmlTemplate,placeHolder);
         }
-        let firstNode = getFirstNodeFromTemplate(newTemplateCollection.htmlTemplates[key],placeHolder);
-        return firstNode;
+        return getFirstNodeFromTemplate(newTemplateCollection.htmlTemplates[key],placeHolder);
 
     },newPlaceHolder);
     newTemplateCollection.placeHolders = placeHolders;
@@ -173,16 +170,16 @@ class HtmlTemplateCollection{
     }
 
     _init(){
-        let newTemplateCollection = this;
-        let index = newTemplateCollection.items.length;
+        let self = this;
+        let index = self.items.length;
         while(index--){
-            let item = newTemplateCollection.items[index];
-            let key = newTemplateCollection.keyFn.apply(newTemplateCollection,[item]);
-            let htmlTemplate = newTemplateCollection.templateFn.apply(newTemplateCollection,[item,index,newTemplateCollection.items]);
-            newTemplateCollection.htmlTemplates[key] = htmlTemplate;
-            newTemplateCollection.keys.push(key);
+            let item = self.items[index];
+            let key = self.keyFn.apply(self,[item]);
+            let htmlTemplate = self.templateFn.apply(self,[item,index,self.items]);
+            self.htmlTemplates[key] = htmlTemplate;
+            self.keys.push(key);
         }
-        newTemplateCollection.keys.reverse();
+        self.keys.reverse();
     }
 
     destroy(){
@@ -232,7 +229,7 @@ class HtmlTemplate{
         let template = _cache[key];
         this.content = template.content.cloneNode(true);
         if(!template.dynamicNodesPath){
-            this._init();
+            this._coldStart();
             template.dynamicNodesPath = this.dynamicNodesPath;
         }else{
             this.dynamicNodesPath = template.dynamicNodesPath;
@@ -243,7 +240,7 @@ class HtmlTemplate{
         return this.nodeTree;
     }
 
-    _init(){
+    _coldStart(){
         let results = [];
         let resultsPath = [];
         this._lookDynamicNodes(Array.from(this.content.childNodes),results,resultsPath);
