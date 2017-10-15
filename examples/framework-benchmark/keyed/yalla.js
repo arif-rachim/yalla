@@ -128,6 +128,7 @@ class Main {
     }
     update() {
         startMeasure("update");
+        this.store.update();
         updateDisplay();
         stopMeasure();
     }
@@ -219,7 +220,7 @@ let app = () => html`
         </div>
         <table class="table table-hover table-striped test-data">
             <tbody id="tbody">
-                ${htmlMap(main.store.data,'id',(data,index) => html`<tr>
+                ${htmlMap(main.store.data,'id',(data,index) => cache('key').html`<tr>
                         <td class="col-md-1">${data.id}</td>
                         <td class="col-md-4">
                             <a class="lbl" onclick="${main.select}" data-id="${data.id}">${data.label}</a>

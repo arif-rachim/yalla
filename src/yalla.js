@@ -145,8 +145,18 @@ function _renderText(val, node){
 }
 
 function html(strings,...values){
-    return new HtmlTemplate(strings,values);
+    let key = strings.join('').replace(/\s/g,'');
+    return new HtmlTemplate(strings,values,key);
 }
+
+function cache(key){
+    return {
+        html : function(strings,...values){
+            return new HtmlTemplate(strings,values,key);
+        }
+    }
+}
+
 function htmlMap(items,keyFn,templateFn){
     return new HtmlTemplateCollection(items,keyFn,templateFn);
 }
@@ -158,20 +168,21 @@ class HtmlTemplateCollection{
         this.items = items;
         this.keyFn = typeof keyFn === 'function' ? keyFn : (i) => i[keyFn];
         this.templateFn = templateFn;
-
         this.keys = [];
         this.htmlTemplates = {};
-
         this._init();
     }
 
     _init(){
-        this.items.forEach((item,index,array) => {
+        let index = this.items.length;
+        while(index--){
+            let item = this.items[index];
             let key = this.keyFn.apply(this,[item]);
-            let htmlTemplate = this.templateFn.apply(this,[item,index,array]);
+            let htmlTemplate = this.templateFn.apply(this,[item,index,this.items]);
             this.htmlTemplates[key] = htmlTemplate;
             this.keys.push(key);
-        });
+        }
+        this.keys.reverse();
     }
 
     destroy(){
@@ -205,25 +216,26 @@ function getPath(node) {
 }
 
 class HtmlTemplate{
-    constructor(strings,values){
+    constructor(strings,values,key){
         this.strings = strings;
         this.values = values;
-        this.key = this.strings.join('').replace(/\s/g,'');
+        this.key = key;
     }
 
     generateNodeTree(){
         let key = this.key;
-        if(!(key in _cache)){
+        if(!_cache[key]){
             let template = document.createElement('template');
             template.innerHTML = this.strings.join(PLACEHOLDER);
             _cache[key] = template;
         }
-        this.content = _cache[key].content.cloneNode(true);
-        if(!_cache[key].dynamicNodesPath){
+        let template = _cache[key];
+        this.content = template.content.cloneNode(true);
+        if(!template.dynamicNodesPath){
             this._init();
-            _cache[key].dynamicNodesPath = this.dynamicNodesPath;
+            template.dynamicNodesPath = this.dynamicNodesPath;
         }else{
-            this.dynamicNodesPath = _cache[key].dynamicNodesPath;
+            this.dynamicNodesPath = template.dynamicNodesPath;
             this._warmStart();
         }
 
