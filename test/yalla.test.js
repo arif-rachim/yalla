@@ -84,7 +84,7 @@ describe('yalla',function(){
         it('Should generate list of collections',function () {
             let dom = document.createElement('div');
             let items = [{name:'alpha'},{name:'beta'},{name:'charlie'},{name:'delta'}];
-            let template = html`${htmlMap(items,'name',i => html`<li>${i.name}</li>`)}`;
+            let template = html`${htmlCollection(items,'name', i => html`<li>${i.name}</li>`)}`;
             render(template,dom);
             expect(dom).to.satisfy(function (dom) {
                 return dom.childElementCount == items.length;
@@ -117,7 +117,7 @@ describe('yalla',function(){
 
             function update(){
                 render(html`
-                    ${htmlMap(items,'id',i => html`<label>${i.label} ${i.value}</label>`)}
+                    ${htmlCollection(items,'id', i => html`<label>${i.label} ${i.value}</label>`)}
                 `,dom);
             }
 
@@ -137,7 +137,7 @@ describe('yalla',function(){
 
             function update(){
                 render(html`
-                    ${htmlMap(items,'id',i => html`<label>${i.label} ${i.value}</label>`)}
+                    ${htmlCollection(items,'id', i => html`<label>${i.label} ${i.value}</label>`)}
                 `,dom);
             }
 
@@ -236,7 +236,7 @@ describe('yalla',function(){
             ];
             function update(){
                 render(html`<ul>
-                ${htmlMap(items,i => i.key, (item,index) => html`
+                ${htmlCollection(items, i => i.key, (item, index) => html`
                     <li>${item.label}</li>
                 `)}
             </ul>`,dom);
@@ -271,7 +271,7 @@ describe('yalla',function(){
             ];
             function update(){
                 render(html`<ul>
-                ${htmlMap(items,i => i.key, (item,index) => html`
+                ${htmlCollection(items, i => i.key, (item, index) => html`
                     <li>${item.label}${item.hasInputField ? html`<input type='text'>` : ''}</li>
                 `)}
             </ul>`,dom);
@@ -310,7 +310,7 @@ describe('yalla',function(){
                 {key:'three',label:'three',value:'three',hasInputField:false},
             ];
             function update(){
-                render(html`<ul>${htmlMap(items,i => i.key, (item,index) => {return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:'Hello Yalla!';})}</ul>`,dom);
+                render(html`<ul>${htmlCollection(items, i => i.key, (item, index) => {return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:'Hello Yalla!';})}</ul>`,dom);
             }
             update();
             expect(dom.innerHTML.replace(/\s/g, '')).to.satisfy(function (innerHTML) {
@@ -333,7 +333,7 @@ describe('yalla',function(){
                 {key:'three',label:'three',value:'three',hasInputField:false},
             ];
             function update(){
-                render(html`${htmlMap(items,i => i.key, (item,index) => {return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:  `Hello Yalla!`;})}`,dom);
+                render(html`${htmlCollection(items, i => i.key, (item, index) => {return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:  `Hello Yalla!`;})}`,dom);
             }
             update();
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
@@ -351,7 +351,7 @@ describe('yalla',function(){
         it('Should render array',function () {
             let dom = document.createElement('dom');
             let items = [{label:'one'},{label:'two'},{label:'three'}];
-            render(html`${htmlMap(items,'label',i => html`${i.label}`) }`,dom);
+            render(html`${htmlCollection(items,'label', i => html`${i.label}`) }`,dom);
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
                 return innerHtml == `one${PLACEHOLDER}${PLACEHOLDER}two${PLACEHOLDER}${PLACEHOLDER}three${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
             });
@@ -359,7 +359,7 @@ describe('yalla',function(){
 
             items = [{label:'four'},{label:'five'},{label:'six'}];
             //render(html`${items.map(i => `${i.label}`)}`,dom);
-            render(html`${htmlMap(items,'label',i =>html`${i.label}`) }`,dom);
+            render(html`${htmlCollection(items,'label', i =>html`${i.label}`) }`,dom);
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
                 return innerHtml == `four${PLACEHOLDER}${PLACEHOLDER}five${PLACEHOLDER}${PLACEHOLDER}six${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
             });
@@ -369,13 +369,13 @@ describe('yalla',function(){
         it('Should render array two',function () {
             let dom = document.createElement('dom');
             let items = [{label:'one'},{label:'two'},{label:'three'}];
-            render(html`${htmlMap(items,'label',i => html`${i.label}`) }`,dom);
+            render(html`${htmlCollection(items,'label', i => html`${i.label}`) }`,dom);
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
                 console.log(innerHtml);
                 return innerHtml == `one${PLACEHOLDER}${PLACEHOLDER}two${PLACEHOLDER}${PLACEHOLDER}three${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
             });
             // items = [{label:'three'},{label:'two'},{label:'one'}];
-            // render(html`${htmlMap(items,'label',i =>html`${i.label}`) }`,dom);
+            // render(html`${htmlCollection(items,'label',i =>html`${i.label}`) }`,dom);
         });
 
         it('Should be able to render td',function () {

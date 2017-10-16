@@ -153,7 +153,7 @@ function cache(key){
     }
 }
 
-function htmlMap(items,keyFn,templateFn){
+function htmlCollection(items, keyFn, templateFn){
     return new HtmlTemplateCollection(items,keyFn,templateFn);
 }
 
