@@ -30,95 +30,95 @@ const isMinimizationAttribute = node => {
 };
 
 
-function render(val, node) {
+function render(templateValue, node) {
 
     if (!node.$content) {
         let placeHolder = document.createComment(PLACEHOLDER_CONTENT);
         node.appendChild(placeHolder);
-        _render(val, placeHolder);
+        _render(templateValue, placeHolder);
         node.$content = placeHolder;
     } else {
-        _render(val, node.$content);
+        _render(templateValue, node.$content);
     }
 }
 
-function destroy(val) {
-    if (val instanceof HtmlTemplate) {
-        val.destroy();
-    } else if (val instanceof HtmlTemplateCollection) {
-        val.destroy();
-    } else if (val.parentNode) {
-        val.parentNode.removeChild(val);
+function destroy(templateValue) {
+    if (templateValue instanceof HtmlTemplate) {
+        templateValue.destroy();
+    } else if (templateValue instanceof HtmlTemplateCollection) {
+        templateValue.destroy();
+    } else if (templateValue.parentNode) {
+        templateValue.parentNode.removeChild(templateValue);
     }
 }
 
-function _render(val, node) {
-    if (val instanceof HtmlTemplate) {
-        _renderHtmlTemplate(val, node);
-    } else if (val instanceof HtmlTemplateCollection) {
-        _renderHtmlTemplateCollection(val, node);
+function _render(templateValue, placeHolder) {
+    if (templateValue instanceof HtmlTemplate) {
+        _renderHtmlTemplate(templateValue, placeHolder);
+    } else if (templateValue instanceof HtmlTemplateCollection) {
+        _renderHtmlTemplateCollection(templateValue, placeHolder);
     } else {
-        _renderText(val, node);
+        _renderText(templateValue, placeHolder);
     }
 }
 
-function getFirstNodeFromTemplate(template, placeHolder) {
-    if (template instanceof HtmlTemplate) {
-        return template.nodeTree[0];
-    } else if (template instanceof HtmlTemplateCollection) {
-        return getFirstNodeFromTemplate(template.htmlTemplates[template.keys[0]], placeHolder);
+function getFirstNodeFromTemplate(templateValue, placeHolder) {
+    if (templateValue instanceof HtmlTemplate) {
+        return templateValue.nodeTree[0];
+    } else if (templateValue instanceof HtmlTemplateCollection) {
+        return getFirstNodeFromTemplate(templateValue.htmlTemplates[templateValue.keys[0]], placeHolder);
     } else {
         return placeHolder.$content;
     }
 }
-function _renderHtmlTemplateCollection(newTemplateCollection, newPlaceHolder) {
+function _renderHtmlTemplateCollection(templateCollectionValue, newPlaceHolder) {
 
-    let placeHolders = {};
-    let oldPlaceHolders = {};
-    let oldHtmlTemplateCollection = newPlaceHolder.$content;
+    let placeHolderContainer = {};
+    let oldPlaceHolderContainer = {};
+    let oldTemplateCollectionValue = newPlaceHolder.$content;
 
-    if (oldHtmlTemplateCollection && (!(oldHtmlTemplateCollection instanceof HtmlTemplateCollection))) {
-        destroy(oldHtmlTemplateCollection);
-        oldHtmlTemplateCollection = null;
+    if (oldTemplateCollectionValue && (!(oldTemplateCollectionValue instanceof HtmlTemplateCollection))) {
+        destroy(oldTemplateCollectionValue);
+        oldTemplateCollectionValue = null;
     }
 
-    if (oldHtmlTemplateCollection) {
-        oldPlaceHolders = oldHtmlTemplateCollection.placeHolders;
-        oldHtmlTemplateCollection.keys.forEach(oldKey => {
-            if (newTemplateCollection.keys.indexOf(oldKey) < 0) {
-                let oldPlaceHolder = oldPlaceHolders[oldKey];
+    if (oldTemplateCollectionValue) {
+        oldPlaceHolderContainer = oldTemplateCollectionValue.placeHolders;
+        oldTemplateCollectionValue.keys.forEach(oldKey => {
+            if (templateCollectionValue.keys.indexOf(oldKey) < 0) {
+                let oldPlaceHolder = oldPlaceHolderContainer[oldKey];
                 removePlaceholder(oldPlaceHolder);
             }
         });
     }
 
-    newTemplateCollection.keys.reduceRight((prev, key) => {
-        let htmlTemplate = newTemplateCollection.htmlTemplates[key];
+    templateCollectionValue.keys.reduceRight((sibling, key) => {
+        let childTemplateValue = templateCollectionValue.htmlTemplates[key];
 
-        let placeHolder = document.createComment(PLACEHOLDER_CONTENT);
-        if (oldPlaceHolders[key]) {
-            placeHolder = oldPlaceHolders[key];
+        let childPlaceHolder = document.createComment(PLACEHOLDER_CONTENT);
+        if (oldPlaceHolderContainer[key]) {
+            childPlaceHolder = oldPlaceHolderContainer[key];
         }
 
-        if( (!placeHolder.nextSibling) || (placeHolder.nextSibling != prev) ){
-            newPlaceHolder.parentNode.insertBefore(placeHolder, prev);
+        if( (!childPlaceHolder.nextSibling) || (childPlaceHolder.nextSibling != sibling) ){
+            newPlaceHolder.parentNode.insertBefore(childPlaceHolder, sibling);
         }
 
-        placeHolders[key] = placeHolder;
-        if (oldPlaceHolders[key]) {
-            let oldHtmlTemplate = oldHtmlTemplateCollection.htmlTemplates[key];
-            _render(htmlTemplate, placeHolder);
-            if (oldHtmlTemplate instanceof HtmlTemplate && htmlTemplate instanceof HtmlTemplate && oldHtmlTemplate.key == htmlTemplate.key) {
-                newTemplateCollection.htmlTemplates[key] = oldHtmlTemplate;
+        placeHolderContainer[key] = childPlaceHolder;
+        if (oldPlaceHolderContainer[key]) {
+            let oldChildTemplateValue = oldTemplateCollectionValue.htmlTemplates[key];
+            _render(childTemplateValue, childPlaceHolder);
+            if (oldChildTemplateValue instanceof HtmlTemplate && childTemplateValue instanceof HtmlTemplate && oldChildTemplateValue.key == childTemplateValue.key) {
+                templateCollectionValue.htmlTemplates[key] = oldChildTemplateValue;
             }
         } else {
-            _render(htmlTemplate, placeHolder);
+            _render(childTemplateValue, childPlaceHolder);
         }
-        return getFirstNodeFromTemplate(newTemplateCollection.htmlTemplates[key], placeHolder);
+        return getFirstNodeFromTemplate(templateCollectionValue.htmlTemplates[key], childPlaceHolder);
 
     }, newPlaceHolder);
-    newTemplateCollection.placeHolders = placeHolders;
-    newPlaceHolder.$content = newTemplateCollection;
+    templateCollectionValue.placeHolders = placeHolderContainer;
+    newPlaceHolder.$content = templateCollectionValue;
 }
 
 function removePlaceholder(placeHolder) {
@@ -130,39 +130,39 @@ function removePlaceholder(placeHolder) {
     placeHolder.parentNode.removeChild(placeHolder);
 }
 
-function _buildTemplate(htmlTemplate, node) {
-    htmlTemplate.generateNodeTree().forEach(n => node.parentNode.insertBefore(n, node));
-    node.$content = htmlTemplate;
+function _buildTemplate(templateValue, placeHolder) {
+    templateValue.generateNodeTree().forEach(node => placeHolder.parentNode.insertBefore(node, placeHolder));
+    placeHolder.$content = templateValue;
 }
-function _renderHtmlTemplate(htmlTemplate, node) {
-    if (node.$content) {
-        if (node.$content instanceof HtmlTemplate) {
-            node.$content.applyValues(htmlTemplate.values);
-            node.$content.nodeTree.reduceRight(function (next, item) {
+function _renderHtmlTemplate(templateValue, placeHolder) {
+    if (placeHolder.$content) {
+        if (placeHolder.$content instanceof HtmlTemplate) {
+            placeHolder.$content.applyValues(templateValue.values);
+            placeHolder.$content.nodeTree.reduceRight(function (next, item) {
                 if (item.nextSibling && item.nextSibling != next && next.parentNode) {
                     next.parentNode.insertBefore(item, next);
                 }
                 return item;
-            }, node);
+            }, placeHolder);
         } else {
-            destroy(node.$content);
-            _buildTemplate(htmlTemplate, node);
+            destroy(placeHolder.$content);
+            _buildTemplate(templateValue, placeHolder);
         }
     } else {
-        _buildTemplate(htmlTemplate, node);
+        _buildTemplate(templateValue, placeHolder);
     }
 }
 
-function _renderText(val, node) {
-    if (node.parentNode == null) {
+function _renderText(templateValue, placeHolder) {
+    if (placeHolder.parentNode == null) {
         return;
     }
-    if (node.$content) {
-        destroy(node.$content);
+    if (placeHolder.$content) {
+        destroy(placeHolder.$content);
     }
-    let textNode = document.createTextNode(val);
-    node.parentNode.insertBefore(textNode, node);
-    node.$content = textNode;
+    let textNode = document.createTextNode(templateValue);
+    placeHolder.parentNode.insertBefore(textNode, placeHolder);
+    placeHolder.$content = textNode;
 }
 
 function html(strings, ...values) {
@@ -223,7 +223,7 @@ class HtmlTemplateCollection {
 }
 
 function getPath(node) {
-    var i = 0;
+    let i = 0;
     let child = node;
     while ((child = child.previousSibling) != null) {
         i++;
@@ -251,23 +251,22 @@ class HtmlTemplate {
             _cache[key] = template;
         }
         let template = _cache[key];
-        this.content = template.content.cloneNode(true);
+        let documentFragment = template.content.cloneNode(true);
         if (!template.dynamicNodesPath) {
-            this._coldStart();
+            this._coldStart(documentFragment);
             template.dynamicNodesPath = this.dynamicNodesPath;
         } else {
             this.dynamicNodesPath = template.dynamicNodesPath;
-            this._warmStart();
+            this._warmStart(documentFragment);
         }
-
-        this.nodeTree = Array.from(this.content.childNodes);
+        this.nodeTree = Array.from(documentFragment.childNodes);
         return this.nodeTree;
     }
 
-    _coldStart() {
+    _coldStart(documentFragment) {
         let results = [];
         let resultsPath = [];
-        this._lookDynamicNodes(Array.from(this.content.childNodes), results, resultsPath);
+        this._lookDynamicNodes(Array.from(documentFragment.childNodes), results, resultsPath);
         this.dynamicNodes = results;
         this.dynamicNodesPath = resultsPath.map(path => {
             return path.reverse();
@@ -275,13 +274,13 @@ class HtmlTemplate {
         this.applyValues(this.values);
     }
 
-    _warmStart() {
-        this._lookDynamicNodesFromPath();
+    _warmStart(documentFragment) {
+        this.dynamicNodes = this._lookDynamicNodesFromPath(documentFragment,this.dynamicNodesPath);
         this.applyValues(this.values);
     }
 
-    _lookDynamicNodesFromPath() {
-        this.dynamicNodes = this.dynamicNodesPath.map((path) => {
+    _lookDynamicNodesFromPath(documentFragment,dynamicNodesPath) {
+        return dynamicNodesPath.map((path) => {
             return path.reduce(function (content, path) {
                 if (typeof path == 'number') {
                     return content.childNodes[path];
@@ -291,11 +290,8 @@ class HtmlTemplate {
                     attribute.$dynamicAttributeLengthPos = 0;
                     return attribute;
                 }
-
-            }, this.content)
+            }, documentFragment)
         });
-
-
     }
 
     _lookDynamicNodes(childNodes, results, resultsPath) {
@@ -326,19 +322,18 @@ class HtmlTemplate {
         });
     }
 
-    applyValues(values) {
+    applyValues(templateValue) {
         this.dynamicNodes.forEach((dn, index) => {
             if (dn.nodeType === Node.ATTRIBUTE_NODE) {
-                HtmlTemplate._applyAttributeNode(dn, values[index]);
+                HtmlTemplate._applyAttributeNode(dn, templateValue[index]);
             } else {
-                _render(values[index], dn);
+                _render(templateValue[index], dn);
             }
         });
     }
 
     destroy() {
         this.nodeTree.forEach(n => n.parentNode.removeChild(n));
-        this.content = null;
     }
 
     static _applyAttributeNode(node, value) {
