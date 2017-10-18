@@ -18,11 +18,22 @@
     function clickMe(){
 
     }
+    let displayCollection = true;
+    function toggleCollection() {
+        displayCollection = !displayCollection;
+    }
+
     function update(){
-        render(html`<ul>
-                ${htmlCollection(items, i => i.key, (item, index) => html`
+
+        render(html`
+<button onclick="${toggleCollection}">Toggle Collection</button>
+<ul>
+
+                ${displayCollection ? htmlCollection(items, i => i.key, (item, index) => html`
                     <li>${item.label}${item.hasInputField ? html`<input type='text' onclick="${clickMe}" style="color:${`blue`}">` : ''}</li>
-                `)}</ul>`,document.getElementById('test'));
+                `) : ''}
+
+</ul>`,document.getElementById('test'));
     }
 
     update();
