@@ -278,13 +278,11 @@ describe('yalla',function(){
             }
             update();
             let tags = dom.getElementsByTagName('li');
-            console.log(tags);
+
             expect(tags[0]).to.satisfy(function (tag) {
-                console.log('Expected 0',tag.getElementsByTagName('input').length);
                 return tag.getElementsByTagName('input').length == 0;
             });
             expect(tags[1]).to.satisfy(function (tag) {
-                console.log('Expected 1',tag.getElementsByTagName('input').length);
                 return tag.getElementsByTagName('input').length == 0;
             });
             let t = items[1];
@@ -293,11 +291,9 @@ describe('yalla',function(){
             update();
             tags = dom.getElementsByTagName('li');
             expect(tags[0]).to.satisfy(function (tag) {
-                console.log('Expected 1',tag.getElementsByTagName('input').length);
                 return tag.getElementsByTagName('input').length == 0;
             });
             expect(tags[1]).to.satisfy(function (tag) {
-                console.log('Expected 0',tag.getElementsByTagName('input').length);
                 return tag.getElementsByTagName('input').length == 0;
             });
         });
@@ -371,7 +367,6 @@ describe('yalla',function(){
             let items = [{label:'one'},{label:'two'},{label:'three'}];
             render(html`${htmlCollection(items,'label', i => html`${i.label}`) }`,dom);
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                console.log(innerHtml);
                 return innerHtml == `one${PLACEHOLDER}${PLACEHOLDER}two${PLACEHOLDER}${PLACEHOLDER}three${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
             });
             // items = [{label:'three'},{label:'two'},{label:'one'}];
@@ -395,10 +390,52 @@ describe('yalla',function(){
             }
             render(html`<button onclick="${clickme}"></button>`,dom);
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                console.log(innerHtml);
                 return innerHtml == `<button onclick="false"></button>${PLACEHOLDER}`;
             });
         });
+
+        // singleton element
+        ['area','base','br','col','embed','hr','img','input','keygen','link','meta','param','source','track','wbr'].forEach(function(tag){
+            it(`Should be able to render singleton ${tag}`,function () {
+                let dom = document.createElement('div');
+                let display = true;
+                render(html(['<'+tag+'>']),dom);
+                expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                    return innerHtml == `<${tag}>${PLACEHOLDER}`;
+                });
+            });
+        });
+        // element with optional content
+        ['a','abbr','acronym','address','article','aside','audio','b','bdi','bdo','big','blockquote','button',
+            'canvas','caption','center','cite','code','colgroup','data','datalist','dd','del','details','dfn','dialog',
+            'dir','dl','dt','em','fieldset','figcaption','figure','font','footer','form','h1','h2',
+            'h3','h4','h5','h6','header','i','iframe','ins','kbd','legend','main',
+            'map','mark','menu','menuitem','meter','nav','noframes','ol','optgroup','option','output','p','picture',
+            'pre','progress','q','rp','rt','ruby','s','samp','section','select','small','span','strike','strong',
+            'style','sub','summary','sup','table','tbody','td','textarea','tfoot','th','thead','time','tr','tt',
+            'u','var','video'].forEach(function(tag){
+            it(`Should be able to render ${tag}`,function () {
+                let dom = document.createElement('div');
+                let display = true;
+                render(html(['<'+tag+'></'+tag+'>']),dom);
+                expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                    return innerHtml == `<${tag}></${tag}>${PLACEHOLDER}`;
+                });
+            });
+        });
+        // element with mandatory content
+        ['div','label','li','ul'].forEach(function(tag){
+            it(`Should be able to render ${tag}`,function () {
+                let dom = document.createElement('div');
+                let display = true;
+                render(cache(tag).html(['<'+tag+'>content</'+tag+'>']),dom);
+                expect(dom.innerHTML).to.satisfy(function (innerHtml) {
+                    return innerHtml == `<${tag}>content</${tag}>${PLACEHOLDER}`;
+                });
+            });
+        });
+
+
 
     });
 });

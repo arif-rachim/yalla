@@ -39,14 +39,32 @@ const isMinimizationAttribute = node => {
     return ['checked', 'compact', 'declare', 'defer', 'disabled', 'ismap',
             'noresize', 'noshade', 'nowrap', 'selected'].indexOf(node.nodeName) >= 0;
 };
-if(Array.from === undefined){
-    // fallback
-    Array.from = function(nodeList){
-        var arr = [];
-        for(var i = nodeList.length; i--; arr.unshift(nodeList[i]));
-        return arr;
-    };
-}
+
+/*
+ TemplateRoot is a mapping of elements that require certain tag as their parent
+ */
+const templateRoot = {
+    'col' : 'colgroup',
+    'td' : 'tr',
+    'area' : 'map',
+    'tbody' : 'table',
+    'tfoot' : 'table',
+    'th' : 'tr',
+    'thead' : 'table',
+    'tr' : 'tbody',
+    'caption' : 'table',
+    'colgroup' : 'table',
+    'li' : 'ul'
+};
+
+/*
+Convert Nodelist to Array
+ */
+const arrayFrom = nodeList => {
+    var arr = [];
+    for(var i = nodeList.length; i--; arr.unshift(nodeList[i]));
+    return arr;
+};
 /*
  Function used to render values into an Element. Value can be HtmlTemplate, HtmlTemplateCollection,
  or a Text while the element is a dom element.
@@ -98,13 +116,13 @@ function _render(templateValue, placeHolder) {
  */
 function getFirstNodeFromTemplate(templateValue, placeHolder) {
     if (templateValue instanceof HtmlTemplate) {
-        // Jika template value berupa HtmlTemplate maka kita akan mengembalikan nodeTree index 0.
+        // If the template value is HtmlTemplate then we will return the nodeTree index 0.
         return templateValue.nodeTree[0];
     } else if (templateValue instanceof HtmlTemplateCollection) {
-        // Jika template value berupa HtmlTemplateCollection maka kita akan kembalikan berdasarkan posisi key index ke 0.
+        // If the template value is HtmlTemplateCollection then we will return it based on key index position to 0.
         return getFirstNodeFromTemplate(templateValue.templateValuesContainer[templateValue.keys[0]], placeHolder);
     } else {
-        // Jika template value berupa Text, maka kita akan kembalikan contentnya.
+        // If the template value is Text, then we will return the content.
         return placeHolder.$content;
     }
 }
@@ -398,28 +416,25 @@ class HtmlTemplate {
             this._warmStart(documentFragment);
         }
         // after we get the dynamicNodes we save the childNodes document fragment to nodeTree.
-        this.nodeTree = Array.from(documentFragment.childNodes);
+        this.nodeTree = arrayFrom(documentFragment.childNodes);
         return this.nodeTree;
     }
 
     _getProperTemplateTag(contentText) {
         let template = null;
         let openTag = contentText.substring(1,contentText.indexOf('>'));
-        openTag = openTag.indexOf(' ') > 0 ? openTag.substring(0,openTag.indexOf(' ')) : openTag;
-        if (['tr'].indexOf(openTag) >= 0) {
-            template = document.createElement('tbody');
-        }else if (['td'].indexOf(openTag) >= 0) {
-            template = document.createElement('tr');
-        }else if (['tbody', 'tfoot'].indexOf(openTag) >= 0) {
-            template = document.createElement('table');
-        } else if (['li'].indexOf(openTag) >= 0) {
-            template = document.createElement('ul');
-        } else {
+        openTag = (openTag.indexOf(' ') > 0 ? openTag.substring(0,openTag.indexOf(' ')) : openTag).toLowerCase();
+        let rootTag = templateRoot[openTag];
+        if(rootTag){
+            template = document.createElement(rootTag);
+        }else{
             template = document.createElement('div');
         }
         template.innerHTML = contentText;
         return template;
     }
+
+
 
     /*
      The Coldstart function will populate dynamicNodes, and dynamicNodesPath from document fragment
@@ -428,7 +443,7 @@ class HtmlTemplate {
         let dynamicNodes = [];
         let dynamicNodesPath = [];
         // fungsi yang akan mengambil dynamicNodes dari path.
-        this._lookDynamicNodes(Array.from(documentFragment.childNodes), dynamicNodes, dynamicNodesPath);
+        this._lookDynamicNodes(arrayFrom(documentFragment.childNodes), dynamicNodes, dynamicNodesPath);
         this.dynamicNodes = dynamicNodes;
         this.dynamicNodesPath = dynamicNodesPath.map(path => {
             return path.reverse();
@@ -472,7 +487,7 @@ class HtmlTemplate {
                 dynamicNodesPath.push(getPath(node));
             }
             else if (node.attributes) {
-                Array.from(node.attributes).reduce((results, attribute) => {
+                arrayFrom(node.attributes).reduce((results, attribute) => {
                     if (attribute.nodeValue.indexOf(PLACEHOLDER) >= 0) {
                         let dynamicLength = attribute.nodeValue.split(PLACEHOLDER).length - 1;
                         for (let i = 0; i < dynamicLength; i++) {
@@ -488,7 +503,7 @@ class HtmlTemplate {
                     }
                     return results;
                 }, dynamicNodes);
-                this._lookDynamicNodes(Array.from(node.childNodes), dynamicNodes, dynamicNodesPath);
+                this._lookDynamicNodes(arrayFrom(node.childNodes), dynamicNodes, dynamicNodesPath);
             }
         });
     }
