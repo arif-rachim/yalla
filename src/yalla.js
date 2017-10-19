@@ -25,7 +25,8 @@
 /*
  PLACEHOLDER_CONTENT is a constant used to mark a placeholder
  */
-const PLACEHOLDER_CONTENT = '∞';
+//const PLACEHOLDER_CONTENT = '∞';
+const PLACEHOLDER_CONTENT = 'placeholder';
 /*
  PlaceHolder is a Comment node that contains a PLACEHOLDER_CONTENT value
  */
@@ -38,7 +39,14 @@ const isMinimizationAttribute = node => {
     return ['checked', 'compact', 'declare', 'defer', 'disabled', 'ismap',
             'noresize', 'noshade', 'nowrap', 'selected'].indexOf(node.nodeName) >= 0;
 };
-
+if(Array.from === undefined){
+    // fallback
+    Array.from = function(nodeList){
+        var arr = [];
+        for(var i = nodeList.length; i--; arr.unshift(nodeList[i]));
+        return arr;
+    };
+}
 /*
  Function used to render values into an Element. Value can be HtmlTemplate, HtmlTemplateCollection,
  or a Text while the element is a dom element.
@@ -342,7 +350,7 @@ function getPath(node) {
     }
     let path = [];
     path.push(i);
-    if (node.parentNode && node.parentNode.nodeType != Node.DOCUMENT_FRAGMENT_NODE) {
+    if (node.parentNode && node.parentNode.parentNode) {
         return path.concat(getPath(node.parentNode));
     }
     return path;
@@ -368,13 +376,12 @@ class HtmlTemplate {
         let key = this.key;
         // jika key sudah terdapat di cache, maka kita gunakan template untuk mempercepat pembuatan htmlTemplate.
         if (!_cache[key]) {
-            let template = document.createElement('template');
-            template.innerHTML = this.strings.join(PLACEHOLDER);
+            let template = this._getProperTemplateTag(this.strings.join(PLACEHOLDER).trim());
             _cache[key] = template;
         }
         let template = _cache[key];
         // kita clone document fragment dari template
-        let documentFragment = template.content.cloneNode(true);
+        let documentFragment = template.cloneNode(true);
         /*
          if the template does not have dynamicNode Path, it means that this is the first time the tempalte has been created,
          then we will create dynamicNodesPath by calling coldStart.
@@ -393,6 +400,25 @@ class HtmlTemplate {
         // after we get the dynamicNodes we save the childNodes document fragment to nodeTree.
         this.nodeTree = Array.from(documentFragment.childNodes);
         return this.nodeTree;
+    }
+
+    _getProperTemplateTag(contentText) {
+        let template = null;
+        let openTag = contentText.substring(1,contentText.indexOf('>'));
+        openTag = openTag.indexOf(' ') > 0 ? openTag.substring(0,openTag.indexOf(' ')) : openTag;
+        if (['tr'].indexOf(openTag) >= 0) {
+            template = document.createElement('tbody');
+        }else if (['td'].indexOf(openTag) >= 0) {
+            template = document.createElement('tr');
+        }else if (['tbody', 'tfoot'].indexOf(openTag) >= 0) {
+            template = document.createElement('table');
+        } else if (['li'].indexOf(openTag) >= 0) {
+            template = document.createElement('ul');
+        } else {
+            template = document.createElement('div');
+        }
+        template.innerHTML = contentText;
+        return template;
     }
 
     /*
@@ -495,8 +521,9 @@ class HtmlTemplate {
          If the attribute is a function, and the node name has a prefix on, then we assume it's an attribute event so we will call ownerElement [node.name]
          */
         if (typeof value === 'function' && node.name.indexOf('on') === 0) {
-            node.nodeValue = PLACEHOLDER_CONTENT;
-            node.ownerElement[node.name] = value;
+            node.nodeValue = false;
+            let eventName = node.name.substring(2,node.name.length);
+            node.ownerElement.addEventListener(eventName,value);
         } else {
             if (!node.$valueOriginal) {
                 node.$valueOriginal = node.value;
