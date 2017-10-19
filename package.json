@@ -1,6 +1,6 @@
 {
   "name": "yallajs",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0-beta.2",
   "description": "Web Application with zero boiler plate",
   "scripts": {
     "commit": "git-cz",
@@ -49,5 +49,5 @@
       "pre-commit": "yarn test"
     }
   },
-  "main": "index.js"
+  "main": "lib/yalla.min.js"
 }
