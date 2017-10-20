@@ -329,18 +329,18 @@ describe('yalla',function(){
                 {key:'three',label:'three',value:'three',hasInputField:false},
             ];
             function update(){
-                render(html`${htmlCollection(items, i => i.key, (item, index) => {return item.hasInputField ? html`<li>${item.hasInputField ? html`<input type='text'>` : ''}</li>`:  `Hello Yalla!`;})}`,dom);
+                render(html`<ul>${htmlCollection(items, i => i.key, (item, index) => {return html`<li>${item.hasInputField ? html`<input type='text'>` : 'Hello Yalla!'}</li>`})}<ul>`,dom);
             }
             update();
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `Hello Yalla!${PLACEHOLDER}<li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}Hello Yalla!${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
+                return innerHtml == `<ul><li>Hello Yalla!${PLACEHOLDER}</li>${PLACEHOLDER}<li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}<li>Hello Yalla!${PLACEHOLDER}</li>${PLACEHOLDER}${PLACEHOLDER}<ul></ul></ul>${PLACEHOLDER}`;
             });
             let t = items[1];
             items[1] = items[0];
             items[0] = t;
             update();
             expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                return innerHtml == `${PLACEHOLDER}<li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}Hello Yalla!Hello Yalla!${PLACEHOLDER}${PLACEHOLDER}${PLACEHOLDER}`;
+                return innerHtml == `<ul><li><input type="text">${PLACEHOLDER}</li>${PLACEHOLDER}<li>Hello Yalla!${PLACEHOLDER}</li>${PLACEHOLDER}<li>Hello Yalla!${PLACEHOLDER}</li>${PLACEHOLDER}${PLACEHOLDER}<ul></ul></ul>${PLACEHOLDER}`;
             });
         });
 

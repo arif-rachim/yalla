@@ -5,38 +5,39 @@
     <title>Title</title>
 </head>
 <body>
-    <div id="test"></div>
+
 </body>
 <script src="src/yalla.js"></script>
 <script>
-    let toggle = false;
-    let items =[
+    let items = [
         {key:'one',label:'one',value:'one',hasInputField:false},
         {key:'two',label:'two',value:'two',hasInputField:true},
         {key:'three',label:'three',value:'three',hasInputField:false},
     ];
-    function clickMe(){
-
-    }
-    let displayCollection = true;
-    function toggleCollection() {
-        displayCollection = !displayCollection;
-    }
-
     function update(){
-
-        render(html`
-<button onclick="${toggleCollection}">Toggle Collection</button>
-<ul>
-
-                ${displayCollection ? htmlCollection(items, i => i.key, (item, index) => html`
-                    <li>${item.label}${item.hasInputField ? html`<input type='text' onclick="${clickMe}" style="color:${`blue`}">` : ''}</li>
-                `) : ''}
-
-</ul>`,document.getElementById('test'));
+        render(html`<button onclick="${updateMe}">Update me</button>
+            <ul>
+                ${htmlCollection(items, i => i.key, (item, index) => {
+                    return item.hasInputField ? html`
+                       <li>${item.hasInputField ? html`<input type='text' onkeyup="${updateText}">` : ''}</li>` :  `${val}`;}
+                )}
+            </ul>`,document.getElementsByTagName('body')[0]);
     }
 
+    let val = 'Hello';
+    function updateText(e){
+        val = e.target.value;
+        update();
+    }
+
+    function updateMe() {
+        let t = items[1];
+        items[1] = items[0];
+        items[0] = t;
+        update();
+    }
     update();
-    setInterval(update,1000);
+
+
 </script>
 </html>

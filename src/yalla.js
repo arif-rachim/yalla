@@ -262,10 +262,18 @@ function _renderText(templateValue, placeHolder) {
     if (placeHolder.parentNode == null) {
         return;
     }
-    // Jika sudah terdapat oldTemplateValue kita destroy terlebih dulu oldTemplateValue
+    // Jika sudah terdapat oldTemplateValue kita gunakan template value yang lama, atau kita destroy dan gunakan yang baru
     let oldTemplateValue = placeHolder.$content;
     if (oldTemplateValue) {
-        destroy(oldTemplateValue);
+        if(oldTemplateValue.nodeType && oldTemplateValue.nodeType === Node.TEXT_NODE){
+            if(oldTemplateValue.nodeValue == templateValue){
+                return;
+            }
+            oldTemplateValue.nodeValue = templateValue;
+            return;
+        }else{
+            destroy(oldTemplateValue);
+        }
     }
     // kemudian kita buat text node dari templateValue
     let textNode = document.createTextNode(templateValue);
