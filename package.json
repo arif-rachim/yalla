@@ -5,10 +5,11 @@
   "scripts": {
     "commit": "git-cz",
     "build": "babel src -d lib",
+    "zip" : "node gzip",
     "report-coverage": "cat ./coverage/report-lcov/lcov.info | codecov",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
     "compress": "uglifyjs lib/yalla.js -o lib/yalla.min.js -c -m",
-    "test": "babel src -d lib && karma start --single-run --browsers ChromeHeadless karma.conf.js && uglifyjs lib/yalla.js -o lib/yalla.min.js -c -m"
+    "test": "babel src -d lib && karma start --single-run --browsers ChromeHeadless karma.conf.js && uglifyjs lib/yalla.js -o lib/yalla.min.js -c -m && node gzip"
   },
   "repository": "https://github.com/yallajs/yalla.git",
   "keywords": [

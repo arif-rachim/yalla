@@ -17,14 +17,14 @@
     function update(){
         render(html`<button onclick="${updateMe}">Update me</button>
             <ul>
-                ${htmlCollection(items, i => i.key, (item, index) => {
-                    return item.hasInputField ? html`
-                       <li>${item.hasInputField ? html`<input type='text' onkeyup="${updateText}">` : ''}</li>` :  `${val}`;}
-                )}
+                ${htmlCollection(items,'key',(item)=>{
+                    return html`<li><input type="text" value="${item.label}">${item.label}</li>`
+        })}
             </ul>`,document.getElementsByTagName('body')[0]);
     }
 
     let val = 'Hello';
+
     function updateText(e){
         val = e.target.value;
         update();

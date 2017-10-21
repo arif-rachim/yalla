@@ -6,7 +6,7 @@ YallaJS
 [![Codecov](https://img.shields.io/codecov/c/github/yallajs/yalla.svg)](https://codecov.io/gh/yallajs/yalla)
 [![Website](https://img.shields.io/website-up-down-green-red/http/yallajs.io.svg?label=yallajs.io)](http://yallajs.io)
 [![David](https://img.shields.io/david/expressjs/express.svg)](https://github.com/yallajs/yalla/blob/master/package.json)
-[![Github file size](https://img.shields.io/github/size/yallajs/yalla/lib/yalla.min.js.svg)](https://github.com/yallajs/yalla/tree/master/lib/yalla.min.js)
+[![Github file size](https://img.shields.io/github/size/yallajs/yalla/lib/yalla.min.js.gzip.svg)](https://github.com/yallajs/yalla/tree/master/lib/yalla.min.js)
 [![license](https://img.shields.io/github/license/yallajs/yalla.svg)]()
 
 **Hello**, 

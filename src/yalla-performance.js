@@ -25,8 +25,8 @@
 /*
  PLACEHOLDER_CONTENT is a constant used to mark a placeholder
  */
-//const PLACEHOLDER_CONTENT = '∞';
 const PLACEHOLDER_CONTENT = 'placeholder';
+
 /*
  PlaceHolder is a Comment node that contains a PLACEHOLDER_CONTENT value
  */
@@ -44,27 +44,61 @@ const isMinimizationAttribute = node => {
  TemplateRoot is a mapping of elements that require certain tag as their parent
  */
 const templateRoot = {
-    'col' : 'colgroup',
-    'td' : 'tr',
-    'area' : 'map',
-    'tbody' : 'table',
-    'tfoot' : 'table',
-    'th' : 'tr',
-    'thead' : 'table',
-    'tr' : 'tbody',
-    'caption' : 'table',
-    'colgroup' : 'table',
-    'li' : 'ul'
+    'col': 'colgroup',
+    'td': 'tr',
+    'area': 'map',
+    'tbody': 'table',
+    'tfoot': 'table',
+    'th': 'tr',
+    'thead': 'table',
+    'tr': 'tbody',
+    'caption': 'table',
+    'colgroup': 'table',
+    'li': 'ul'
 };
 
 /*
  Convert Nodelist to Array
  */
 const arrayFrom = nodeList => {
-    var arr = [];
-    for(var i = nodeList.length; i--; arr.unshift(nodeList[i]));
+    let arr = [];
+    for (let i = nodeList.length; i--; arr.unshift(nodeList[i])) ;
     return arr;
 };
+
+
+function syncTree(cloneTree, baseTree) {
+    cloneTree.forEach((clonedNode,index)=>{
+        let baseNode = baseTree[index];
+        if(clonedNode instanceof Comment && clonedNode.nodeValue === PLACEHOLDER_CONTENT && (!clonedNode.$content)){
+
+            let content = baseNode.$content;
+
+            if(content instanceof HtmlTemplate){
+                let i = content.nodeTree.length;
+                let newNodeTree = [];
+                let prevSibling = clonedNode.previousSibling;
+                while(i--){
+                    newNodeTree.push(prevSibling);
+                    prevSibling = prevSibling.previousSibling;
+                }
+                // ok we have new node here
+                clonedNode.$content = content.clone(newNodeTree);
+            }else if(content instanceof HtmlTemplateCollection){
+                clonedNode.$content = content.clone();
+
+                debugger;
+            }else{
+                // this is text so we just put content as prev sibling
+                clonedNode.$content = clonedNode.previousSibling;
+            }
+
+        }else if(clonedNode.childNodes && clonedNode.childNodes.length > 0){
+            syncTree(arrayFrom(clonedNode.childNodes),arrayFrom(baseNode.childNodes));
+        }
+    });
+}
+
 /*
  Function used to render values into an Element. Value can be HtmlTemplate, HtmlTemplateCollection,
  or a Text while the element is a dom element.
@@ -79,6 +113,14 @@ function render(templateValue, element) {
         element.$content = placeHolder;
     }
     _render(templateValue, element.$content);
+
+    // setelah berhasil dirender kita akan mengupdate nilai dari template $content
+    setTimeout(function () {
+        _templateToUpdate.forEach(fn => fn());
+        _templateToUpdate = [];
+        syncTree(_rootTree.cloneTree,_rootTree.baseTree);
+        debugger;
+    }, 100);
 }
 
 /*
@@ -185,13 +227,14 @@ function _renderHtmlTemplateCollection(templateCollectionValue, placeHolder) {
                 templateCollectionValue.templateValuesContainer[key] = oldChildTemplateValue;
             }
         }
-        /* Jika childPlaceHolder nextSibling tidak ada, atau nextSibling bukan expectedSibling, maka kita tempatkan
+        /*
+         Jika childPlaceHolder nextSibling tidak ada, atau nextSibling bukan expectedSibling, maka kita tempatkan
          childPlaceHolder ini disebelah expectedSibling.
          */
         if ((!childPlaceHolder.nextSibling) || (childPlaceHolder.nextSibling != expectedSibling)) {
             placeHolder.parentNode.insertBefore(childPlaceHolder, expectedSibling);
         }
-        // kemudian kita tempatekan childPlaceHolder kedalam placeHolderContainer yang baru
+        // kemudian kita tempatkan childPlaceHolder kedalam placeHolderContainer yang baru
         placeHolderContainer[key] = childPlaceHolder;
         // Kemudian kita render childTemplateValue ke dalam childPlaceHolder
         _render(childTemplateValue, childPlaceHolder);
@@ -200,6 +243,7 @@ function _renderHtmlTemplateCollection(templateCollectionValue, placeHolder) {
         return getFirstNodeFromTemplate(templateCollectionValue.templateValuesContainer[key], childPlaceHolder);
 
     }, placeHolder);
+
     // menempatkan placeHolderContainer kedalam templateCollectionValue yang baru
     templateCollectionValue.placeHolderContainer = placeHolderContainer;
     // menempatkan $content kedalam placeHolder.
@@ -221,17 +265,8 @@ function removePlaceholder(placeHolder) {
  function used to build templateValue, on its placeholder
  */
 function _buildTemplate(templateValue, placeHolder) {
-    let key = templateValue.key;
-    if(_templateCache[key]){
-        let templateValueCloned = _templateCache[key];
-        templateValueCloned.applyValues(templateValue.values);
-        templateValueCloned.cloneTemplate(templateValue);
-    }else{
-        templateValue.generateNodeTree()
-    }
-    templateValue.nodeTree.forEach(node => placeHolder.parentNode.insertBefore(node, placeHolder));
+    templateValue.generateNodeTree(placeHolder).forEach(node => placeHolder.parentNode.insertBefore(node, placeHolder));
     placeHolder.$content = templateValue;
-
 }
 
 /*
@@ -274,13 +309,13 @@ function _renderText(templateValue, placeHolder) {
     // Jika sudah terdapat oldTemplateValue kita gunakan template value yang lama, atau kita destroy dan gunakan yang baru
     let oldTemplateValue = placeHolder.$content;
     if (oldTemplateValue) {
-        if(oldTemplateValue.nodeType && oldTemplateValue.nodeType === Node.TEXT_NODE){
-            if(oldTemplateValue.nodeValue == templateValue){
+        if (oldTemplateValue.nodeType && oldTemplateValue.nodeType === Node.TEXT_NODE) {
+            if (oldTemplateValue.nodeValue === templateValue) {
                 return;
             }
             oldTemplateValue.nodeValue = templateValue;
             return;
-        }else{
+        } else {
             destroy(oldTemplateValue);
         }
     }
@@ -319,8 +354,8 @@ function htmlCollection(items, keyFn, templateFn) {
 }
 
 const _cache = {};
-const _templateCache = {};
-const _disableTemplateCache = true;
+let _templateToUpdate = [];
+let _rootTree = [];
 
 /*
  Class that stores information about the collection template
@@ -333,14 +368,17 @@ const _disableTemplateCache = true;
    6. placeHolderContainer: container from placeHolder used to render the collection
  */
 class HtmlTemplateCollection {
-    constructor(items, keyFn, templateFn) {
+    constructor(items, keyFn, templateFn,ignoreInit) {
         this.items = items;
         this.keyFn = typeof keyFn === 'function' ? keyFn : (i) => i[keyFn];
         this.templateFn = templateFn;
         this.keys = [];
         this.templateValuesContainer = {};
         this.placeHolderContainer = {};
-        this._init();
+        if(!ignoreInit){
+            this._init();
+        }
+
     }
 
     /*
@@ -374,6 +412,14 @@ class HtmlTemplateCollection {
         this.placeHolderContainer = {};
     }
 
+    clone(){
+        let clone = new HtmlTemplateCollection(this.items,this.keyFn,this.templateFn,true);
+        clone.keys = this.keys;
+        clone.templateValuesContainer = {};
+        clone.placeHolderContainer = {};
+        return clone;
+    }
+
 }
 
 /*
@@ -393,14 +439,31 @@ function getPath(node) {
     return path;
 }
 
+
+function getNode(path,documentFragment) {
+    let node = path.reduce(function (content, path) {
+        if (typeof path == 'number') {
+            return content.childNodes[path];
+        } else {
+            let attribute = content.attributes[path.name];
+            attribute.$dynamicAttributeLength = path.dynamicLength;
+            attribute.$dynamicAttributeLengthPos = 0;
+            return attribute;
+        }
+    }, documentFragment);
+    return node;
+}
+
+
 /*
  Class that stores information about templateValue. HtmlTemplate has attribute
    1. strings: static strings
    2. values: or dynamic values
    3. key: used as cache or name of template
- 4. dynamicNodesPath : the address of dynamicNodes (placeholder)
- 5. nodeTree : the childNodes in array
- 6. dynamicNodes : the placeholders
+ 4. documentFragment : the template root
+ 5. nodeTree : the array of childNodes
+ 6. dynamicNodes : the dynamicNodes of this element
+ 7. dynamicNodesPath : the path of the dynamicNodes
  */
 class HtmlTemplate {
     constructor(strings, values, key) {
@@ -412,116 +475,89 @@ class HtmlTemplate {
     /*
      Function to generate nodeTree
      */
-    generateNodeTree() {
+    generateNodeTree(placeholder) {
+
         let key = this.key;
         // jika key sudah terdapat di cache, maka kita gunakan template untuk mempercepat pembuatan htmlTemplate.
         if (!_cache[key]) {
-            let template = this._getProperTemplateTag(this.strings.join(PLACEHOLDER).trim());
-            _cache[key] = template;
+            let templateRoot = this._getProperTemplateTag(this.strings.join(PLACEHOLDER).trim());
+            let htmlTemplate = new HtmlTemplate(this.strings, this.values, this.key);
+            htmlTemplate.documentFragment = templateRoot;
+            let dynamicNodes = [];
+            // fungsi yang akan mengambil dynamicNodes dari path.
+            htmlTemplate._lookDynamicNodes(arrayFrom(htmlTemplate.documentFragment.childNodes), dynamicNodes);
+            htmlTemplate.dynamicNodes = dynamicNodes;
+            _cache[key] = htmlTemplate;
         }
         let template = _cache[key];
-        // kita cloneTemplate document fragment dari template
-
-        this.documentFragment = template.cloneNode(true);
-        /*
-         if the template does not have dynamicNode Path, it means that this is the first time the tempalte has been created,
-         then we will create dynamicNodesPath by calling coldStart.
-         */
-        if (!template.dynamicNodesPath) {
-            this._coldStart(this.documentFragment);
-            template.dynamicNodesPath = this.dynamicNodesPath;
-            // mari kita simpan copy  dari ini kedalam templateCache
-            let cacheTemplate = new HtmlTemplate(this.strings,this.values,this.key);
-            cacheTemplate.generateNodeTree();
-            if(!_disableTemplateCache){
-                if(!_templateCache[key]){
-                    _templateCache[key] = cacheTemplate;
-                }
-            }
-        } else {
-            /*
-             If the template already has dynamicNodesPath, then we will use dynamicNodesPath template
-             to pull dynamicNodes by using warmStart.
-             */
-            this.dynamicNodesPath = template.dynamicNodesPath;
-            this._warmStart(this.documentFragment);
-        }
-        // after we get the dynamicNodes we save the childNodes document fragment to nodeTree.
+        template.applyValues(this.values, true);
+        this.documentFragment = template.documentFragment.cloneNode(true);
         this.nodeTree = arrayFrom(this.documentFragment.childNodes);
+        _templateToUpdate.push(() => {
+            this.dynamicNodesPath = template._generateDynamicNodesPath();
+            this.dynamicNodes = this._lookDynamicNodesFromPath({childNodes: this.nodeTree}, this.dynamicNodesPath, true);
+            // this is the flag to set the base tree in the root tree for match the result later
+            _rootTree = {
+                cloneTree : this.nodeTree,
+                baseTree : template.documentFragment.childNodes
+            };
+        });
         return this.nodeTree;
+    }
+
+    _generateDynamicNodesPath() {
+        if (!this.dynamicNodesPath) {
+            this.dynamicNodesPath = this.dynamicNodes.map((dn) => {
+                if (dn.nodeType === Node.ATTRIBUTE_NODE) {
+                    return ([{
+                        name: dn.nodeName,
+                        dynamicLength: dn.$dynamicAttributeLength
+                    }].concat(getPath(dn.ownerElement))).reverse();
+                } else {
+                    return getPath(dn).reverse();
+                }
+            });
+        }
+        return this.dynamicNodesPath;
     }
 
     _getProperTemplateTag(contentText) {
         let template = null;
-        let openTag = contentText.substring(1,contentText.indexOf('>'));
-        openTag = (openTag.indexOf(' ') > 0 ? openTag.substring(0,openTag.indexOf(' ')) : openTag).toLowerCase();
+        let openTag = contentText.substring(1, contentText.indexOf('>'));
+        openTag = (openTag.indexOf(' ') > 0 ? openTag.substring(0, openTag.indexOf(' ')) : openTag).toLowerCase();
         let rootTag = templateRoot[openTag];
-        if(rootTag){
+        if (rootTag) {
             template = document.createElement(rootTag);
-        }else{
+        } else {
             template = document.createElement('div');
         }
         template.innerHTML = contentText;
         return template;
     }
 
-
-
-    /*
-     The Coldstart function will populate dynamicNodes, and dynamicNodesPath from document fragment
-     */
-    _coldStart(documentFragment) {
-        let dynamicNodes = [];
-        let dynamicNodesPath = [];
-        // fungsi yang akan mengambil dynamicNodes dari path.
-        this._lookDynamicNodes(arrayFrom(documentFragment.childNodes), dynamicNodes, dynamicNodesPath);
-        this.dynamicNodes = dynamicNodes;
-        this.dynamicNodesPath = dynamicNodesPath.map(path => {
-            return path.reverse();
-        });
-        this.applyValues(this.values);
-    }
-
-    /*
-     Warm start, will assign dynamic nodes of dynamicNodesPath, then apply values based on dynamicNodes that have been adapted.
-     */
-    _warmStart(documentFragment) {
-        this.dynamicNodes = this._lookDynamicNodesFromPath(documentFragment, this.dynamicNodesPath);
-        this.applyValues(this.values);
-    }
-
     /*
      Function that searches dynamicNodes in a documentFragment with dynamicNodesPath
      */
-    _lookDynamicNodesFromPath(documentFragment, dynamicNodesPath) {
-        return dynamicNodesPath.map((path) => {
-            return path.reduce(function (content, path) {
-                if (typeof path == 'number') {
-                    return content.childNodes[path];
-                } else {
-                    let attribute = content.attributes[path.name];
-                    attribute.$dynamicAttributeLength = path.dynamicLength;
-                    attribute.$dynamicAttributeLengthPos = 0;
-                    return attribute;
-                }
-            }, documentFragment)
-        });
-    }
+    _lookDynamicNodesFromPath(documentFragment, dynamicNodesPath, repopulateContent) {
+        return dynamicNodesPath.map((path, index) => {
+            let dynamicNode = getNode(path,documentFragment);
 
-    _lookPathFromDynamicNodes(dynamicNodes){
-        var dynamicNodesPath = [];
-        dynamicNodes.forEach(function(node){
-            if(node.nodeType === Node.ATTRIBUTE_NODE){
-                var path = [{
-                    name: node.nodeName,
-                    dynamicLength: node.$dynamicAttributeLength
-                }].concat(getPath(node.ownerElement));
-                dynamicNodesPath.push(path);
-            } else if(node.nodeType === Node.COMMENT_NODE){
-                dynamicNodesPath.push(getPath(node));
+            if (repopulateContent) {
+                if (dynamicNode.nodeType === Node.COMMENT_NODE) {
+                    if(dynamicNode.previousSibling instanceof Text){
+                        dynamicNode.$content = dynamicNode.previousSibling;
+                    }else if(dynamicNode.previousSibling instanceof Comment){
+                        console.log('Okay we got prev sibling comment and i need to update content of this otherwise i need to delete this shit !!!')
+                    }
+
+                }
+                if (dynamicNode.nodeType === Node.ATTRIBUTE_NODE && dynamicNode.nodeName.indexOf('on') === 0) {
+                    let eventName = dynamicNode.nodeName.substring(2, dynamicNode.nodeName.length);
+                    dynamicNode.ownerElement.addEventListener(eventName, this.values[index]);
+                }
             }
+            return dynamicNode;
         });
-        return dynamicNodesPath;
     }
 
     /*
@@ -531,7 +567,9 @@ class HtmlTemplate {
         documentFragmentChildNodes.forEach(node => {
             if (node instanceof Comment && node.nodeValue == PLACEHOLDER_CONTENT) {
                 dynamicNodes.push(node);
-                dynamicNodesPath.push(getPath(node));
+                if (dynamicNodesPath) {
+                    dynamicNodesPath.push(getPath(node));
+                }
             }
             else if (node.attributes) {
                 arrayFrom(node.attributes).reduce((results, attribute) => {
@@ -541,11 +579,15 @@ class HtmlTemplate {
                             attribute.$dynamicAttributeLength = dynamicLength;
                             attribute.$dynamicAttributeLengthPos = 0;
                             results.push(attribute);
-                            let path = [{
-                                name: attribute.nodeName,
-                                dynamicLength: dynamicLength
-                            }].concat(getPath(attribute.ownerElement));
-                            dynamicNodesPath.push(path);
+                            if (dynamicNodesPath) {
+                                let path = [{
+                                    name: attribute.nodeName,
+                                    dynamicLength: dynamicLength
+                                }].concat(getPath(attribute.ownerElement));
+
+                                dynamicNodesPath.push(path);
+                            }
+
                         }
                     }
                     return results;
@@ -558,35 +600,14 @@ class HtmlTemplate {
     /*
      Function that will apply templateValues
      */
-    applyValues(templateValues) {
+    applyValues(templateValues, noEvents) {
         this.dynamicNodes.forEach((dynamicNode, index) => {
             if (dynamicNode.nodeType === Node.ATTRIBUTE_NODE) {
-                HtmlTemplate._applyAttributeNode(dynamicNode, templateValues[index]);
+                HtmlTemplate._applyAttributeNode(dynamicNode, templateValues[index], noEvents);
             } else {
                 _render(templateValues[index], dynamicNode);
             }
         });
-        return this;
-    }
-
-    /*
-     Function to cloneTemplate this template value
-     */
-    cloneTemplate(templateToClone){
-        templateToClone.strings = this.strings;
-        templateToClone.values = this.values;
-        templateToClone.key = this.key;
-        templateToClone.documentFragment = this.documentFragment.cloneNode(true);
-        templateToClone.nodeTree = arrayFrom(templateToClone.documentFragment.childNodes);
-        templateToClone.dynamicNodesPath = [];
-        templateToClone.dynamicNodes = [];
-        /*
-         Following code is still early performance improvement
-         templateToClone.dynamicNodesPath = templateToClone._lookPathFromDynamicNodes(this.dynamicNodes);
-         templateToClone.dynamicNodesPath.map(path => {return path.reverse()});
-         templateToClone.dynamicNodes = templateToClone._lookDynamicNodesFromPath(templateToClone.documentFragment, templateToClone.dynamicNodesPath);
-         */
-        return templateToClone;
     }
 
     /*
@@ -599,14 +620,18 @@ class HtmlTemplate {
     /*
      Function to apply attribute node.
      */
-    static _applyAttributeNode(node, value) {
+    static _applyAttributeNode(node, value, noEvents) {
         /*
          If the attribute is a function, and the node name has a prefix on, then we assume it's an attribute event so we will call ownerElement [node.name]
          */
         if (typeof value === 'function' && node.name.indexOf('on') === 0) {
+            if (!noEvents) {
+                // we are ignoring events here
+                return;
+            }
             node.nodeValue = false;
-            let eventName = node.name.substring(2,node.name.length);
-            node.ownerElement.addEventListener(eventName,value);
+            let eventName = node.name.substring(2, node.name.length);
+            node.ownerElement.addEventListener(eventName, value);
         } else {
             if (!node.$valueOriginal) {
                 node.$valueOriginal = node.value;
@@ -620,7 +645,7 @@ class HtmlTemplate {
             if (isMinimizationAttribute(node)) {
                 node.ownerElement[node.nodeName] = value;
             } else {
-                node.$value = node.$value.split(PLACEHOLDER).reduce((result, data, index)=> {
+                node.$value = node.$value.split(PLACEHOLDER).reduce((result, data, index) => {
                     return index == 0 ? data : `${result}${index == 1 ? value : PLACEHOLDER}${data}`;
                 }, '');
                 node.$dynamicAttributeLengthPos++;
@@ -630,4 +655,14 @@ class HtmlTemplate {
             }
         }
     }
+
+    clone(nodeTree){
+        let clone = new HtmlTemplate(this.strings,this.values,this.key);
+        clone.documentFragment = this.documentFragment;
+        clone.nodeTree = nodeTree;
+        clone.dynamicNodesPath = this.dynamicNodesPath;
+        clone.dynamicNodes = this._lookDynamicNodesFromPath({childNodes:nodeTree},this.dynamicNodesPath);
+        return clone;
+    }
+
 }
