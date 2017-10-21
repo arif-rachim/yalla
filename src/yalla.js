@@ -68,28 +68,28 @@ const arrayFrom = nodeList => {
 
 
 function findPreviousPlaceHolder(clonedNode) {
-    if(!clonedNode.previousSibling){
+    if (!clonedNode.previousSibling) {
         return null;
     }
     let sibling = clonedNode.previousSibling;
-    if(sibling instanceof Comment && sibling.nodeValue == PLACEHOLDER_CONTENT){
+    if (sibling instanceof Comment && sibling.nodeValue == PLACEHOLDER_CONTENT) {
         return sibling;
     }
     return findPreviousPlaceHolder(sibling);
 }
 
 function syncTree(cloneTree, baseTree) {
-    cloneTree.forEach((clonedNode,index)=>{
+    cloneTree.forEach((clonedNode, index) => {
         let baseNode = baseTree[index];
-        if(clonedNode instanceof Comment && clonedNode.nodeValue === PLACEHOLDER_CONTENT && (!clonedNode.$content)){
+        if (clonedNode instanceof Comment && clonedNode.nodeValue === PLACEHOLDER_CONTENT && (!clonedNode.$content)) {
 
             let content = baseNode.$content;
 
-            if(content instanceof HtmlTemplate){
+            if (content instanceof HtmlTemplate) {
                 let i = content.nodeTree.length;
                 let newNodeTree = [];
                 let prevSibling = clonedNode.previousSibling;
-                while(i--){
+                while (i--) {
                     newNodeTree.push(prevSibling);
                     prevSibling = prevSibling.previousSibling;
                 }
@@ -97,22 +97,22 @@ function syncTree(cloneTree, baseTree) {
                 clonedNode.$content = content.clone(newNodeTree);
                 // ok now we need to reapply the value here !!
 
-            }else if(content instanceof HtmlTemplateCollection){
+            } else if (content instanceof HtmlTemplateCollection) {
                 clonedNode.$content = content.clone();
                 let i = content.keys.length;
                 let placeHolder = findPreviousPlaceHolder(clonedNode);
-                while(i--){
+                while (i--) {
                     let key = content.keys[i];
                     clonedNode.$content.placeHolderContainer[key] = placeHolder;
                     clonedNode.$content.templateValuesContainer[key] = placeHolder.$content;
                     placeHolder = findPreviousPlaceHolder(placeHolder);
                 }
-            }else{
+            } else {
                 clonedNode.$content = clonedNode.previousSibling;
             }
 
-        }else if(clonedNode.childNodes && clonedNode.childNodes.length > 0){
-            syncTree(arrayFrom(clonedNode.childNodes),arrayFrom(baseNode.childNodes));
+        } else if (clonedNode.childNodes && clonedNode.childNodes.length > 0) {
+            syncTree(arrayFrom(clonedNode.childNodes), arrayFrom(baseNode.childNodes));
         }
     });
 }
@@ -123,7 +123,7 @@ function syncTree(cloneTree, baseTree) {
  */
 function render(templateValue, element) {
     let callback = {
-        then : function(successFn){
+        then: function (successFn) {
             callback.successFn = successFn;
         }
     };
@@ -141,8 +141,8 @@ function render(templateValue, element) {
     setTimeout(function () {
         _templateToUpdate.forEach(fn => fn());
         _templateToUpdate = [];
-        syncTree(_rootTree.cloneTree,_rootTree.baseTree);
-        if(callback.successFn){
+        syncTree(_rootTree.cloneTree, _rootTree.baseTree);
+        if (callback.successFn) {
             callback.successFn();
         }
     }, 100);
@@ -394,14 +394,14 @@ let _rootTree = [];
    6. placeHolderContainer: container from placeHolder used to render the collection
  */
 class HtmlTemplateCollection {
-    constructor(items, keyFn, templateFn,ignoreInit) {
+    constructor(items, keyFn, templateFn, ignoreInit) {
         this.items = items;
         this.keyFn = typeof keyFn === 'function' ? keyFn : (i) => i[keyFn];
         this.templateFn = templateFn;
         this.keys = [];
         this.templateValuesContainer = {};
         this.placeHolderContainer = {};
-        if(!ignoreInit){
+        if (!ignoreInit) {
             this._init();
         }
 
@@ -438,8 +438,8 @@ class HtmlTemplateCollection {
         this.placeHolderContainer = {};
     }
 
-    clone(){
-        let clone = new HtmlTemplateCollection(this.items,this.keyFn,this.templateFn,true);
+    clone() {
+        let clone = new HtmlTemplateCollection(this.items, this.keyFn, this.templateFn, true);
         clone.keys = this.keys;
         clone.templateValuesContainer = {};
         clone.placeHolderContainer = {};
@@ -466,7 +466,7 @@ function getPath(node) {
 }
 
 
-function getNode(path,documentFragment) {
+function getNode(path, documentFragment) {
     let node = path.reduce(function (content, path) {
         if (typeof path == 'number') {
             return content.childNodes[path];
@@ -521,11 +521,11 @@ class HtmlTemplate {
         this.nodeTree = arrayFrom(this.documentFragment.childNodes);
         _templateToUpdate.push(() => {
             this.dynamicNodesPath = template._generateDynamicNodesPath();
-            this.dynamicNodes = this._lookDynamicNodesFromPath({childNodes: this.nodeTree}, this.dynamicNodesPath, true);
+            this.dynamicNodes = this._lookDynamicNodesFromPath({childNodes: this.nodeTree}, this.dynamicNodesPath, template.dynamicNodes);
             // this is the flag to set the base tree in the root tree for match the result later
             _rootTree = {
-                cloneTree : this.nodeTree,
-                baseTree : template.documentFragment.childNodes
+                cloneTree: this.nodeTree,
+                baseTree: template.documentFragment.childNodes
             };
         });
         return this.nodeTree;
@@ -564,22 +564,25 @@ class HtmlTemplate {
     /*
      Function that searches dynamicNodes in a documentFragment with dynamicNodesPath
      */
-    _lookDynamicNodesFromPath(documentFragment, dynamicNodesPath, repopulateContent) {
+    _lookDynamicNodesFromPath(documentFragment, dynamicNodesPath, dynamicNodesFromTemplate) {
         return dynamicNodesPath.map((path, index) => {
-            let dynamicNode = getNode(path,documentFragment);
-
-            if (repopulateContent) {
+            let dynamicNode = getNode(path, documentFragment);
+            // if we have dynamicNodes from template that means we need to update them
+            if (dynamicNodesFromTemplate) {
                 if (dynamicNode.nodeType === Node.COMMENT_NODE) {
-                    if(dynamicNode.previousSibling instanceof Text){
+                    if (dynamicNode.previousSibling instanceof Text) {
                         dynamicNode.$content = dynamicNode.previousSibling;
-                    }else if(dynamicNode.previousSibling instanceof Comment){
-                        //console.log('unexpected execution');
                     }
-
                 }
-                if (dynamicNode.nodeType === Node.ATTRIBUTE_NODE && dynamicNode.nodeName.indexOf('on') === 0) {
-                    let eventName = dynamicNode.nodeName.substring(2, dynamicNode.nodeName.length);
-                    dynamicNode.ownerElement.addEventListener(eventName, this.values[index]);
+                if (dynamicNode.nodeType === Node.ATTRIBUTE_NODE) {
+                    if (dynamicNode.nodeName.indexOf("on") === 0) {
+                        let eventName = dynamicNode.nodeName.substring(2, dynamicNode.nodeName.length);
+                        dynamicNode.ownerElement.addEventListener(eventName, this.values[index]);
+                    } else {
+                        let templateDynamicNodes = dynamicNodesFromTemplate[index];
+                        dynamicNode.$value = templateDynamicNodes.$value;
+                        dynamicNode.$valueOriginal = templateDynamicNodes.$valueOriginal;
+                    }
                 }
             }
             return dynamicNode;
@@ -610,10 +613,8 @@ class HtmlTemplate {
                                     name: attribute.nodeName,
                                     dynamicLength: dynamicLength
                                 }].concat(getPath(attribute.ownerElement));
-
                                 dynamicNodesPath.push(path);
                             }
-
                         }
                     }
                     return results;
@@ -651,12 +652,12 @@ class HtmlTemplate {
         /*
          If the attribute is a function, and the node name has a prefix on, then we assume it's an attribute event so we will call ownerElement [node.name]
          */
-        if (typeof value === 'function' && node.name.indexOf('on') === 0) {
+        if (typeof value === 'function' && node.name.indexOf("on") === 0) {
             if (!noEvents) {
                 // we are ignoring events here
                 return;
             }
-            node.nodeValue = "false";
+            node.nodeValue = "return false;";
             let eventName = node.name.substring(2, node.name.length);
             node.ownerElement.addEventListener(eventName, value);
         } else {
@@ -683,19 +684,27 @@ class HtmlTemplate {
         }
     }
 
-    clone(nodeTree){
-        let clone = new HtmlTemplate(this.strings,this.values,this.key);
+    clone(nodeTree) {
+        let clone = new HtmlTemplate(this.strings, this.values, this.key);
         clone.documentFragment = this.documentFragment;
         clone.nodeTree = nodeTree;
         clone.dynamicNodesPath = this.dynamicNodesPath;
-        clone.dynamicNodes = this._lookDynamicNodesFromPath({childNodes:nodeTree},this.dynamicNodesPath);
-        clone.dynamicNodes.forEach((dn,index) => {
-           if(dn.nodeType === Node.ATTRIBUTE_NODE && dn.nodeName.indexOf("on") === 0){
-               let eventName = dn.nodeName.substring(2,dn.nodeName.length);
-               dn.ownerElement.addEventListener(eventName,this.values[index]);
-           }
+        clone.dynamicNodes = this._lookDynamicNodesFromPath({childNodes: nodeTree}, this.dynamicNodesPath);
+        clone.dynamicNodes.forEach((dn, index) => {
+            if (dn.nodeType === Node.ATTRIBUTE_NODE) {
+                if (dn.nodeName.indexOf("on") === 0) {
+                    // this is function attribute, lets register their event listener
+                    let eventName = dn.nodeName.substring(2, dn.nodeName.length);
+                    dn.ownerElement.addEventListener(eventName, this.values[index]);
+                } else {
+                    dn.$valueOriginal = this.dynamicNodes[index].$valueOriginal;
+                    dn.$value = this.dynamicNodes[index].$value;
+                    dn.$dynamicAttributeLength = this.dynamicNodes[index].$dynamicAttributeLength;
+                    dn.$dynamicAttributeLengthPos = this.dynamicNodes[index].$dynamicAttributeLengthPos;
+                }
+
+            }
         });
         return clone;
     }
-
 }

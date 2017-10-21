@@ -9,12 +9,64 @@
 </body>
 <script src="src/yalla.js"></script>
 <script>
-    let items = ['One','Two'];
+
+    let dom = document.createElement('div');
+    document.getElementsByTagName('body')[0].appendChild(dom);
+
+    let todos = [
+        {id:Math.round(Math.random()*1000000),todo : 'Todo app testing sample data one',done : false},
+        {id:Math.round(Math.random()*1000000),todo : 'Todo app testing sample data two',done : true},
+        {id:Math.round(Math.random()*1000000),todo : 'Todo app testing sample data three',done : false},
+    ];
+
+    function toggleDone(e){
+        let id = e.target.getAttribute('data-id');
+
+        let styleBefore = document.getElementById(id).getAttribute('style');
+        let selectedTodo = todos.filter(t => t.id == id)[0];
+        selectedTodo.done = !selectedTodo.done;
+        update().then(function(){
+            let styleAfter = document.getElementById(id).getAttribute('style');
+        });
+    }
+
+    function deleteTodo(e){
+        let id = e.target.getAttribute('data-id');
+
+        let selectedTodo = todos.filter(t => t.id == id)[0];
+        let index = todos.indexOf(selectedTodo);
+        todos.splice(index,1);
+        update();
+    }
+
+    function addTodo(e){
+        todos.push({id:Math.round(Math.random()*1000000),todo : e.target.elements.todo.value ,done : false});
+        update();
+        e.target.elements.todo.value = '';
+        return false;
+    }
+
+    let app = () => html`<div>
+                <form onsubmit="${addTodo}">
+                    <input type="text" name="todo" value="" />
+                    <input type="submit" value="Save" />
+                </form>
+                <ul>
+                    ${htmlCollection(todos,'id',(todo,index)=>{
+        return html`<li id="${todo.id}" style="text-decoration: ${todo.done ? 'line-through' : ''}">
+                            <button onclick="${toggleDone}" data-id="${todo.id}">Done</button>
+                            ${todo.todo}<button onclick="${deleteTodo}" data-id="${todo.id}">Delete</button>
+                            </li>`
+    })}
+                </ul>
+            </div>`;
 
     function update(){
-        render(html`<ul>${htmlCollection(items,i=>i,i => html`<li>${i}</li>`)}</ul>`,document.getElementsByTagName('body')[0]);
-    };
+        return render(app(),dom);
+    }
+
     update();
+
 
 </script>
 </html>
