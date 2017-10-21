@@ -1,15 +1,25 @@
-YallaJS
-=======
-*Zero Boilerplate WebApp*
+<p align="center">
+<img align="center" class="image" src="http://yallajs.io/images/yallajs.svg" width="150px">
+</p>
 
-[![Build Status](https://travis-ci.org/yallajs/yalla.svg?branch=master)](https://travis-ci.org/yallajs/yalla)
-[![Codecov](https://img.shields.io/codecov/c/github/yallajs/yalla.svg)](https://codecov.io/gh/yallajs/yalla)
-[![Website](https://img.shields.io/website-up-down-green-red/http/yallajs.io.svg?label=yallajs.io)](http://yallajs.io)
-[![David](https://img.shields.io/david/expressjs/express.svg)](https://github.com/yallajs/yalla/blob/master/package.json)
-[![Github file size](https://img.shields.io/github/size/yallajs/yalla/lib/yalla.min.js.gzip.svg)](https://github.com/yallajs/yalla/tree/master/lib/yalla.min.js)
-[![license](https://img.shields.io/github/license/yallajs/yalla.svg)]()
+<p align="center">
+<a href="https://travis-ci.org/yallajs/yalla"><img src="https://travis-ci.org/yallajs/yalla.svg?branch=master" alt="Build Status"></a>
+<a href="https://codecov.io/gh/yallajs/yalla"><img src="https://img.shields.io/codecov/c/github/yallajs/yalla.svg" alt="Coverage"></a>
+<a href="http://yallajs.io"><img src="https://img.shields.io/website-up-down-green-red/http/yallajs.io.svg?label=yallajs.io" alt="Build Status"></a>
+<a href="https://github.com/yallajs/yalla/blob/master/package.json"><img src="https://img.shields.io/david/expressjs/express.svg" alt="Build Status"></a>
+<a href="https://github.com/yallajs/yalla/tree/master/lib/yalla.min.js"><img src="https://img.shields.io/github/size/yallajs/yalla/lib/yalla.min.js.gzip.svg" alt="Build Status"></a>
+<a href="https://travis-ci.org/yallajs/yalla"><img src="https://img.shields.io/github/license/yallajs/yalla.svg" alt="License"></a>
+</p>
+   
+----
 
-**Hello**, 
+**YallaJS** is a javascript framework for building web applications swiftly. 
 
-We are currently renovating our laboratory to prepare for the launch of yalla js 2.0 codename bellona. 
-We are excited to launch our new technology, please come back on 20th of October 2017
+**Performance**
+---
+The beta version of yallajs shows the performance of yalla js differing only 1.3 from plain vanilla javascript. This places yallajs as one of the fastest frameworks today even though yallajs are currently in the early stages to focus on performance.
+
+**API**
+---
+
+Yalla uses ES 2015 String literal for html templating, yallajs API is very simple, making yalla js almost invisible in your code. This makes your app not have boilerplate.
