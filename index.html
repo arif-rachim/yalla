@@ -9,35 +9,12 @@
 </body>
 <script src="src/yalla.js"></script>
 <script>
-    let items = [
-        {key:'one',label:'one',value:'one',hasInputField:false},
-        {key:'two',label:'two',value:'two',hasInputField:true},
-        {key:'three',label:'three',value:'three',hasInputField:false},
-    ];
+    let items = ['One','Two'];
+
     function update(){
-        render(html`<button onclick="${updateMe}">Update me</button>
-            <ul>
-                ${htmlCollection(items,'key',(item)=>{
-                    return html`<li><input type="text" value="${item.label}">${item.label}</li>`
-        })}
-            </ul>`,document.getElementsByTagName('body')[0]);
-    }
-
-    let val = 'Hello';
-
-    function updateText(e){
-        val = e.target.value;
-        update();
-    }
-
-    function updateMe() {
-        let t = items[1];
-        items[1] = items[0];
-        items[0] = t;
-        update();
-    }
+        render(html`<ul>${htmlCollection(items,i=>i,i => html`<li>${i}</li>`)}</ul>`,document.getElementsByTagName('body')[0]);
+    };
     update();
-
 
 </script>
 </html>
