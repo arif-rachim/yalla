@@ -24,6 +24,7 @@
 
 let isChrome = !!window.chrome && !!window.chrome.webstore;
 
+
 class Context {
     constructor() {
         this._cache = {};
@@ -102,6 +103,12 @@ const TEMPLATE_ROOT = {
     'caption': 'table',
     'colgroup': 'table',
     'li': 'ul'
+};
+
+
+const isMinimizationAttribute = node => {
+    return ['checked', 'compact', 'declare', 'defer', 'disabled', 'ismap',
+            'noresize', 'noshade', 'nowrap', 'selected'].indexOf(node.nodeName) >= 0;
 };
 
 class HtmlTemplateCollectionInstance extends Template {
@@ -445,7 +452,13 @@ class HtmlTemplate extends Template {
                     valueIndexes.forEach((valueIndex, index) => {
                         actualAttributeValue = actualAttributeValue.replace(`<!--${valueIndex}-->`, valFiltered[index]);
                     });
-                    node.ownerElement.setAttribute(nodeName, actualAttributeValue);
+                    if(isMinimizationAttribute(node)){
+                        node.ownerElement[nodeName] = actualAttributeValue.trim() == 'true';
+                        node.ownerElement.setAttribute(nodeName,'');
+                    }else{
+                        node.ownerElement.setAttribute(nodeName, actualAttributeValue);
+                    }
+
                     if (nodeName.indexOf('.bind') >= 0) {
                         let attributeName = nodeName.substring(0, nodeName.indexOf('.bind'));
                         node.ownerElement.setAttribute(attributeName, actualAttributeValue);
