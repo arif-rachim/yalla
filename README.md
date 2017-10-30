@@ -12,6 +12,19 @@
 </p>
    
 ----
+<p align="center">
+<table width="100%">
+    <tbody>
+        <tr>
+            <td style="text-align:center"><img width='64px' src="http://browserbadge.com/chrome/22"></td>
+            <td style="text-align:center"><img width='64px' src="http://browserbadge.com/opera/20"></td>
+            <td style="text-align:center"><img width='64px' src="http://browserbadge.com/firefox/20"></td>
+            <td style="text-align:center"><img width='64px' src="http://browserbadge.com/safari/6"></td>
+            <td style="text-align:center"><img width='64px' src="http://browserbadge.com/ie/9"></td>
+        </tr>
+    </tbody>
+</table>
+</p>
 
 **YallaJS** is a javascript framework for building web applications swiftly. 
 
