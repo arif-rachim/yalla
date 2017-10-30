@@ -22,28 +22,75 @@
  THE SOFTWARE.
  */
 
-/*
- PLACEHOLDER_CONTENT is a constant used to mark a placeholder
- */
-const PLACEHOLDER_CONTENT = 'placeholder';
+let isChrome = !!window.chrome && !!window.chrome.webstore;
 
-/*
- PlaceHolder is a Comment node that contains a PLACEHOLDER_CONTENT value
- */
-const PLACEHOLDER = `<!--${PLACEHOLDER_CONTENT}-->`;
+class Context {
+    constructor() {
+        this._cache = {};
+        this._synccallbacks = [];
+    }
 
-/*
- Function to validate whether the node is a minimization
+    hasCache(key) {
+        return key in this._cache;
+    }
+
+    cache(key, data) {
+        if (!this.hasCache(key)) {
+            this._cache[key] = data;
+        }
+        return this._cache[key];
+    }
+
+    html() {
+        let context = this;
+        return function (strings, ...values) {
+            return new HtmlTemplate(strings, values, context);
+        }
+    }
+
+    htmlCollection() {
+        let context = this;
+        return function (arrayItems, keyFn, templateFn) {
+            return new HtmlTemplateCollection(arrayItems, keyFn, templateFn, context);
+        }
+    }
+
+    addSyncCallback(callback) {
+        this._synccallbacks.push(callback);
+    }
+
+    clearSyncCallbacks() {
+        this._synccallbacks.forEach(cb => {
+            cb.apply();
+        });
+        this._synccallbacks = [];
+    }
+}
+
+/**
+ * Deep clone node is broken in IE, following for the fix
  */
-const isMinimizationAttribute = node => {
-    return ['checked', 'compact', 'declare', 'defer', 'disabled', 'ismap',
-        'noresize', 'noshade', 'nowrap', 'selected'].indexOf(node.nodeName) >= 0;
+const cloneNodeDeep = (node) => {
+    if (isChrome) {
+        return node.cloneNode(true);
+    } else {
+        let clone = node.nodeType == 3 ? document.createTextNode(node.nodeValue) : node.cloneNode(false);
+        let child = node.firstChild;
+        while (child) {
+            clone.appendChild(cloneNodeDeep(child));
+            child = child.nextSibling;
+        }
+        return clone;
+    }
 };
 
-/*
- TemplateRoot is a mapping of elements that require certain tag as their parent
- */
-const templateRoot = {
+class Template {
+    destroy() {
+        console.log('WARNING NOT IMPLEMENTED YET ');
+    }
+}
+
+const TEMPLATE_ROOT = {
     'col': 'colgroup',
     'td': 'tr',
     'area': 'map',
@@ -57,393 +104,124 @@ const templateRoot = {
     'li': 'ul'
 };
 
-/*
- Convert Nodelist to Array
- */
-const arrayFrom = nodeList => {
-    let arr = [];
-    for (let i = nodeList.length; i--; arr.unshift(nodeList[i])) ;
-    return arr;
-};
-
-
-function findPreviousPlaceHolder(clonedNode) {
-    if (!clonedNode.previousSibling) {
-        return null;
+class HtmlTemplateCollectionInstance extends Template {
+    constructor(templateCollection, placeholder) {
+        super();
+        this.template = templateCollection;
+        this.placeholder = placeholder;
+        this.instance = null;
     }
-    let sibling = clonedNode.previousSibling;
-    if (sibling instanceof Comment && sibling.nodeValue == PLACEHOLDER_CONTENT) {
-        return sibling;
-    }
-    return findPreviousPlaceHolder(sibling);
-}
 
-function syncTree(cloneTree, baseTree) {
-    cloneTree.forEach((clonedNode, index) => {
-        let baseNode = baseTree[index];
-        if (clonedNode instanceof Comment && clonedNode.nodeValue === PLACEHOLDER_CONTENT && (!clonedNode.$content)) {
-
-            let content = baseNode.$content;
-
-            if (content instanceof HtmlTemplate) {
-                let i = content.nodeTree.length;
-                let newNodeTree = [];
-                let prevSibling = clonedNode.previousSibling;
-                while (i--) {
-                    newNodeTree.push(prevSibling);
-                    prevSibling = prevSibling.previousSibling;
-                }
-                // ok we have new node here
-                clonedNode.$content = content.clone(newNodeTree);
-                // ok now we need to reapply the value here !!
-
-            } else if (content instanceof HtmlTemplateCollection) {
-                clonedNode.$content = content.clone();
-                let i = content.keys.length;
-                let placeHolder = findPreviousPlaceHolder(clonedNode);
-                while (i--) {
-                    let key = content.keys[i];
-                    clonedNode.$content.placeHolderContainer[key] = placeHolder;
-                    clonedNode.$content.templateValuesContainer[key] = placeHolder.$content;
-                    placeHolder = findPreviousPlaceHolder(placeHolder);
-                }
-            } else {
-                clonedNode.$content = clonedNode.previousSibling;
-            }
-
-        } else if (clonedNode.childNodes && clonedNode.childNodes.length > 0) {
-            syncTree(arrayFrom(clonedNode.childNodes), arrayFrom(baseNode.childNodes));
-        }
-    });
-}
-
-/*
- Function used to render values into an Element. Value can be HtmlTemplate, HtmlTemplateCollection,
- or a Text while the element is a dom element.
- */
-function render(templateValue, element) {
-    let callback = {
-        then: function (successFn) {
-            callback.successFn = successFn;
-        }
-    };
-
-    // if the element has never rendered the 'templateValue' then it has no content.
-    if (!element.$content) {
-        // placeHolder is Node.COMMENT used as a marker where templateValue will be rendered
-        let placeHolder = document.createComment(PLACEHOLDER_CONTENT);
-        // we add placeholder to the element to be rendered.
-        element.appendChild(placeHolder);
-        element.$content = placeHolder;
-    }
-    _render(templateValue, element.$content);
-    // setelah berhasil dirender kita akan mengupdate nilai dari template $content
-    setTimeout(function () {
-        _templateToUpdate.forEach(fn => fn());
-        _templateToUpdate = [];
-        syncTree(_rootTree.cloneTree, _rootTree.baseTree);
-        if (callback.successFn) {
-            callback.successFn();
-        }
-    }, 100);
-    return callback;
-}
-
-/*
- Function used to destroy templateValue. TemplateValue can be HtmlTemplate, HtmlTemplateCollection or Text.
- */
-function destroy(templateValue) {
-    if (templateValue instanceof HtmlTemplate) {
-        templateValue.destroy();
-    } else if (templateValue instanceof HtmlTemplateCollection) {
-        templateValue.destroy();
-    } else if (templateValue.parentNode) {
-        templateValue.parentNode.removeChild(templateValue);
-    }
-}
-
-/*
- Function used to render templateValue in placeHolder position.
- PlaceHolder is a Node.COMMENT that is used as a placemark where templateValue will be rendered
- */
-function _render(templateValue, placeHolder) {
-    if (templateValue instanceof HtmlTemplate) {
-        // if templateValue is an instance of HtmlTemplate, we will call _renderHtmlTemplate
-        _renderHtmlTemplate(templateValue, placeHolder);
-    } else if (templateValue instanceof HtmlTemplateCollection) {
-        // if templateValue is an HtmlTemplateCollection we will call _renderHtmlTemplateCollection
-        _renderHtmlTemplateCollection(templateValue, placeHolder);
-    } else {
-        // apart from HtmlTemplate or HtmlTemplateCollection we will call _renderText
-        _renderText(templateValue, placeHolder);
-    }
-}
-
-/*
- Function that return the first node of a templateValue or a placeHolder.
- */
-function getFirstNodeFromTemplate(templateValue, placeHolder) {
-    if (templateValue instanceof HtmlTemplate) {
-        // If the template value is HtmlTemplate then we will return the nodeTree index 0.
-        return templateValue.nodeTree[0];
-    } else if (templateValue instanceof HtmlTemplateCollection) {
-        // If the template value is HtmlTemplateCollection then we will return it based on key index position to 0.
-        return getFirstNodeFromTemplate(templateValue.templateValuesContainer[templateValue.keys[0]], placeHolder);
-    } else {
-        // If the template value is Text, then we will return the content.
-        return placeHolder.$content;
-    }
-}
-
-/*
- Function used to render templateCollectionValue into placeHolder.
- */
-function _renderHtmlTemplateCollection(templateCollectionValue, placeHolder) {
-    // variable yang menyimpan placeHolder children yang baru
-    let placeHolderContainer = {};
-    // variable yang menyimpan placeHolder children yang lama
-    let oldPlaceHolderContainer = {};
-    // variable yang menyimpan templateCollectionValue yang lama
-    let oldTemplateCollectionValue = placeHolder.$content;
-
-    /*
-     If there is an old templateCollectionValue, then we will remove the existing templateValue children in the new templateCollectionValue.
-     But if the old templateCollection is not HtmlTemplateCollection then we will destroy the old template collection
-     */
-    if (oldTemplateCollectionValue) {
-        /*
-         If the oldTemplateCollection value instance of HtmlTemplateCollection, then we will remove all the children the key is not listed in the new templateCollection.
-         */
-        if (oldTemplateCollectionValue instanceof HtmlTemplateCollection) {
-            oldPlaceHolderContainer = oldTemplateCollectionValue.placeHolderContainer;
-            oldTemplateCollectionValue.keys.forEach(oldKey => {
-                if (templateCollectionValue.keys.indexOf(oldKey) < 0) {
-                    let oldPlaceHolder = oldPlaceHolderContainer[oldKey];
-                    removePlaceholder(oldPlaceHolder);
-                }
+    applyValues(newHtmlTemplateCollection) {
+        if (this.instance === null) {
+            this.instance = {};
+            let placeholderPointer = this.placeholder.commentNode;
+            newHtmlTemplateCollection.iterateRight((item, key, template) => {
+                let childPlaceholder = Placeholder.from(document.createComment('placeholder-child'));
+                placeholderPointer.parentNode.insertBefore(childPlaceholder.commentNode, placeholderPointer);
+                renderTemplate(template, childPlaceholder.commentNode);
+                placeholderPointer = childPlaceholder.firstChildNode();
+                this.instance[key] = childPlaceholder.commentNode;
             });
         } else {
-            /*
-             If it turns out the old templateCollection is not HtmlTemplateCollection then we will destroy the oldTemplateCollectionValue
-             */
-            destroy(oldTemplateCollectionValue);
-            oldTemplateCollectionValue = null;
-        }
-    }
 
-    /*
-     We iterate templateCollectionValue keys from right by using reduce right, then will do the checking
-     if there is oldChildPlaceholder from oldPlaceHolderContainer, then we will use oldChildPlaceHolder
-     rather than the new childPlaceholder.
-     */
-    templateCollectionValue.keys.reduceRight((expectedSibling, key) => {
-        // disini kita panggil childTemplateValue dari templateCollectionValue
-        let childTemplateValue = templateCollectionValue.templateValuesContainer[key];
+            newHtmlTemplateCollection.iterateRight();
+            let oldHtmlTemplateCollection = this.template;
 
-        // kemudian kita create childPlaceHolder
-        let childPlaceHolder = document.createComment(PLACEHOLDER_CONTENT);
-        if (oldPlaceHolderContainer[key]) {
-            // bila terdapat key dari oldPlaceHolderContainer maka kita gunakan oldChildPlaceHolder dari oldPlaceHolderContainer.
-            childPlaceHolder = oldPlaceHolderContainer[key];
-
-            // bila terdapat oldChildTemplateValue dari oldTemplateCollectionValue maka kita akan gunakan oldChildTemplateValue sebagai
-            // templateValue yang baru.
-            let oldChildTemplateValue = oldTemplateCollectionValue.templateValuesContainer[key];
-            if (oldChildTemplateValue instanceof HtmlTemplate && childTemplateValue instanceof HtmlTemplate && oldChildTemplateValue.key == childTemplateValue.key) {
-                templateCollectionValue.templateValuesContainer[key] = oldChildTemplateValue;
-            }
-        }
-        /*
-         Jika childPlaceHolder nextSibling tidak ada, atau nextSibling bukan expectedSibling, maka kita tempatkan
-         childPlaceHolder ini disebelah expectedSibling.
-         */
-        if ((!childPlaceHolder.nextSibling) || (childPlaceHolder.nextSibling != expectedSibling)) {
-            placeHolder.parentNode.insertBefore(childPlaceHolder, expectedSibling);
-        }
-        // kemudian kita tempatkan childPlaceHolder kedalam placeHolderContainer yang baru
-        placeHolderContainer[key] = childPlaceHolder;
-        // Kemudian kita render childTemplateValue ke dalam childPlaceHolder
-        _render(childTemplateValue, childPlaceHolder);
-
-        // mengembalikan first node dari templateCollectionValue
-        return getFirstNodeFromTemplate(templateCollectionValue.templateValuesContainer[key], childPlaceHolder);
-
-    }, placeHolder);
-
-    // menempatkan placeHolderContainer kedalam templateCollectionValue yang baru
-    templateCollectionValue.placeHolderContainer = placeHolderContainer;
-    // menempatkan $content kedalam placeHolder.
-    placeHolder.$content = templateCollectionValue;
-}
-
-/*
- Function used to remove placeHolder
- */
-function removePlaceholder(placeHolder) {
-    if ((placeHolder.$content instanceof HtmlTemplate) || (placeHolder.$content instanceof HtmlTemplateCollection)) {
-        // Jika placeHolder.$content merupakan HtmlTemplate kita kita akan mendestroy dulu kemudian remove.
-        placeHolder.$content.destroy();
-    }
-    placeHolder.parentNode.removeChild(placeHolder);
-}
-
-/*
- function used to build templateValue, on its placeholder
- */
-function _buildTemplate(templateValue, placeHolder) {
-    templateValue.generateNodeTree(placeHolder).forEach(node => placeHolder.parentNode.insertBefore(node, placeHolder));
-    placeHolder.$content = templateValue;
-}
-
-/*
- Function to render HtmlTemplate on its placeHolder
- */
-function _renderHtmlTemplate(templateValue, placeHolder) {
-    // Jika placeHolder memiliki $content artinya placeHolder sudah pernah merender content.
-    if (placeHolder.$content) {
-        let oldTemplateValue = placeHolder.$content;
-        // Jika oldTemplateValue merukanan HtmlTemplate maka kita akan melakukan update
-        if (oldTemplateValue instanceof HtmlTemplate) {
-            // mengupdate oldTemplateValue(HtmlTemplate) dengan values yang baru
-            oldTemplateValue.applyValues(templateValue.values);
-            // kemudian kita me-reallign apakah nodeTree sudah berada di posisi sibling yang benar
-            oldTemplateValue.nodeTree.reduceRight(function (sibling, item) {
-                if (item.nextSibling && item.nextSibling != sibling && sibling.parentNode) {
-                    sibling.parentNode.insertBefore(item, sibling);
+            oldHtmlTemplateCollection.keys.forEach(key => {
+                let keyIsDeleted = newHtmlTemplateCollection.keys.indexOf(key) < 0;
+                if (keyIsDeleted) {
+                    let commentNode = this.instance[key];
+                    Placeholder.from(commentNode).clearContent();
+                    commentNode.parentNode.removeChild(commentNode);
+                    delete this.instance[key];
                 }
-                return item;
-            }, placeHolder);
-        } else {
-            // Jika ternyata placeholder.$content bukan merupakan HtmlTemplate, maka kita destroy templateValue tersebut.
-            destroy(oldTemplateValue);
-            // sekarang kita buat lagi templatenya berdasarkan placeHolder yang sama
-            _buildTemplate(templateValue, placeHolder);
-        }
-    } else {
-        // kita buat templateValue yang baru dari placeholder
-        _buildTemplate(templateValue, placeHolder);
-    }
-}
+            });
 
-/*
- Function to render templateValue as Text on its placeHolder.
- */
-function _renderText(templateValue, placeHolder) {
-    if (placeHolder.parentNode == null) {
-        return;
-    }
-    // Jika sudah terdapat oldTemplateValue kita gunakan template value yang lama, atau kita destroy dan gunakan yang baru
-    let oldTemplateValue = placeHolder.$content;
-    if (oldTemplateValue) {
-        if (oldTemplateValue.nodeType && oldTemplateValue.nodeType === Node.TEXT_NODE) {
-            if (oldTemplateValue.nodeValue === templateValue) {
-                return;
-            }
-            oldTemplateValue.nodeValue = templateValue;
-            return;
-        } else {
-            destroy(oldTemplateValue);
-        }
-    }
-    // kemudian kita buat text node dari templateValue
-    let textNode = document.createTextNode(templateValue);
-    // setelah itu kita insert textNode ke sebelah placeHolder
-    placeHolder.parentNode.insertBefore(textNode, placeHolder);
-    // kemudian kita simpan textNode ke placeHolder
-    placeHolder.$content = textNode;
-}
-
-/*
- html is a function to create an HtmlTemplate object
- */
-function html(strings, ...values) {
-    let key = strings.join('').replace(/\s/g, '');
-    return new HtmlTemplate(strings, values, key);
-}
-
-/*
- The cache used to save the HtmlTemplate, thus speeding up the key creation.
- */
-function cache(key) {
-    return {
-        html: function (strings, ...values) {
-            return new HtmlTemplate(strings, values, key);
+            let placeholderPointer = this.placeholder.commentNode;
+            newHtmlTemplateCollection.iterateRight((item, key, template) => {
+                let commentNode = this.instance[key];
+                if (commentNode) {
+                    let childPlaceholder = Placeholder.from(commentNode);
+                    if (childPlaceholder.content instanceof HtmlTemplateInstance) {
+                        childPlaceholder.setHtmlTemplateContent(template);
+                    } else if (childPlaceholder.content instanceof HtmlTemplateCollectionInstance) {
+                        childPlaceholder.setHtmlTemplateCollectionContent(template);
+                    } else {
+                        childPlaceholder.setTextContent(template);
+                    }
+                    if (placeholderPointer.previousSibling != commentNode) {
+                        placeholderPointer.parentNode.insertBefore(commentNode, placeholderPointer);
+                        childPlaceholder.validateInstancePosition();
+                    }
+                    placeholderPointer = childPlaceholder.firstChildNode();
+                } else {
+                    let childPlaceholder = Placeholder.from(document.createComment('placeholder-child'));
+                    placeholderPointer.parentNode.insertBefore(childPlaceholder.commentNode, placeholderPointer);
+                    renderTemplate(template, childPlaceholder.commentNode);
+                    placeholderPointer = childPlaceholder.firstChildNode();
+                    this.instance[key] = childPlaceholder.commentNode;
+                    this.template.context.addSyncCallback(function () {
+                        syncNode(template, childPlaceholder.commentNode);
+                    });
+                }
+            });
+            this.template = newHtmlTemplateCollection;
         }
     }
-}
 
-/*
- htmlCollection is a function to create an HtmlTemplateCollection object
- */
-function htmlCollection(items, keyFn, templateFn) {
-    return new HtmlTemplateCollection(items, keyFn, templateFn);
-}
-
-const _cache = {};
-let _templateToUpdate = [];
-let _rootTree = [];
-
-/*
- Class that stores information about the collection template
-   HtmlTemplateCollection has several attributes:
-   1. items: attribute that contains items or data
-   2. keyFn: function that map object and its key, receive input item and return string from key
-   3. templatefn: function that returns a templateValue instance eg HtmlTemplate, HtmlTemplateCollection, or Text
-   4. keys: arrays containing sequences of keys based on their order
-   5. templateValuesContainer: container from templateValues
-   6. placeHolderContainer: container from placeHolder used to render the collection
- */
-class HtmlTemplateCollection {
-    constructor(items, keyFn, templateFn, ignoreInit) {
-        this.items = items;
-        this.keyFn = typeof keyFn === 'function' ? keyFn : (i) => i[keyFn];
-        this.templateFn = templateFn;
-        this.keys = [];
-        this.templateValuesContainer = {};
-        this.placeHolderContainer = {};
-        if (!ignoreInit) {
-            this._init();
-        }
-
-    }
-
-    /*
-     Function to initialize item, key into HtmlTemplateCollection
-     */
-    _init() {
-        let index = this.items.length;
-        while (index--) {
-            let item = this.items[index];
-            let key = this.keyFn.apply(this, [item]);
-            this.templateValuesContainer[key] = this.templateFn.apply(this, [item, index, this.items]);
-            this.keys.push(key);
-        }
-        this.keys.reverse();
-    }
-
-    /*
-     Function called to destroy HtmlTemplateCollection
-     */
     destroy() {
-        this.keys.forEach(key => {
-            if (this.templateValuesContainer[key] instanceof HtmlTemplate) {
-                this.templateValuesContainer[key].destroy();
-                this.placeHolderContainer[key].parentNode.removeChild(this.placeHolderContainer[key]);
+        this.template.getKeys().forEach(key => {
+            let childPlaceholderCommentNode = this.instance[key];
+            let childPlaceholder = Placeholder.from(childPlaceholderCommentNode);
+            if (childPlaceholder.content instanceof Template) {
+                childPlaceholder.content.destroy();
+            } else {
+                childPlaceholder.content.parentNode.removeChild(childPlaceholder.content);
             }
+            childPlaceholderCommentNode.parentNode.removeChild(childPlaceholderCommentNode);
+            delete this.instance[key];
         });
 
-        this.keys = [];
-        this.templateValuesContainer = {};
-        this.items = {};
-        this.placeHolderContainer = {};
+        this.placeholder = null;
+        this.instance = null;
+        this.template = null;
+    }
+}
+
+class HtmlTemplateInstance extends Template {
+    constructor(template, placeholder) {
+        super();
+        this.template = template;
+        this.placeholder = placeholder;
+        this.instance = [];
+        this.nodeValueIndexArray = null;
     }
 
-    clone() {
-        let clone = new HtmlTemplateCollection(this.items, this.keyFn, this.templateFn, true);
-        clone.keys = this.keys;
-        clone.templateValuesContainer = {};
-        clone.placeHolderContainer = {};
-        return clone;
+    applyValues(newHtmlTemplate) {
+        let values = newHtmlTemplate.values;
+        if (this.instance === null || this.instance.length === 0) {
+            HtmlTemplate.applyValues(values, this.template.nodeValueIndexArray);
+            let documentFragment = this.template.documentFragment;
+            let cloneNode = cloneNodeDeep(documentFragment);
+            let commentNode = this.placeholder.commentNode;
+            let cloneChildNode = cloneNode.childNodes[0];
+            let nextSibling = null;
+            do {
+                this.instance.push(cloneChildNode);
+                nextSibling = cloneChildNode.nextSibling;
+                commentNode.parentNode.insertBefore(cloneChildNode, commentNode);
+            } while (cloneChildNode = nextSibling);
+        } else if (this.nodeValueIndexArray) {
+            HtmlTemplate.applyValues(values, this.nodeValueIndexArray);
+        }
+    }
+
+    destroy() {
+        this.instance.forEach(i => i.parentNode.removeChild(i));
+        this.nodeValueIndexArray = null;
+        this.placeholder = null;
+        this.template = null;
     }
 
 }
@@ -452,6 +230,9 @@ class HtmlTemplateCollection {
  Function to take the path of a node up in documentFragment
  */
 function getPath(node) {
+    if (node.nodeType === Node.ATTRIBUTE_NODE) {
+        return getPath(node.ownerElement).concat([{name: node.nodeName}]);
+    }
     let i = 0;
     let child = node;
     while ((child = child.previousSibling) != null) {
@@ -460,7 +241,7 @@ function getPath(node) {
     let path = [];
     path.push(i);
     if (node.parentNode && node.parentNode.parentNode) {
-        return path.concat(getPath(node.parentNode));
+        return getPath(node.parentNode).concat(path);
     }
     return path;
 }
@@ -472,239 +253,511 @@ function getNode(path, documentFragment) {
             return content.childNodes[path];
         } else {
             let attribute = content.attributes[path.name];
-            attribute.$dynamicAttributeLength = path.dynamicLength;
-            attribute.$dynamicAttributeLengthPos = 0;
             return attribute;
         }
     }, documentFragment);
     return node;
 }
 
+class HtmlTemplateCollection extends Template {
+    constructor(items, keyFn, templateFn, context) {
+        super();
+        this.items = items;
+        this.keyFn = typeof keyFn === 'string' ? item => item[keyFn] : keyFn;
+        this.templateFn = templateFn;
+        this.context = context;
+        this.keys = [];
+        this.templates = {};
+        this.initialzed = false;
+    }
 
-/*
- Class that stores information about templateValue. HtmlTemplate has attribute
-   1. strings: static strings
-   2. values: or dynamic values
-   3. key: used as cache or name of template
- 4. documentFragment : the template root
- 5. nodeTree : the array of childNodes
- 6. dynamicNodes : the dynamicNodes of this element
- 7. dynamicNodesPath : the path of the dynamicNodes
- */
-class HtmlTemplate {
-    constructor(strings, values, key) {
+    iterateRight(callback) {
+        if (!this.initialzed) {
+            let index = this.items.length - 1;
+            while (index >= 0) {
+                let item = this.items[index];
+                let key = this.keyFn.apply(this, [item, index]);
+                let template = this.templateFn.apply(this, [item, index]);
+                if (callback) {
+                    callback.apply(null, [item, key, template, index]);
+                }
+                index--;
+                this.keys.push(key);
+                this.templates[key] = template;
+            }
+            this.initialzed = true;
+            this.keys.reverse();
+        } else {
+            let index = this.keys.length - 1;
+            while (index >= 0) {
+                let item = this.items[index];
+                let key = this.keys[index];
+                let template = this.templates[key];
+                callback.apply(null, [item, key, template, index]);
+                index--;
+            }
+        }
+    }
+
+    getKeys() {
+        if (!this.initialzed) {
+            throw new Error('Yikes its not initialized yet');
+        }
+        return this.keys;
+    }
+
+    getTemplates() {
+        if (!this.initialzed) {
+            throw new Error('Yikes its not initialized yet');
+        }
+        return this.templates;
+    }
+
+}
+
+class HtmlTemplate extends Template {
+    constructor(strings, values, context) {
+        super();
         this.strings = strings;
         this.values = values;
-        this.key = key;
+        this.context = context;
+        this.key = this.strings.join('').trim();
+        this.nodeValueIndexArray = null;
+        this.documentFragment = null;
     }
 
-    /*
-     Function to generate nodeTree
-     */
-    generateNodeTree(placeholder) {
+    buildTemplate(templateString) {
+        this.documentFragment = this.getProperTemplateTag(templateString);
+        this.nodeValueIndexArray = this.buildNodeValueIndex(this.documentFragment, []);
+        HtmlTemplate.applyValues(this, this.nodeValueIndexArray);
+    }
 
-        let key = this.key;
-        // jika key sudah terdapat di cache, maka kita gunakan template untuk mempercepat pembuatan htmlTemplate.
-        if (!_cache[key]) {
-            let templateRoot = this._getProperTemplateTag(this.strings.join(PLACEHOLDER).trim());
-            let htmlTemplate = new HtmlTemplate(this.strings, this.values, this.key);
-            htmlTemplate.documentFragment = templateRoot;
-            let dynamicNodes = [];
-            // fungsi yang akan mengambil dynamicNodes dari path.
-            htmlTemplate._lookDynamicNodes(arrayFrom(htmlTemplate.documentFragment.childNodes), dynamicNodes);
-            htmlTemplate.dynamicNodes = dynamicNodes;
-            _cache[key] = htmlTemplate;
+    buildNodeValueIndex(documentFragment) {
+
+        let childNodes = documentFragment.childNodes;
+        let nodeValueIndexArray = [];
+        let node = childNodes[0];
+        if (undefined === node) {
+            return nodeValueIndexArray;
         }
-        let template = _cache[key];
-        template.applyValues(this.values, true);
-        this.documentFragment = template.documentFragment.cloneNode(true);
-        this.nodeTree = arrayFrom(this.documentFragment.childNodes);
-        _templateToUpdate.push(() => {
-            this.dynamicNodesPath = template._generateDynamicNodesPath();
-            this.dynamicNodes = this._lookDynamicNodesFromPath({childNodes: this.nodeTree}, this.dynamicNodesPath, template.dynamicNodes);
-            // this is the flag to set the base tree in the root tree for match the result later
-            _rootTree = {
-                cloneTree: this.nodeTree,
-                baseTree: template.documentFragment.childNodes
-            };
-        });
-        return this.nodeTree;
-    }
-
-    _generateDynamicNodesPath() {
-        if (!this.dynamicNodesPath) {
-            this.dynamicNodesPath = this.dynamicNodes.map((dn) => {
-                if (dn.nodeType === Node.ATTRIBUTE_NODE) {
-                    return ([{
-                        name: dn.nodeName,
-                        dynamicLength: dn.$dynamicAttributeLength
-                    }].concat(getPath(dn.ownerElement))).reverse();
-                } else {
-                    return getPath(dn).reverse();
+        do {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                let attributes = node.attributes;
+                let k = attributes.length;
+                for (let attributeIndex = 0; attributeIndex < k; attributeIndex++) {
+                    let nodeValue = attributes[attributeIndex].nodeValue;
+                    let nodeValueIndexMap = this.lookNodeValueArray(nodeValue);
+                    if (nodeValueIndexMap.length == 0) {
+                        continue;
+                    }
+                    let valueIndexes = nodeValueIndexMap.map(function (x) {
+                        return x.match(/[\w\.]+/)[0];
+                    }).map(i => parseInt(i));
+                    if (valueIndexes && valueIndexes.length > 0) {
+                        nodeValueIndexArray.push({
+                            node: attributes[attributeIndex],
+                            valueIndexes: valueIndexes,
+                            nodeValue: nodeValue
+                        });
+                    }
                 }
-            });
-        }
-        return this.dynamicNodesPath;
+                nodeValueIndexArray = nodeValueIndexArray.concat(this.buildNodeValueIndex(node));
+            }
+            if (node.nodeType === Node.TEXT_NODE && documentFragment.nodeName.toUpperCase() === 'STYLE') {
+                let nodeValue = node.nodeValue;
+                let nodeValueIndexMap = this.lookNodeValueArray(nodeValue);
+                if (nodeValueIndexMap.length == 0) {
+                    continue;
+                }
+
+                let valueIndexes = nodeValueIndexMap.map(function (x) {
+                    return x.match(/[\w\.]+/)[0];
+                }).map(i => parseInt(i));
+
+                if (valueIndexes && valueIndexes.length > 0) {
+                    nodeValueIndexArray.push({node: node, valueIndexes: valueIndexes, nodeValue: nodeValue});
+                }
+            }
+            if (node.nodeType === Node.COMMENT_NODE) {
+                let nodeValue = node.nodeValue;
+                node.nodeValue = 'placeholder';
+                nodeValueIndexArray.push({node: node, valueIndexes: parseInt(nodeValue)});
+            }
+        } while (node = node.nextSibling);
+        return nodeValueIndexArray;
     }
 
-    _getProperTemplateTag(contentText) {
-        let template = null;
+    lookNodeValueArray(nodeValue) {
+        let result = [];
+        let pointerStart = nodeValue.indexOf('<!--');
+        let pointerEnd = nodeValue.indexOf('-->', pointerStart);
+
+        while (pointerEnd < nodeValue.length && pointerEnd >= 0 && pointerStart >= 0) {
+            result.push(nodeValue.substring((pointerStart + 4), pointerEnd));
+            pointerStart = nodeValue.indexOf('<!--', (pointerEnd + 3));
+            pointerEnd = nodeValue.indexOf('-->', pointerStart);
+        }
+        return result;
+    }
+
+    getProperTemplateTag(contentText) {
         let openTag = contentText.substring(1, contentText.indexOf('>'));
         openTag = (openTag.indexOf(' ') > 0 ? openTag.substring(0, openTag.indexOf(' ')) : openTag).toLowerCase();
-        let rootTag = templateRoot[openTag];
-        if (rootTag) {
-            template = document.createElement(rootTag);
-        } else {
-            template = document.createElement('div');
-        }
+        let rootTag = TEMPLATE_ROOT[openTag];
+        rootTag = rootTag || 'div';
+        let template = document.createElement(rootTag);
         template.innerHTML = contentText;
         return template;
     }
 
-    /*
-     Function that searches dynamicNodes in a documentFragment with dynamicNodesPath
-     */
-    _lookDynamicNodesFromPath(documentFragment, dynamicNodesPath, dynamicNodesFromTemplate) {
-        return dynamicNodesPath.map((path, index) => {
-            let dynamicNode = getNode(path, documentFragment);
-            // if we have dynamicNodes from template that means we need to update them
-            if (dynamicNodesFromTemplate) {
-                if (dynamicNode.nodeType === Node.COMMENT_NODE) {
-                    if (dynamicNode.previousSibling instanceof Text) {
-                        dynamicNode.$content = dynamicNode.previousSibling;
+    constructTemplate() {
+        if (!this.context.hasCache(this.key)) {
+            let templateString = this.buildStringSequence();
+            this.buildTemplate(templateString);
+            return this.context.cache(this.key, this);
+        }
+        return this.context.cache(this.key);
+    }
+
+    buildStringSequence() {
+        return this.strings.reduce((result, string, index)=> {
+            return index == 0 ? string : `${result}<!--${(index - 1)}-->${string}`;
+        }, '').trim();
+    }
+
+    static applyValues(values, nodeValueIndexArray) {
+        if (!nodeValueIndexArray) {
+            return;
+        }
+        nodeValueIndexArray.forEach((nodeValueIndex, index)=> {
+            let {node, valueIndexes} = nodeValueIndex;
+            let nodeName = node.nodeName;
+            if (node.nodeType === Node.ATTRIBUTE_NODE) {
+                let marker = Marker.from(node);
+                let isEvent = nodeName.indexOf('on') === 0;
+                let nodeValue = nodeValueIndex.nodeValue;
+                if (isEvent) {
+                    let valueIndex = valueIndexes[0];
+                    marker.attributes[nodeName] = values[valueIndex];
+                } else {
+                    let actualAttributeValue = nodeValue;
+                    let valFiltered = valueIndexes.map(valueIndex => values[(valueIndex)]);
+                    valueIndexes.forEach((valueIndex, index) => {
+                        actualAttributeValue = actualAttributeValue.replace(`<!--${valueIndex}-->`, valFiltered[index]);
+                    });
+                    node.ownerElement.setAttribute(nodeName, actualAttributeValue);
+                    if (nodeName.indexOf('.bind') >= 0) {
+                        let attributeName = nodeName.substring(0, nodeName.indexOf('.bind'));
+                        node.ownerElement.setAttribute(attributeName, actualAttributeValue);
                     }
+                    marker.attributes[nodeName] = actualAttributeValue;
                 }
-                if (dynamicNode.nodeType === Node.ATTRIBUTE_NODE) {
-                    if (dynamicNode.nodeName.indexOf("on") === 0) {
-                        let eventName = dynamicNode.nodeName.substring(2, dynamicNode.nodeName.length);
-                        dynamicNode.ownerElement.addEventListener(eventName, this.values[index]);
+            }
+            if (node.nodeType === Node.TEXT_NODE) {
+                let actualAttributeValue = nodeValueIndex.nodeValue;
+                let valFiltered = valueIndexes.map(valueIndex => values[(valueIndex)]);
+                valueIndexes.forEach((valueIndex, index) => {
+                    actualAttributeValue = actualAttributeValue.replace(`<!--${valueIndex}-->`, valFiltered[index]);
+                });
+                node.nodeValue = actualAttributeValue;
+            }
+            if (node.nodeType === Node.COMMENT_NODE) {
+                let nodeValue = node.nodeValue;
+                let valueIndex = valueIndexes;
+                let value = values[valueIndex];
+                renderTemplate(value, node);
+            }
+        });
+    }
+}
+
+function renderText(text, node) {
+    let placeholder = Placeholder.from(node);
+    placeholder.setTextContent(text);
+}
+
+function renderHtmlTemplate(htmlTemplate, node) {
+    let placeholder = Placeholder.from(node);
+    placeholder.setHtmlTemplateContent(htmlTemplate);
+}
+
+function renderHtmlTemplateCollection(htmlTemplateCollection, node) {
+    let placeholder = Placeholder.from(node);
+    placeholder.setHtmlTemplateCollectionContent(htmlTemplateCollection);
+}
+
+function renderTemplate(template, node) {
+    if (template instanceof HtmlTemplate) {
+        renderHtmlTemplate(template, node);
+    } else if (template instanceof HtmlTemplateCollection) {
+        renderHtmlTemplateCollection(template, node);
+    } else {
+        renderText(template, node);
+    }
+}
+
+function syncNode(template, node) {
+    let placeholder = Placeholder.from(node);
+    let values = template.values;
+    if (placeholder.content && placeholder.content instanceof HtmlTemplateInstance) {
+        let htmlTemplateInstance = placeholder.content;
+        let template = htmlTemplateInstance.template;
+        let docFragment = {childNodes: htmlTemplateInstance.instance};
+
+        if (template.nodeValueIndexArray) {
+            let actualNodeValueIndexArray = template.nodeValueIndexArray.map(nodeValueIndex => {
+                let path = getPath(nodeValueIndex.node);
+                let actualNode = getNode(path, docFragment);
+                let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === 'STYLE';
+                if (isStyleNode) {
+                    return {
+                        node: actualNode,
+                        valueIndexes: nodeValueIndex.valueIndexes,
+                        nodeValue: nodeValueIndex.nodeValue
+                    }
+                } else if (actualNode.nodeType === Node.ATTRIBUTE_NODE) {
+                    let marker = Marker.from(actualNode);
+
+                    let valueIndexes = nodeValueIndex.valueIndexes;
+                    let nodeName = actualNode.nodeName;
+                    let isEvent = nodeName.indexOf('on') === 0;
+                    let nodeValue = nodeValueIndex.nodeValue;
+                    if (isEvent) {
+                        let valueIndex = valueIndexes[0];
+                        marker.attributes[nodeName] = values[valueIndex];
+                        let eventName = nodeName.substring(2, nodeName.length);
+                        actualNode.ownerElement.setAttribute(nodeName, 'return false;');
+                        actualNode.ownerElement.addEventListener(eventName, values[valueIndex]);
                     } else {
-                        let templateDynamicNodes = dynamicNodesFromTemplate[index];
-                        dynamicNode.$value = templateDynamicNodes.$value;
-                        dynamicNode.$valueOriginal = templateDynamicNodes.$valueOriginal;
+                        let actualAttributeValue = nodeValue;
+                        let valFiltered = valueIndexes.map(valueIndex => values[(valueIndex)]);
+                        valueIndexes.forEach((valueIndex, index) => {
+                            actualAttributeValue = actualAttributeValue.replace(`<!--${valueIndex}-->`, valFiltered[index]);
+                        });
+
+                        marker.attributes[nodeName] = actualAttributeValue;
+                    }
+                    return {
+                        node: actualNode,
+                        valueIndexes: nodeValueIndex.valueIndexes,
+                        nodeValue: nodeValueIndex.nodeValue
+                    }
+                } else {
+                    let placeholder = Placeholder.from(actualNode);
+                    let value = values[nodeValueIndex.valueIndexes];
+                    if (value instanceof HtmlTemplate) {
+                        placeholder.constructHtmlTemplateContent(value);
+                        syncNode(value, placeholder.commentNode);
+                    }
+                    else if (value instanceof HtmlTemplateCollection) {
+                        placeholder.constructHtmlTemplateCollectionContent(value);
+                        syncNode(value, placeholder.commentNode);
+                    }
+                    else {
+                        placeholder.constructTextContent();
+                    }
+                    return {
+                        node: actualNode,
+                        valueIndexes: nodeValueIndex.valueIndexes
                     }
                 }
-            }
-            return dynamicNode;
-        });
+            });
+            htmlTemplateInstance.nodeValueIndexArray = actualNodeValueIndexArray;
+        }
     }
-
-    /*
-     Function that looks for dynamicNodes, from documentFragment.childNodes, then saves the result into dynamicNodes, dynamicNodesPath
-     */
-    _lookDynamicNodes(documentFragmentChildNodes, dynamicNodes, dynamicNodesPath) {
-        documentFragmentChildNodes.forEach(node => {
-            if (node instanceof Comment && node.nodeValue == PLACEHOLDER_CONTENT) {
-                dynamicNodes.push(node);
-                if (dynamicNodesPath) {
-                    dynamicNodesPath.push(getPath(node));
+    if (placeholder.content && placeholder.content instanceof HtmlTemplateCollectionInstance) {
+        let htmlTemplateCollectionInstance = placeholder.content;
+        let templates = htmlTemplateCollectionInstance.template.templates;
+        let keys = htmlTemplateCollectionInstance.template.keys;
+        keys.forEach(key => {
+            let template = templates[key];
+            let commentNode = htmlTemplateCollectionInstance.instance[key];
+            let placeholder = Placeholder.from(commentNode);
+            if (placeholder.content === null) {
+                if (template instanceof HtmlTemplate) {
+                    placeholder.constructHtmlTemplateContent(template.context.cache(template.key));
+                    syncNode(template, commentNode);
                 }
-            }
-            else if (node.attributes) {
-                arrayFrom(node.attributes).reduce((results, attribute) => {
-                    if (attribute.nodeValue.indexOf(PLACEHOLDER) >= 0) {
-                        let dynamicLength = attribute.nodeValue.split(PLACEHOLDER).length - 1;
-                        for (let i = 0; i < dynamicLength; i++) {
-                            attribute.$dynamicAttributeLength = dynamicLength;
-                            attribute.$dynamicAttributeLengthPos = 0;
-                            results.push(attribute);
-                            if (dynamicNodesPath) {
-                                let path = [{
-                                    name: attribute.nodeName,
-                                    dynamicLength: dynamicLength
-                                }].concat(getPath(attribute.ownerElement));
-                                dynamicNodesPath.push(path);
-                            }
-                        }
-                    }
-                    return results;
-                }, dynamicNodes);
-                this._lookDynamicNodes(arrayFrom(node.childNodes), dynamicNodes, dynamicNodesPath);
-            }
-        });
-    }
-
-    /*
-     Function that will apply templateValues
-     */
-    applyValues(templateValues, noEvents) {
-        this.dynamicNodes = this.dynamicNodes || [];
-        this.dynamicNodes.forEach((dynamicNode, index) => {
-            if (dynamicNode.nodeType === Node.ATTRIBUTE_NODE) {
-                HtmlTemplate._applyAttributeNode(dynamicNode, templateValues[index], noEvents);
             } else {
-                _render(templateValues[index], dynamicNode);
+                if (placeholder.content instanceof HtmlTemplateInstance) {
+                    syncNode(template, commentNode);
+                }
             }
         });
     }
+}
 
-    /*
-     Function to destroy HtmlTemplate
-     */
-    destroy() {
-        this.nodeTree.forEach(n => n.parentNode.removeChild(n));
+function render(templateValue, node) {
+    renderTemplate(templateValue, node);
+    if (!node.$synced) {
+        syncNode(templateValue, node);
+        node.$synced = true;
+    }
+    if('Promise' in window){
+        return new Promise(function(resolve){
+            setTimeout(() => {
+                templateValue.context.clearSyncCallbacks();
+                resolve();
+            }, 300);
+        });
+    }else{
+        setTimeout(() => {
+            templateValue.context.clearSyncCallbacks();
+        }, 300);
+    }
+}
+
+class Marker {
+
+    constructor(node) {
+        this.node = node;
+        this.attributes = {};
     }
 
-    /*
-     Function to apply attribute node.
-     */
-    static _applyAttributeNode(node, value, noEvents) {
-        /*
-         If the attribute is a function, and the node name has a prefix on, then we assume it's an attribute event so we will call ownerElement [node.name]
-         */
-        if (typeof value === 'function' && node.name.indexOf("on") === 0) {
-            if (!noEvents) {
-                // we are ignoring events here
-                return;
-            }
-            node.nodeValue = "return false;";
-            let eventName = node.name.substring(2, node.name.length);
-            node.ownerElement.addEventListener(eventName, value);
+    static from(node) {
+        let element = node;
+        if (node.nodeType === Node.ATTRIBUTE_NODE) {
+            element = node.ownerElement;
+        }
+        element.$data = element.$data || new Marker(element);
+        return element.$data;
+    }
+}
+
+class Placeholder {
+    constructor(commentNode) {
+        this.commentNode = commentNode;
+        this.content = null;
+    }
+
+    constructTextContent() {
+        this.content = this.commentNode.previousSibling;
+    }
+
+    constructHtmlTemplateCollectionContent(htmlTemplateCollection) {
+        this.content = new HtmlTemplateCollectionInstance(htmlTemplateCollection, this);
+        this.content.instance = {};
+        let pointer = this.commentNode;
+        htmlTemplateCollection.iterateRight((item, key, template, index) => {
+            do {
+                pointer = pointer.previousSibling
+            } while (pointer.nodeType != Node.COMMENT_NODE && pointer.nodeValue !== 'placeholder-child');
+            this.content.instance[key] = pointer;
+        });
+    }
+
+    constructHtmlTemplateContent(htmlTemplate) {
+        let childNodesLength = htmlTemplate.documentFragment.childNodes.length;
+        this.content = new HtmlTemplateInstance(htmlTemplate, this);
+        let sibling = this.commentNode;
+        while (childNodesLength--) {
+            sibling = sibling.previousSibling;
+            this.content.instance.push(sibling)
+        }
+        this.content.instance.reverse();
+    }
+
+    setTextContent(text) {
+        if (this.content instanceof Text) {
+            this.content.nodeValue = text;
         } else {
-            if (!node.$valueOriginal) {
-                node.$valueOriginal = node.value;
-            }
-            if (node.$dynamicAttributeLengthPos == node.$dynamicAttributeLength) {
-                node.$dynamicAttributeLengthPos = 0;
-            }
-            if (node.$dynamicAttributeLengthPos == 0) {
-                node.$value = node.$valueOriginal;
-            }
-            if (isMinimizationAttribute(node)) {
-                node.ownerElement[node.nodeName] = value;
-            } else {
-                node.$value = node.$value.split(PLACEHOLDER).reduce((result, data, index) => {
-                    return index == 0 ? data : `${result}${index == 1 ? value : PLACEHOLDER}${data}`;
-                }, '');
-                node.$dynamicAttributeLengthPos++;
-                if (node.$dynamicAttributeLengthPos == node.$dynamicAttributeLength && node.value != node.$value) {
-                    node.value = node.$value;
-                }
-            }
+            this.clearContent();
+            this.content = document.createTextNode(text);
+            this.commentNode.parentNode.insertBefore(this.content, this.commentNode);
         }
     }
 
-    clone(nodeTree) {
-        let clone = new HtmlTemplate(this.strings, this.values, this.key);
-        clone.documentFragment = this.documentFragment;
-        clone.nodeTree = nodeTree;
-        clone.dynamicNodesPath = this.dynamicNodesPath;
-        clone.dynamicNodes = this._lookDynamicNodesFromPath({childNodes: nodeTree}, this.dynamicNodesPath);
-        clone.dynamicNodes.forEach((dn, index) => {
-            if (dn.nodeType === Node.ATTRIBUTE_NODE) {
-                if (dn.nodeName.indexOf("on") === 0) {
-                    // this is function attribute, lets register their event listener
-                    let eventName = dn.nodeName.substring(2, dn.nodeName.length);
-                    dn.ownerElement.addEventListener(eventName, this.values[index]);
-                } else {
-                    dn.$valueOriginal = this.dynamicNodes[index].$valueOriginal;
-                    dn.$value = this.dynamicNodes[index].$value;
-                    dn.$dynamicAttributeLength = this.dynamicNodes[index].$dynamicAttributeLength;
-                    dn.$dynamicAttributeLengthPos = this.dynamicNodes[index].$dynamicAttributeLengthPos;
-                }
-
+    setHtmlTemplateCollectionContent(htmlTemplateCollection) {
+        let clearContentWasCalled = false;
+        let contentHasSameStructure = this.content && this.content instanceof HtmlTemplateCollectionInstance;
+        if (this.content !== null && !contentHasSameStructure) {
+            if (this.content instanceof Text && this.content.nodeValue === 'undefined') {
+                clearContentWasCalled = false;
+            } else {
+                clearContentWasCalled = true;
             }
-        });
-        return clone;
+            this.clearContent();
+        }
+        if (!this.content) {
+            this.content = new HtmlTemplateCollectionInstance(htmlTemplateCollection, this);
+        }
+        this.content.applyValues(htmlTemplateCollection);
+        if (clearContentWasCalled) {
+            syncNode(this.content.template, this.commentNode);
+        }
+    }
+
+    setHtmlTemplateContent(htmlTemplate) {
+        let clearContentWasCalled = false;
+        let contentHasSameKey = this.content && this.content instanceof HtmlTemplateInstance ? this.content.template.key === htmlTemplate.key : false;
+        if (this.content !== null && !contentHasSameKey) {
+            this.clearContent();
+            clearContentWasCalled = true;
+        }
+        if (!this.content) {
+            let template = htmlTemplate.constructTemplate();
+            this.content = new HtmlTemplateInstance(template, this);
+        }
+        this.content.applyValues(htmlTemplate);
+        if (clearContentWasCalled) {
+            syncNode(this.content.template, this.commentNode);
+        }
+    }
+
+    clearContent() {
+        if (this.content !== null) {
+            if (this.content instanceof Template) {
+                this.content.destroy();
+            } else {
+                this.content.parentNode.removeChild(this.content);
+            }
+            this.content = null;
+        }
+    }
+
+    hasEmptyContent() {
+        return this.content === null;
+    }
+
+    static from(node) {
+        if (node instanceof Comment) {
+            node.$data = node.$data || new Placeholder(node);
+            return node.$data
+        } else {
+            if (!node.$placeholder) {
+                node.$placeholder = document.createComment('placeholder');
+                node.appendChild(node.$placeholder);
+            }
+            return Placeholder.from(node.$placeholder);
+        }
+    }
+
+    firstChildNode() {
+        if (this.content instanceof HtmlTemplateInstance) {
+            return this.content.instance[0];
+        } else if (this.content instanceof HtmlTemplateCollectionInstance) {
+            let firstKey = this.content.template.keys[0];
+            let placeholder = Placeholder.from(this.content.instance[firstKey]);
+            return placeholder.firstChildNode();
+        } else {
+            return this.content;
+        }
+    }
+
+    validateInstancePosition() {
+        if (this.content instanceof HtmlTemplateInstance) {
+            this.content.instance.reduceRight((pointer, ctn)=> {
+                if (pointer.previousSibling != ctn) {
+                    pointer.parentNode.insertBefore(ctn, pointer);
+                }
+                return ctn;
+            }, this.commentNode);
+        } else if (this.content instanceof HtmlTemplateCollectionInstance) {
+            // we need to investigate how to sort this
+        } else {
+            if (this.commentNode.previousSibling != this.content) {
+                this.commentNode.parentNode.insertBefore(this.content, this.commentNode);
+            }
+        }
     }
 }
