@@ -24,14 +24,30 @@
 
 **Performance**
 ---
-The beta version of yallajs shows the performance of yalla js differing only 1.3 from plain vanilla javascript. This places yallajs as one of the fastest frameworks today even though yallajs are currently in the early stages to focus on performance.
+The beta version of yallajs shows the performance of yalla js differing only 1.2 from plain vanilla javascript. This places yallajs as one of the fastest frameworks today even though yallajs are currently in the early stages to focus on performance.
 
 **API**
 ---
 
 Yalla uses ES 2015 String literal for html templating, yallajs API is very simple, making yalla js almost invisible in your code. This makes your app not have boilerplate.
 
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Overview
+--------
+Print **Hello World** in the screen.
+```html
+<script src="https://unpkg.com/yallajs"></script>
+```
+
+```javascript
+
+let context = new Context();
+let html = context.html();
+render(html`Hello World`,document.body);
+```
+
+YallaJS <a href="http://yallajs.io/todomvc.html">TodoMVC</a>
+
+
 YallaJS Project is supported by :
 
 <img align="center" class="image" src="http://yallajs.io/images/browser-stack.svg" width="150px">
