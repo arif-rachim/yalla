@@ -510,22 +510,17 @@ function syncNode(template, node) {
 
         if (template.nodeValueIndexArray) {
             let actualNodeValueIndexArray = template.nodeValueIndexArray.map(nodeValueIndex => {
+                let {nodeValue,valueIndexes} = nodeValueIndex;
                 let path = getPath(nodeValueIndex.node);
                 let actualNode = getNode(path, docFragment);
+                //let actualValues = valueIndexes.map(index => values[index]);
                 let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === 'STYLE';
                 if (isStyleNode) {
-                    return {
-                        node: actualNode,
-                        valueIndexes: nodeValueIndex.valueIndexes,
-                        nodeValue: nodeValueIndex.nodeValue
-                    }
+                    return {node: actualNode,valueIndexes,nodeValue}
                 } else if (actualNode.nodeType === Node.ATTRIBUTE_NODE) {
                     let marker = Marker.from(actualNode);
-
-                    let valueIndexes = nodeValueIndex.valueIndexes;
                     let nodeName = actualNode.nodeName;
                     let isEvent = nodeName.indexOf('on') === 0;
-                    let nodeValue = nodeValueIndex.nodeValue;
                     if (isEvent) {
                         let valueIndex = valueIndexes[0];
                         marker.attributes[nodeName] = values[valueIndex];
@@ -541,14 +536,10 @@ function syncNode(template, node) {
 
                         marker.attributes[nodeName] = actualAttributeValue;
                     }
-                    return {
-                        node: actualNode,
-                        valueIndexes: nodeValueIndex.valueIndexes,
-                        nodeValue: nodeValueIndex.nodeValue
-                    }
+                    return {node: actualNode,valueIndexes,nodeValue}
                 } else {
                     let placeholder = Placeholder.from(actualNode);
-                    let value = values[nodeValueIndex.valueIndexes];
+                    let value = values[valueIndexes];
                     if (value instanceof HtmlTemplate) {
                         placeholder.constructHtmlTemplateContent(value);
                         syncNode(value, placeholder.commentNode);
@@ -560,10 +551,7 @@ function syncNode(template, node) {
                     else {
                         placeholder.constructTextContent();
                     }
-                    return {
-                        node: actualNode,
-                        valueIndexes: nodeValueIndex.valueIndexes
-                    }
+                    return {node: actualNode,valueIndexes}
                 }
             });
             htmlTemplateInstance.nodeValueIndexArray = actualNodeValueIndexArray;
