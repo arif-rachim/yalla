@@ -311,6 +311,21 @@ class HtmlTemplateCollection extends Template {
     }
 
 }
+function isMatch(newActualValues,values){
+    if(newActualValues === values){
+        return true;
+    }else if(Array.isArray(newActualValues) && Array.isArray(values) && newActualValues.length == values.length){
+        let isMatch = true;
+        for(let i = 0;i<values.length;i++){
+            isMatch = isMatch && (newActualValues[i] === values[i]);
+            if(!isMatch){
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
 
 class HtmlTemplate extends Template {
     constructor(strings, values, context) {
@@ -423,12 +438,18 @@ class HtmlTemplate extends Template {
     }
 
     static applyValues(nextHtmlTemplate, nodeValueIndexArray) {
-        let values = nextHtmlTemplate.values;
+        let newValues = nextHtmlTemplate.values;
         if (!nodeValueIndexArray) {
             return;
         }
         nodeValueIndexArray.forEach((nodeValueIndex, index)=> {
-            let {node, valueIndexes} = nodeValueIndex;
+            let {node, valueIndexes,values} = nodeValueIndex;
+            let newActualValues = Array.isArray(valueIndexes) ? valueIndexes.map(valueIndex => newValues[(valueIndex)]) : newValues[valueIndexes];
+
+            if(isMatch(newActualValues,values)){
+                return;
+            }
+
             let nodeName = node.nodeName;
             if (node.nodeType === Node.ATTRIBUTE_NODE) {
                 let marker = Marker.from(node);
@@ -436,10 +457,10 @@ class HtmlTemplate extends Template {
                 let nodeValue = nodeValueIndex.nodeValue;
                 if (isEvent) {
                     let valueIndex = valueIndexes[0];
-                    marker.attributes[nodeName] = values[valueIndex];
+                    marker.attributes[nodeName] = newValues[valueIndex];
                 } else {
                     let actualAttributeValue = nodeValue;
-                    let valFiltered = valueIndexes.map(valueIndex => values[(valueIndex)]);
+                    let valFiltered = valueIndexes.map(valueIndex => newValues[(valueIndex)]);
                     valueIndexes.forEach((valueIndex, index) => {
                         actualAttributeValue = actualAttributeValue.replace(`<!--${valueIndex}-->`, valFiltered[index]);
                     });
@@ -449,7 +470,6 @@ class HtmlTemplate extends Template {
                     }else{
                         node.ownerElement.setAttribute(nodeName, actualAttributeValue);
                     }
-
                     if (nodeName.indexOf('.bind') >= 0) {
                         let attributeName = nodeName.substring(0, nodeName.indexOf('.bind'));
                         node.ownerElement.setAttribute(attributeName, actualAttributeValue);
@@ -459,7 +479,7 @@ class HtmlTemplate extends Template {
             }
             if (node.nodeType === Node.TEXT_NODE) {
                 let actualAttributeValue = nodeValueIndex.nodeValue;
-                let valFiltered = valueIndexes.map(valueIndex => values[(valueIndex)]);
+                let valFiltered = valueIndexes.map(valueIndex => newValues[(valueIndex)]);
                 valueIndexes.forEach((valueIndex, index) => {
                     actualAttributeValue = actualAttributeValue.replace(`<!--${valueIndex}-->`, valFiltered[index]);
                 });
@@ -468,9 +488,10 @@ class HtmlTemplate extends Template {
             if (node.nodeType === Node.COMMENT_NODE) {
                 let nodeValue = node.nodeValue;
                 let valueIndex = valueIndexes;
-                let value = values[valueIndex];
+                let value = newValues[valueIndex];
                 renderTemplate(value, node);
             }
+            nodeValueIndex.values = newActualValues;
         });
     }
 }
@@ -502,7 +523,7 @@ function renderTemplate(template, node) {
 
 function syncNode(template, node) {
     let placeholder = Placeholder.from(node);
-    let values = template.values;
+    let templateValues = template.values;
     if (placeholder.content && placeholder.content instanceof HtmlTemplateInstance) {
         let htmlTemplateInstance = placeholder.content;
         let template = htmlTemplateInstance.template;
@@ -513,33 +534,34 @@ function syncNode(template, node) {
                 let {nodeValue,valueIndexes} = nodeValueIndex;
                 let path = getPath(nodeValueIndex.node);
                 let actualNode = getNode(path, docFragment);
-                //let actualValues = valueIndexes.map(index => values[index]);
+                let values = Array.isArray(valueIndexes) ? valueIndexes.map(index => templateValues[index]) : templateValues[valueIndexes];
+
                 let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === 'STYLE';
                 if (isStyleNode) {
-                    return {node: actualNode,valueIndexes,nodeValue}
+                    return {node: actualNode,valueIndexes,nodeValue,values}
                 } else if (actualNode.nodeType === Node.ATTRIBUTE_NODE) {
                     let marker = Marker.from(actualNode);
                     let nodeName = actualNode.nodeName;
                     let isEvent = nodeName.indexOf('on') === 0;
                     if (isEvent) {
                         let valueIndex = valueIndexes[0];
-                        marker.attributes[nodeName] = values[valueIndex];
+                        marker.attributes[nodeName] = templateValues[valueIndex];
                         let eventName = nodeName.substring(2, nodeName.length);
                         actualNode.ownerElement.setAttribute(nodeName, 'return false;');
-                        actualNode.ownerElement.addEventListener(eventName, values[valueIndex]);
+                        actualNode.ownerElement.addEventListener(eventName, templateValues[valueIndex]);
                     } else {
                         let actualAttributeValue = nodeValue;
-                        let valFiltered = valueIndexes.map(valueIndex => values[(valueIndex)]);
+                        let valFiltered = valueIndexes.map(valueIndex => templateValues[(valueIndex)]);
                         valueIndexes.forEach((valueIndex, index) => {
                             actualAttributeValue = actualAttributeValue.replace(`<!--${valueIndex}-->`, valFiltered[index]);
                         });
 
                         marker.attributes[nodeName] = actualAttributeValue;
                     }
-                    return {node: actualNode,valueIndexes,nodeValue}
+                    return {node: actualNode,valueIndexes,nodeValue,values}
                 } else {
                     let placeholder = Placeholder.from(actualNode);
-                    let value = values[valueIndexes];
+                    let value = templateValues[valueIndexes];
                     if (value instanceof HtmlTemplate) {
                         placeholder.constructHtmlTemplateContent(value);
                         syncNode(value, placeholder.commentNode);
@@ -551,7 +573,7 @@ function syncNode(template, node) {
                     else {
                         placeholder.constructTextContent();
                     }
-                    return {node: actualNode,valueIndexes}
+                    return {node: actualNode,valueIndexes,values}
                 }
             });
             htmlTemplateInstance.nodeValueIndexArray = actualNodeValueIndexArray;
