@@ -7,9 +7,7 @@
 let PLACEHOLDER = '<!--placeholder-->';
 
 
-let ctx = new Context();
-let html = ctx.html();
-let htmlCollection = ctx.htmlCollection();
+let {html,htmlCollection} = new Context();
 
 describe('yalla.js',function(){
 

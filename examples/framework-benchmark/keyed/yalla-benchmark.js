@@ -230,9 +230,7 @@ class Main {
 
 }
 let main = new Main();
-let ctx = new Context();
-let html = ctx.html();
-let htmlCollection = ctx.htmlCollection();
+let {html,htmlCollection} = new Context();
 let app = () => html`
     <div class="container">
         <div class="jumbotron">

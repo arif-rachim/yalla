@@ -29,6 +29,8 @@ class Context {
     constructor() {
         this._cache = {};
         this._synccallbacks = [];
+        this.html = (strings, ...values) => new HtmlTemplate(strings, values, this);
+        this.htmlCollection = (arrayItems, keyFn, templateFn) => new HtmlTemplateCollection(arrayItems, keyFn, templateFn, this);
     }
 
     hasCache(key) {
@@ -40,20 +42,6 @@ class Context {
             this._cache[key] = data;
         }
         return this._cache[key];
-    }
-
-    html() {
-        let context = this;
-        return function (strings, ...values) {
-            return new HtmlTemplate(strings, values, context);
-        }
-    }
-
-    htmlCollection() {
-        let context = this;
-        return function (arrayItems, keyFn, templateFn) {
-            return new HtmlTemplateCollection(arrayItems, keyFn, templateFn, context);
-        }
     }
 
     addSyncCallback(callback) {
@@ -206,9 +194,8 @@ class HtmlTemplateInstance extends Template {
     }
 
     applyValues(newHtmlTemplate) {
-        let values = newHtmlTemplate.values;
         if (this.instance === null || this.instance.length === 0) {
-            HtmlTemplate.applyValues(values, this.template.nodeValueIndexArray);
+            HtmlTemplate.applyValues(newHtmlTemplate, this.template.nodeValueIndexArray);
             let documentFragment = this.template.documentFragment;
             let cloneNode = cloneNodeDeep(documentFragment);
             let commentNode = this.placeholder.commentNode;
@@ -220,7 +207,7 @@ class HtmlTemplateInstance extends Template {
                 commentNode.parentNode.insertBefore(cloneChildNode, commentNode);
             } while (cloneChildNode = nextSibling);
         } else if (this.nodeValueIndexArray) {
-            HtmlTemplate.applyValues(values, this.nodeValueIndexArray);
+            HtmlTemplate.applyValues(newHtmlTemplate, this.nodeValueIndexArray);
         }
     }
 
@@ -270,7 +257,7 @@ class HtmlTemplateCollection extends Template {
     constructor(items, keyFn, templateFn, context) {
         super();
         this.items = items;
-        this.keyFn = typeof keyFn === 'string' ? item => item[keyFn] : keyFn;
+        this.keyFn = typeof keyFn === 'string' ? (item => item[keyFn]) : keyFn;
         this.templateFn = templateFn;
         this.context = context;
         this.keys = [];
@@ -284,6 +271,7 @@ class HtmlTemplateCollection extends Template {
             while (index >= 0) {
                 let item = this.items[index];
                 let key = this.keyFn.apply(this, [item, index]);
+
                 let template = this.templateFn.apply(this, [item, index]);
                 if (callback) {
                     callback.apply(null, [item, key, template, index]);
@@ -300,7 +288,9 @@ class HtmlTemplateCollection extends Template {
                 let item = this.items[index];
                 let key = this.keys[index];
                 let template = this.templates[key];
-                callback.apply(null, [item, key, template, index]);
+                if (callback) {
+                    callback.apply(null, [item, key, template, index]);
+                }
                 index--;
             }
         }
@@ -432,7 +422,8 @@ class HtmlTemplate extends Template {
         }, '').trim();
     }
 
-    static applyValues(values, nodeValueIndexArray) {
+    static applyValues(nextHtmlTemplate, nodeValueIndexArray) {
+        let values = nextHtmlTemplate.values;
         if (!nodeValueIndexArray) {
             return;
         }
@@ -684,11 +675,7 @@ class Placeholder {
         let clearContentWasCalled = false;
         let contentHasSameStructure = this.content && this.content instanceof HtmlTemplateCollectionInstance;
         if (this.content !== null && !contentHasSameStructure) {
-            if (this.content instanceof Text && this.content.nodeValue === 'undefined') {
-                clearContentWasCalled = false;
-            } else {
-                clearContentWasCalled = true;
-            }
+            clearContentWasCalled = true;
             this.clearContent();
         }
         if (!this.content) {
