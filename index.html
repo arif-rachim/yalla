@@ -11,9 +11,7 @@
 <script>
 
     let checked = false;
-    let context = new Context();
-    let html = context.html();
-    let htmlCollection = context.htmlCollection();
+    let {html,htmlCollection} = new Context();
     let app = () => html`<input type="checkbox" checked="${checked}" onchange="${e => {
         checked = e.target.checked;
         update();

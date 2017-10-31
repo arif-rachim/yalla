@@ -1,6 +1,6 @@
 {
   "name": "yallajs",
-  "version": "2.0.0-beta.5",
+  "version": "2.0.0-beta.7",
   "description": "Web Application with zero boiler plate",
   "scripts": {
     "commit": "git-cz",
