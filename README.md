@@ -24,7 +24,20 @@
 
 **Performance**
 ---
-The beta version of yallajs shows the performance of yalla js differing only 1.2 from plain vanilla javascript. This places yallajs as one of the fastest frameworks today even though yallajs are currently in the early stages to focus on performance.
+The beta version of yallajs shows the performance of yalla js very promising by using <a href="https://github.com/krausest/js-framework-benchmark">Stefan Krause performance benchmark</a>.
+
+<img class="image" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRBa5mvSRr6DdMYSZAsLOFowM7P5Jlo1pVRp6BwfyoYtrte3bcvxhIHuJ0Meg8gGMilTsGoSxIqvq9f/pubchart?oid=1459873274&format=image" >
+
+
+**Memory**
+---
+On the other hand, yallajs memory usage is showing promising result.
+
+<img class="image" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRBa5mvSRr6DdMYSZAsLOFowM7P5Jlo1pVRp6BwfyoYtrte3bcvxhIHuJ0Meg8gGMilTsGoSxIqvq9f/pubchart?oid=1555194057&format=image" >
+
+
+You can find the details <a href="http://yallajs.io/benchmark-result.html">here</a>, and the code that we use in this benchmark <a href="#">here</a>.
+
 
 **API**
 ---
@@ -34,14 +47,11 @@ Yalla uses ES 2015 String literal for html templating, yallajs API is very simpl
 Overview
 --------
 Print **Hello World** in the screen.
-```html
-<script src="https://unpkg.com/yallajs"></script>
-```
 
 ```javascript
+import {Context, render} from 'yallajs';
 
-let context = new Context();
-let html = context.html();
+let {html,htmlCollection} = new Context();
 render(html`Hello World`,document.body);
 ```
 
