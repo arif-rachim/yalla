@@ -20,11 +20,75 @@
 <img width='46px' src="http://browserbadge.com/chrome/39">
 </p>
 
-**YallaJS** is a javascript framework for building web applications swiftly. 
+**YallaJS** makes it easy to create HtmlTemplate and render it to DOM efficiently.
+
+```javascript
+import {Context,render} from 'yallajs';
+
+// we pull html Tagged Template literals from the Context object.
+let {html} = new Context();
+
+// create template function that produce HtmlTemplate "<div>Hello xxx </div>"
+let hello = (param) => html`<div>Hello ${name}</div>`;
+
+// render <div>Hello world</div> to document.body.
+render(hello('world'),document.body);
+
+// render <div>Hello yallajs</div> to document.body.
+render(hello('yallajs'),document.body);
+```
+
+
+`yallajs`  has 3 main API
+
+ 1. `render` : Render is a function that renders an HtmlTemplate or HtmlTemplateCollection into node.
+ 2. `html` : html is contextual Tagged Template Literal that generates HtmlTemplate object from Html strings
+ 3. `htmlCollection` : htmlCollection is contextual Tagged Template Literals that generates HtmlTemplateCollection for rendering arrays of object.
+ 4. `Context` : Context is an object that stores local information such as HtmlTemplate cache (in most cases you dont have to do anything with this object).
+
+**Motivation**
+---
+`yallajs` has following main goals :
+
+1. Highly efficient in DOM creation, updates and deletion.
+2. Easy to use and very simple to understand
+3. Using web standards instead of creating new ones
+4. Very small size and no dependency.
+5. Support ES 5 browsers suchas IE 9, IOS 6 and Android 5.
+
+**How it works**
+---
+
+
+**`html` Tagged Template Literals**
+---
+`html` tag expression processed Template Literal, and generate HtmlTemplate object out of it.
+Template literals are string literals allowing embedded expressions. You can use multi-line strings and string interpolation features with them.
+
+Template literals are enclosed by the back-tick (\` \`) character instead of double or single quotes. Template literals can contain place holders. These are indicated by the Dollar sign and curly braces (${expression}). The expressions in the place holders and the text between them get passed to a `html` Tagged Template Literals.
+
+**`render` HtmlTemplate rendering**
+----
+`render()` takes a `HtmlTemplate` or `HtmlTemplateCollection` or `Text`, and renders it to a DOM Container. The process of rendering is describe in following orders :
+
+1. `yallajs` take the static strings in `HtmlTemplate` and join the strings with `<!--placeholder-->` to mark the position of dynamic parts.
+2. `yallajs` passes joined strings to innerHTML to create `DOMTemplate`.
+3. It walks through the `DOMTemplate` and identify the comment tag `placeholder`.
+4. On initial rendering `yallajs` update the `placeholder` with actual values.
+5. After that `yallajs` store the updated `DOMTemplate` into `Context` object.
+6. Lastly `yallajs` clone the `DOMTemplate` to create `HtmlTemplateInstance` and append it to DOM Container.
+
+By keeping the template DOM in the cache, next DOM creation will be done in two steps only :
+
+1. Pull and Update the template DOM placeholder with actual value the template DOM from Cache,
+2. Append the cloned DOM to DOM Container.
+
+In this way we can also perform the DOM update process very efficiently because we already know the location of the placeholder. So if there is a new value that changes, we simply update the placeholder without having to touch other DOM
+
 
 **Performance**
 ---
-The Benchmark result of yallajs 2.0 beta version is very promising. Without any performance tuning, yallajs wins against angular, react and vue, both on rendering and memory allocation.
+The Benchmark result of yallajs 2.0 beta version is very promising. With very early stage of performance tuning, yallajs wins against angular, react and vue, both on rendering and memory allocation.
  Following benchmark result using <a href="https://github.com/krausest/js-framework-benchmark">Stefan Krause performance benchmark</a>.
 
 <img class="image" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRBa5mvSRr6DdMYSZAsLOFowM7P5Jlo1pVRp6BwfyoYtrte3bcvxhIHuJ0Meg8gGMilTsGoSxIqvq9f/pubchart?oid=1459873274&format=image" >
@@ -40,23 +104,80 @@ On the other hand, yallajs memory usage is showing very promising result.
 You can find the details <a href="http://yallajs.io/benchmark-result.html">here</a>, and the code that we use in this benchmark <a href="https://github.com/yallajs/js-framework-benchmark/tree/master/yallajs-v2.0.0-keyed">here</a>.
 
 
-**API**
+**Features**
 ---
 
 Yalla uses ES 2015 String literal for html templating, yallajs API is very simple, making yalla js almost invisible in your code. This makes your application smells good and no boilerplate.
 
 Overview
 --------
-Print **Hello World** in the screen.
+**Events**
+---
 
 ```javascript
-import {Context, render} from 'yallajs';
 
-let {html,htmlCollection} = new Context();
-render(html`Hello World`,document.body);
+function buttonListener(){
+    alert('hello');
+}
+
+render(html`<input type="button" onclick="${e => buttonListener()}">`,document.body);
 ```
 
-YallaJS <a href="http://yallajs.io/todomvc.html">TodoMVC</a>
+
+**Attribute**
+---
+```javascript
+
+render(html`<div
+        style="color : ${dynamicColor};
+        font-size : ${fontSize};" >This is a Node</div>`,document.body);
+```
+
+
+**HtmlTemplate in HtmlTemplate**
+---
+
+```javascript
+
+render(html`<div>This is Parent Node
+        ${html`<div>This is Child Node</div>`}
+        </div>`,document.body);
+```
+
+
+**`htmlCollection` HtmlTemplateCollection**
+---
+
+HtmlTemplateCollection is high performance Object that map array of items to HtmlTemplate Array.
+HtmlTemplateCollection requires key of the item to update the collection effectively.
+
+```javascript
+htmlCollection(arrayItems,keyFunction,templateFunction);
+```
+
+*Example*
+```javascript
+let marshalArtArtist = [
+    {id:1,name:'Yip Man'},
+    {id:2,name:'Bruce Lee'},
+    {id:3,label:'Jackie Chan'}]
+
+render(html`
+<table>
+    <tbody>
+        ${htmlCollection(marshalArtArtist,(data) => data.id, (data,index) => html`
+            <tr><td>${data.name}</td></tr>
+        `)}
+    <tbody>
+</table>
+`,document.body);
+```
+
+
+**Sample Project**
+---
+1. <a href="http://yallajs.io/todomvc.html">TodoMVC</a> : a simple todomvc application
+2. <a href="http://yallajs.io/benchmark.html">Benchmark</a> : benchmark tools for measuring performance, fork of <a href="http://www.stefankrause.net/wp/">Stefan Krause</a> github project
 
 
 YallaJS Project is supported by :
