@@ -24,14 +24,15 @@
 
 **Performance**
 ---
-The beta version of yallajs shows the performance of yalla js very promising by using <a href="https://github.com/krausest/js-framework-benchmark">Stefan Krause performance benchmark</a>.
+The Benchmark result of yallajs 2.0 beta version is very promising. Without any performance tuning, yallajs wins against angular, react and vue, both on rendering and memory allocation.
+ Following benchmark result using <a href="https://github.com/krausest/js-framework-benchmark">Stefan Krause performance benchmark</a>.
 
 <img class="image" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRBa5mvSRr6DdMYSZAsLOFowM7P5Jlo1pVRp6BwfyoYtrte3bcvxhIHuJ0Meg8gGMilTsGoSxIqvq9f/pubchart?oid=1459873274&format=image" >
 
 
 **Memory**
 ---
-On the other hand, yallajs memory usage is showing promising result.
+On the other hand, yallajs memory usage is showing very promising result.
 
 <img class="image" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRBa5mvSRr6DdMYSZAsLOFowM7P5Jlo1pVRp6BwfyoYtrte3bcvxhIHuJ0Meg8gGMilTsGoSxIqvq9f/pubchart?oid=1555194057&format=image" >
 
@@ -42,7 +43,7 @@ You can find the details <a href="http://yallajs.io/benchmark-result.html">here<
 **API**
 ---
 
-Yalla uses ES 2015 String literal for html templating, yallajs API is very simple, making yalla js almost invisible in your code. This makes your app not have boilerplate.
+Yalla uses ES 2015 String literal for html templating, yallajs API is very simple, making yalla js almost invisible in your code. This makes your application smells good and no boilerplate.
 
 Overview
 --------
