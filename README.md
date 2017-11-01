@@ -37,7 +37,7 @@ On the other hand, yallajs memory usage is showing very promising result.
 <img class="image" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRBa5mvSRr6DdMYSZAsLOFowM7P5Jlo1pVRp6BwfyoYtrte3bcvxhIHuJ0Meg8gGMilTsGoSxIqvq9f/pubchart?oid=1555194057&format=image" >
 
 
-You can find the details <a href="http://yallajs.io/benchmark-result.html">here</a>, and the code that we use in this benchmark <a href="#">here</a>.
+You can find the details <a href="http://yallajs.io/benchmark-result.html">here</a>, and the code that we use in this benchmark <a href="https://github.com/yallajs/js-framework-benchmark/tree/master/yallajs-v2.0.0-keyed">here</a>.
 
 
 **API**
