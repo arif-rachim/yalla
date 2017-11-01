@@ -180,6 +180,13 @@ render(html`
 2. <a href="http://yallajs.io/benchmark.html">Benchmark</a> : benchmark tools for measuring performance, fork of <a href="http://www.stefankrause.net/wp/">Stefan Krause</a> github project
 
 
+
+**Codepen sample**
+---
+1. <a href="https://codepen.io/yallajs/pen/NwGpGZ">Hello world</a> : Basic hello world application
+2. <a href="https://codepen.io/yallajs/pen/POPppL/">Simple Calculator</a> : Simple calculator with yallajs
+3. <a href="https://codepen.io/yallajs/pen/wPKdJo">Color Picker</a> : Simple color picker
+
 YallaJS Project is supported by :
 
 <img align="center" class="image" src="http://yallajs.io/images/browser-stack.svg" width="150px">
