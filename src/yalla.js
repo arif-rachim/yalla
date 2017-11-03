@@ -133,50 +133,135 @@
                     this.instance[key] = childPlaceholder.commentNode;
                 });
             } else {
+                this.updateHtmlTemplateCollection(newHtmlTemplateCollection);
+            }
+        }
 
-                newHtmlTemplateCollection.iterateRight();
-                let oldHtmlTemplateCollection = this.template;
+        movePlaceholder(placeholder, pointer,keys) {
+            let commentNode = placeholder.commentNode;
+            let newPlaceholderPointer = Placeholder.from(this.instance[keys[pointer]]);
+            let firstNode = newPlaceholderPointer.firstChildNode();
+            if(firstNode){
+                firstNode.parentNode.insertBefore(commentNode,firstNode);
+                placeholder.validateInstancePosition();
+            }
+        }
 
-                oldHtmlTemplateCollection.keys.forEach(key => {
-                    let keyIsDeleted = newHtmlTemplateCollection.keys.indexOf(key) < 0;
-                    if (keyIsDeleted) {
-                        let commentNode = this.instance[key];
-                        Placeholder.from(commentNode).clearContent();
-                        commentNode.parentNode.removeChild(commentNode);
-                        delete this.instance[key];
-                    }
-                });
+        updateHtmlTemplateCollection(newHtmlTemplateCollection) {
+            let newTemplateCollectionLength = newHtmlTemplateCollection.items.length;
+            let oldKeys = this.template.keys.slice(0);
+            let oldKeysCopy = oldKeys.slice(0);
+            let pointerFromLeft = 0;
+            let pointerFromRight = newTemplateCollectionLength - 1;
+            let oldPointerFromLeft = 0;
+            let oldPointerFromRight = oldKeys.length - 1;
+            let fromLeft = true;
+            let items = newHtmlTemplateCollection.items;
 
-                let placeholderPointer = this.placeholder.commentNode;
-                newHtmlTemplateCollection.iterateRight((item, key, template) => {
-                    let commentNode = this.instance[key];
-                    if (commentNode) {
-                        let childPlaceholder = Placeholder.from(commentNode);
-                        if (childPlaceholder.content instanceof HtmlTemplateInstance) {
-                            childPlaceholder.setHtmlTemplateContent(template);
-                        } else if (childPlaceholder.content instanceof HtmlTemplateCollectionInstance) {
-                            childPlaceholder.setHtmlTemplateCollectionContent(template);
-                        } else {
-                            childPlaceholder.setTextContent(template);
-                        }
-                        if (placeholderPointer.previousSibling != commentNode) {
-                            placeholderPointer.parentNode.insertBefore(commentNode, placeholderPointer);
-                            childPlaceholder.validateInstancePosition();
-                        }
-                        placeholderPointer = childPlaceholder.firstChildNode();
-                    } else {
-                        let childPlaceholder = Placeholder.from(document.createComment('placeholder-child'));
-                        placeholderPointer.parentNode.insertBefore(childPlaceholder.commentNode, placeholderPointer);
-                        renderTemplate(template, childPlaceholder.commentNode);
-                        placeholderPointer = childPlaceholder.firstChildNode();
-                        this.instance[key] = childPlaceholder.commentNode;
-                        this.template.context.addSyncCallback(function () {
-                            syncNode(template, childPlaceholder.commentNode);
+            let itemsToAdd = [];
+            let lastNewKeyLeft = null;
+            let lastNewKeyRight = null;
+
+
+            let newKeysFromLeft = [];
+            let newKeysFromRight = [];
+            let newTemplatesFromLeft = [];
+            let newTemplatesFromRight = [];
+            for(let i =0;i<newTemplateCollectionLength;i++){
+                let nextPointer = fromLeft ? pointerFromLeft : pointerFromRight;
+                let prevPointer = fromLeft ? oldPointerFromLeft : oldPointerFromRight;
+
+                let item = items[nextPointer];
+                let nextKey = newHtmlTemplateCollection.keyFn.apply(null,[item,nextPointer,items]);
+                let template = newHtmlTemplateCollection.templateFn.apply(null,[item,nextPointer,items]);
+
+                let prevKey = oldKeys[prevPointer];
+                let keysAreNotMatch = prevKey !== nextKey;
+                if(keysAreNotMatch){
+                    // cool its not the same now we need to check if in the old keys they have the key that we want
+                    let keyExist = oldKeys.indexOf(nextKey) >= 0;
+                    if(keyExist){
+                        // ok it turns out this guy is in different location lets move them to where we want
+                        renderTemplate(template,this.instance[nextKey]);
+                        this.movePlaceholder(Placeholder.from(this.instance[nextKey]),fromLeft ? prevPointer : prevPointer+1,oldKeys);
+                        oldKeys.splice(prevPointer,0,oldKeys.splice(oldKeys.indexOf(nextKey),1)[0]);
+                    }else{
+                        itemsToAdd.push({
+                            key : nextKey,
+                            template : template,
+                            fromLeft : fromLeft,
+                            insertAfter : fromLeft ? lastNewKeyLeft : null,
+                            insertBefore : fromLeft ? null : lastNewKeyRight
                         });
                     }
-                });
-                this.template = newHtmlTemplateCollection;
+                }else{
+                    renderTemplate(template,this.instance[nextKey]);
+                }
+                if(fromLeft){
+                    pointerFromLeft++;
+                    oldPointerFromLeft++;
+                    lastNewKeyLeft = nextKey;
+                    newKeysFromLeft.push(nextKey);
+                    newTemplatesFromLeft.push(template);
+                }else{
+                    pointerFromRight--;
+                    oldPointerFromRight--;
+                    lastNewKeyRight = nextKey;
+                    newKeysFromRight.unshift(nextKey);
+                    newTemplatesFromRight.unshift(template);
+                }
+
+                fromLeft = keysAreNotMatch ? !fromLeft : fromLeft;
+                if(oldKeysCopy.indexOf(nextKey)>=0){
+                    oldKeysCopy.splice(oldKeysCopy.indexOf(nextKey),1);
+                }
             }
+            newHtmlTemplateCollection.keys = newKeysFromLeft.concat(newKeysFromRight);
+            newHtmlTemplateCollection.templates = newTemplatesFromLeft.concat(newTemplatesFromRight);
+            newHtmlTemplateCollection.initialzed = true;
+
+            oldKeysCopy.forEach(unusedKey => {
+                Placeholder.from(this.instance[unusedKey]).clearContent();
+                delete this.instance[unusedKey];
+                oldKeys.splice(oldKeys.indexOf(unusedKey),1);
+            });
+            itemsToAdd.forEach(itemsToAdd => {
+                let childPlaceholder = Placeholder.from(document.createComment('placeholder-child'));
+                let {fromLeft,insertAfter,insertBefore,key,template} = itemsToAdd;
+                if(fromLeft){
+                    if(insertAfter){
+                        let pointer = Placeholder.from(this.instance[insertAfter]).commentNode.nextSibling;
+                        pointer.parentNode.insertBefore(childPlaceholder.commentNode,pointer);
+                        renderTemplate(template, childPlaceholder.commentNode);
+                        this.instance[key] = childPlaceholder.commentNode;
+                        oldKeys.splice((oldKeys.indexOf(insertAfter)+1),0,key);
+                    }else{
+                        let pointer = oldKeys[0] ? Placeholder.from(this.instance[oldKeys[0]]).firstChildNode() : this.placeholder.commentNode;
+                        pointer.parentNode.insertBefore(childPlaceholder.commentNode,pointer);
+                        renderTemplate(template, childPlaceholder.commentNode);
+                        this.instance[key] = childPlaceholder.commentNode;
+                        oldKeys.unshift(key);
+                    }
+                }else{
+                    if(insertBefore){
+                        let pointer = Placeholder.from(this.instance[insertBefore]).firstChildNode();
+                        pointer.parentNode.insertBefore(childPlaceholder.commentNode,pointer);
+                        renderTemplate(template, childPlaceholder.commentNode);
+                        this.instance[key] = childPlaceholder.commentNode;
+                        oldKeys.splice(oldKeys.indexOf(insertBefore),0,key);
+                    }else{
+                        let pointer = this.placeholder.commentNode;
+                        pointer.parentNode.insertBefore(childPlaceholder.commentNode,pointer);
+                        renderTemplate(template, childPlaceholder.commentNode);
+                        this.instance[key] = childPlaceholder.commentNode;
+                        oldKeys.push(key);
+                    }
+                }
+                this.template.context.addSyncCallback(function () {
+                    syncNode(template, childPlaceholder.commentNode);
+                });
+            });
+            this.template = newHtmlTemplateCollection;
         }
 
         destroy() {
@@ -522,10 +607,13 @@
 
     function renderHtmlTemplateCollection(htmlTemplateCollection, node) {
         let placeholder = Placeholder.from(node);
+
         placeholder.setHtmlTemplateCollectionContent(htmlTemplateCollection);
+
     }
 
     function renderTemplate(template, node) {
+
         if (template instanceof HtmlTemplate) {
             renderHtmlTemplate(template, node);
         } else if (template instanceof HtmlTemplateCollection) {
@@ -616,7 +704,13 @@
     }
 
     function render(templateValue, node) {
-        renderTemplate(templateValue, node);
+        try{
+            renderTemplate(templateValue, node);
+        }catch(err){
+            console.error(err.toString());
+            throw err;
+        }
+
         if (!node.$synced) {
             syncNode(templateValue, node);
             node.$synced = true;
@@ -625,13 +719,11 @@
             return new Promise(function (resolve) {
                 setTimeout(() => {
                     templateValue.context.clearSyncCallbacks();
-                    resolve();
+                    resolve(true);
                 }, 300);
             });
         } else {
-            setTimeout(() => {
-                templateValue.context.clearSyncCallbacks();
-            }, 300);
+            templateValue.context.clearSyncCallbacks();
         }
     }
 
@@ -698,6 +790,7 @@
         setHtmlTemplateCollectionContent(htmlTemplateCollection) {
             let clearContentWasCalled = false;
             let contentHasSameStructure = this.content && this.content instanceof HtmlTemplateCollectionInstance;
+
             if (this.content !== null && !contentHasSameStructure) {
                 clearContentWasCalled = true;
                 this.clearContent();
@@ -763,8 +856,10 @@
                 let firstKey = this.content.template.keys[0];
                 let placeholder = Placeholder.from(this.content.instance[firstKey]);
                 return placeholder.firstChildNode();
-            } else {
+            } else if (this.content){
                 return this.content;
+            } else{
+                return this.commentNode;
             }
         }
 
