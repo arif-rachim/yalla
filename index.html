@@ -7,22 +7,25 @@
 <body>
 
 </body>
-<script src="lib/yalla.js"></script>
+<script src="src/yalla.js"></script>
 <script>
-
-    let checked = false;
+    let items = ['One','Two','Three'];
     let {html,htmlCollection} = new Context();
-    let app = () => html`<input type="checkbox" checked="${checked}" onchange="${e => {
-        checked = e.target.checked;
+    function removeItem(){
+        items.splice(0,1);
         update();
-        }}">`;
-
-    function update(){
-        return render(app(),document.body);
     }
-
+    function update(){
+        render(html`
+            <button onclick="${e => removeItem()}">Splice</button>
+            <ul>
+                ${htmlCollection(items,i=>i, i => {
+                    return html`<li>${i}</li>`
+                })}
+            </ul>
+        `,document.body);
+    }
     update();
-
 
 </script>
 </html>
