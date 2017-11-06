@@ -186,6 +186,8 @@ render(html`
 1. <a href="https://codepen.io/yallajs/pen/NwGpGZ">Hello world</a> : Basic hello world application
 2. <a href="https://codepen.io/yallajs/pen/POPppL/">Simple Calculator</a> : Simple calculator with yallajs
 3. <a href="https://codepen.io/yallajs/pen/wPKdJo">Color Picker</a> : Simple color picker
+4. <a href="https://codepen.io/yallajs/pen/XzKqBb">Async</a> : Example using Promise for async
+5. <a href="https://codepen.io/yallajs/pen/BmzxvO">Html Collection</a> : Using HtmlCollection to render arrays
 
 YallaJS Project is supported by :
 
