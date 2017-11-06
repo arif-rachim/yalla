@@ -9,32 +9,14 @@
 </body>
 <script src="src/yalla.js"></script>
 <script>
-    let items = ['a','b','c','d','e','f','g'];
-    let checked = false;
-    let {html,htmlCollection} = new Context();
-    function updateItems(){
-        items = ['v','a','d','x','z','w','b','h','g','j','m'];
-        update();
-    }
-    function deleteThis(item){
-        items.splice(items.indexOf(item),1);
-        update();
-    }
-    function addText(text){
-        items.push(text);
-        console.log(items);
-        update();
-    }
-    let app = () => html`
-        <input type="text" onkeyup="${e => {if(e.keyCode == 13)addText(e.target.value)}}">
-        <button onclick="${e => updateItems()}">update</button>
-        <ul>
-            ${htmlCollection(items,i=>i,i => html`<li>${i} <button onclick="${e => deleteThis(i)}">Delete </button></li>`)}
-        </ul>
-    `;
 
+    let {html,htmlCollection} = new Context();
     function update(){
-        return render(app(),document.body);
+        render(html`<div>Hello
+            ${Promise.resolve().then(function(){
+                    return html`World`
+                })}
+            </div>`,document.body);
     }
 
     update();

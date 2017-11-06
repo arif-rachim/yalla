@@ -4,7 +4,7 @@
 
 "use strict";
 
-let PLACEHOLDER = '<!--placeholder-->';
+let OUTLET = '<!--outlet-->';
 
 
 let {html,htmlCollection} = new Context();
@@ -19,7 +19,7 @@ describe('yalla.js',function(){
                 let display = true;
                 render(html(['<'+tag+'>']),dom);
                 expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                    return innerHtml == `<${tag}>${PLACEHOLDER}`;
+                    return innerHtml == `<${tag}>${OUTLET}`;
                 });
             });
         });
@@ -37,7 +37,7 @@ describe('yalla.js',function(){
                 let display = true;
                 render(html(['<'+tag+'></'+tag+'>']),dom);
                 expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                    return innerHtml == `<${tag}></${tag}>${PLACEHOLDER}`;
+                    return innerHtml == `<${tag}></${tag}>${OUTLET}`;
                 });
             });
         });
@@ -48,7 +48,7 @@ describe('yalla.js',function(){
                 let display = true;
                 render(html(['<'+tag+'>content</'+tag+'>']),dom);
                 expect(dom.innerHTML).to.satisfy(function (innerHtml) {
-                    return innerHtml == `<${tag}>content</${tag}>${PLACEHOLDER}`;
+                    return innerHtml == `<${tag}>content</${tag}>${OUTLET}`;
                 });
             });
         });
@@ -88,7 +88,7 @@ describe('yalla.js',function(){
             let items = ['One','Two','Three'];
             let dom = document.createElement('div');
             render(html`<ul>${htmlCollection(items,i=>i,i => html`<li>${i}</li>`)}</ul>`,dom);
-            expect(dom.innerHTML).to.equal('<ul><li>One<!--placeholder--></li><!--placeholder-child--><li>Two<!--placeholder--></li><!--placeholder-child--><li>Three<!--placeholder--></li><!--placeholder-child--><!--placeholder--></ul><!--placeholder-->');
+            expect(dom.innerHTML).to.equal('<ul><li>One<!--outlet--></li><!--outlet-child--><li>Two<!--outlet--></li><!--outlet-child--><li>Three<!--outlet--></li><!--outlet-child--><!--outlet--></ul><!--outlet-->');
             done();
         })
         // TODO !!!
@@ -103,13 +103,13 @@ describe('yalla.js',function(){
 
          function validateDom(){
          let expectedResult = items.map(i => {
-         let result = itemsTwo.map(i => `<li>${i}<!--placeholder--></li><!--placeholder-->`);
-         result.push('<!--placeholder-->');
+         let result = itemsTwo.map(i => `<li>${i}<!--outlet--></li><!--outlet-->`);
+         result.push('<!--outlet-->');
          return result
          }).reduce((a,b) => {
          return a.concat(b);
          });
-         expectedResult = ['<ul>',...expectedResult,'<!--placeholder--></ul><!--placeholder-->'];
+         expectedResult = ['<ul>',...expectedResult,'<!--outlet--></ul><!--outlet-->'];
          expect(dom.innerHTML).to.equal(expectedResult.join(''));
          }
          validateDom();
@@ -124,8 +124,8 @@ describe('yalla.js',function(){
                 return render(html`<ul>${htmlCollection(items,i=>i,i => html`<li>${i}</li>`)}</ul>`,dom);
             }
             function validateDom(){
-                let expectedResult = items.map(i => `<li>${i}<!--placeholder--></li><!--placeholder-child-->`);
-                expectedResult = ['<ul>',...expectedResult,'<!--placeholder--></ul><!--placeholder-->'];
+                let expectedResult = items.map(i => `<li>${i}<!--outlet--></li><!--outlet-child-->`);
+                expectedResult = ['<ul>',...expectedResult,'<!--outlet--></ul><!--outlet-->'];
                 expect(dom.innerHTML).to.equal(expectedResult.join(''));
 
             }
@@ -145,8 +145,8 @@ describe('yalla.js',function(){
                 return render(html`<ul>${htmlCollection(items,i=>i,i => html`<li>${i}</li>`)}</ul>`,dom);
             }
             function validateDom(){
-                let expectedResult = items.map(i => `<li>${i}<!--placeholder--></li><!--placeholder-child-->`);
-                expectedResult = ['<ul>',...expectedResult,'<!--placeholder--></ul><!--placeholder-->'];
+                let expectedResult = items.map(i => `<li>${i}<!--outlet--></li><!--outlet-child-->`);
+                expectedResult = ['<ul>',...expectedResult,'<!--outlet--></ul><!--outlet-->'];
                 expect(dom.innerHTML).to.equal(expectedResult.join(''));
             }
 
@@ -167,8 +167,8 @@ describe('yalla.js',function(){
                 return render(html`<ul>${htmlCollection(items,i=>i,i => html`<li>${i}</li>`)}</ul>`,dom);
             }
             function validateDom(){
-                let expectedResult = items.map(i => `<li>${i}<!--placeholder--></li><!--placeholder-child-->`);
-                expectedResult = ['<ul>',...expectedResult,'<!--placeholder--></ul><!--placeholder-->'];
+                let expectedResult = items.map(i => `<li>${i}<!--outlet--></li><!--outlet-child-->`);
+                expectedResult = ['<ul>',...expectedResult,'<!--outlet--></ul><!--outlet-->'];
                 expect(dom.innerHTML).to.equal(expectedResult.join(''));
             }
 
@@ -190,7 +190,7 @@ describe('yalla.js',function(){
         it('Should render HtmlTemplate',function(done){
             let dom = document.createElement('div');
             render(html`Hello World`,dom);
-            expect(dom.innerHTML).to.equal('Hello World<!--placeholder-->');
+            expect(dom.innerHTML).to.equal('Hello World<!--outlet-->');
             done();
         });
         // TODO
@@ -199,10 +199,10 @@ describe('yalla.js',function(){
          let dom = document.createElement('div');
          render(html`<div>Hello ${html`Yalla`} World</div>`,dom).then(function(){
          render(html`Hello ${html`Amazing`} World`,dom);
-         expect(dom.innerHTML).to.equal('<div>Hello Amazing<!--placeholder--> World</div><!--placeholder-->');
+         expect(dom.innerHTML).to.equal('<div>Hello Amazing<!--outlet--> World</div><!--outlet-->');
          done();
          });
-         expect(dom.innerHTML).to.equal('<div>Hello Yalla<!--placeholder--> World</div><!--placeholder-->');
+         expect(dom.innerHTML).to.equal('<div>Hello Yalla<!--outlet--> World</div><!--outlet-->');
          });
 
          it('Should Promote the component and depromote them',function(done){
@@ -210,12 +210,12 @@ describe('yalla.js',function(){
          render(html`<div>Hello ${html`Yalla`} World</div>`,dom).then(function(){
          render(html`Hello World`,dom).then(function(){
          render(html`<div>Hello ${true} World</div>`,dom);
-         expect(dom.innerHTML).to.equal('<div>Hello true<!--placeholder--> World</div><!--placeholder-->');
+         expect(dom.innerHTML).to.equal('<div>Hello true<!--outlet--> World</div><!--outlet-->');
          done();
          });
-         expect(dom.innerHTML).to.equal('<div>Hello <!--placeholder--> World</div><!--placeholder-->');
+         expect(dom.innerHTML).to.equal('<div>Hello <!--outlet--> World</div><!--outlet-->');
          });
-         expect(dom.innerHTML).to.equal('<div>Hello Yalla<!--placeholder--> World</div><!--placeholder-->');
+         expect(dom.innerHTML).to.equal('<div>Hello Yalla<!--outlet--> World</div><!--outlet-->');
          });
          */
 
@@ -225,7 +225,7 @@ describe('yalla.js',function(){
             render(html`<div>Hello ${items} World</div>`,dom).then(function(){
                 done();
             });
-            expect(dom.innerHTML).to.equal('<div>Hello one,two,three<!--placeholder--> World</div><!--placeholder-->');
+            expect(dom.innerHTML).to.equal('<div>Hello one,two,three<!--outlet--> World</div><!--outlet-->');
         });
     });
 
@@ -236,7 +236,7 @@ describe('yalla.js',function(){
             let textAlign = 'center';
             let backgroundColor = 'blue';
             function validateDom(){
-                expect(dom.innerHTML).to.equal(`<div style="color: ${color}; text-align: ${textAlign}; background-color: ${backgroundColor}">Hello World</div><!--placeholder-->`);
+                expect(dom.innerHTML).to.equal(`<div style="color: ${color}; text-align: ${textAlign}; background-color: ${backgroundColor}">Hello World</div><!--outlet-->`);
             }
             function renderDom(){
                 return render(html`<div style="color: ${color}; text-align: ${textAlign}; background-color: ${backgroundColor}">Hello World</div>`,dom)

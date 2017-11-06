@@ -4,9 +4,10 @@
     } else if (typeof module === 'object' && module.exports) {
         module.exports = factory();
     } else {
-        let {Context,render} = factory();
-        root.Context = Context;
-        root.render = render;
+        root.yalla = factory();
+        root.Context = root.yalla.Context;
+        root.render = root.yalla.render;
+        root.plug = root.yalla.plug;
     }
 }(typeof self !== 'undefined' ? self : eval('this'), function () {
 
@@ -87,6 +88,13 @@
         }
     };
 
+    const isPromise = (object) =>{
+        if(typeof object === 'object' && 'constructor' in object && object.constructor.name === 'Promise'){
+            return true;
+        }
+        return false;
+    }
+
     class Template {
         destroy() {
             console.log('WARNING NOT IMPLEMENTED YET ');
@@ -104,7 +112,13 @@
         'tr': 'tbody',
         'caption': 'table',
         'colgroup': 'table',
-        'li': 'ul'
+        'li': 'ul',
+        'g' : 'svg',
+        'circle' : 'svg',
+        'rect' : 'svg',
+        'polygon' : 'svg',
+        'eclipse' : 'svg',
+        'text' : 'svg'
     };
 
 
@@ -114,22 +128,22 @@
     };
 
     class HtmlTemplateCollectionInstance extends Template {
-        constructor(templateCollection, placeholder) {
+        constructor(templateCollection, outlet) {
             super();
             this.template = templateCollection;
-            this.placeholder = placeholder;
+            this.outlet = outlet;
             this.instance = null;
         }
 
         applyValues(newHtmlTemplateCollection) {
             if (this.instance === null) {
                 this.instance = {};
-                let placeholderPointer = this.placeholder.commentNode;
+                let outletPointer = this.outlet.commentNode;
                 newHtmlTemplateCollection.iterateRight((item, key, template) => {
-                    let childPlaceholder = Placeholder.from(document.createComment('placeholder-child'));
-                    placeholderPointer.parentNode.insertBefore(childPlaceholder.commentNode, placeholderPointer);
-                    renderTemplate(template, childPlaceholder.commentNode);
-                    placeholderPointer = childPlaceholder.firstChildNode();
+                    let childPlaceholder = Outlet.from(document.createComment('outlet-child'));
+                    outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
+                    Outlet.from(childPlaceholder.commentNode).setContent(template);
+                    outletPointer = childPlaceholder.firstChildNode();
                     this.instance[key] = childPlaceholder.commentNode;
                 });
             } else {
@@ -141,17 +155,17 @@
                     let keyIsDeleted = newHtmlTemplateCollection.keys.indexOf(key) < 0;
                     if (keyIsDeleted) {
                         let commentNode = this.instance[key];
-                        Placeholder.from(commentNode).clearContent();
+                        Outlet.from(commentNode).clearContent();
                         commentNode.parentNode.removeChild(commentNode);
                         delete this.instance[key];
                     }
                 });
 
-                let placeholderPointer = this.placeholder.commentNode;
+                let outletPointer = this.outlet.commentNode;
                 newHtmlTemplateCollection.iterateRight((item, key, template) => {
                     let commentNode = this.instance[key];
                     if (commentNode) {
-                        let childPlaceholder = Placeholder.from(commentNode);
+                        let childPlaceholder = Outlet.from(commentNode);
                         if (childPlaceholder.content instanceof HtmlTemplateInstance) {
                             childPlaceholder.setHtmlTemplateContent(template);
                         } else if (childPlaceholder.content instanceof HtmlTemplateCollectionInstance) {
@@ -159,16 +173,16 @@
                         } else {
                             childPlaceholder.setTextContent(template);
                         }
-                        if (placeholderPointer.previousSibling != commentNode) {
-                            placeholderPointer.parentNode.insertBefore(commentNode, placeholderPointer);
+                        if (outletPointer.previousSibling != commentNode) {
+                            outletPointer.parentNode.insertBefore(commentNode, outletPointer);
                             childPlaceholder.validateInstancePosition();
                         }
-                        placeholderPointer = childPlaceholder.firstChildNode();
+                        outletPointer = childPlaceholder.firstChildNode();
                     } else {
-                        let childPlaceholder = Placeholder.from(document.createComment('placeholder-child'));
-                        placeholderPointer.parentNode.insertBefore(childPlaceholder.commentNode, placeholderPointer);
-                        renderTemplate(template, childPlaceholder.commentNode);
-                        placeholderPointer = childPlaceholder.firstChildNode();
+                        let childPlaceholder = Outlet.from(document.createComment('outlet-child'));
+                        outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
+                        Outlet.from(childPlaceholder.commentNode).setContent(template);
+                        outletPointer = childPlaceholder.firstChildNode();
                         this.instance[key] = childPlaceholder.commentNode;
                         this.template.context.addSyncCallback(function () {
                             syncNode(template, childPlaceholder.commentNode);
@@ -182,7 +196,7 @@
         destroy() {
             this.template.getKeys().forEach(key => {
                 let childPlaceholderCommentNode = this.instance[key];
-                let childPlaceholder = Placeholder.from(childPlaceholderCommentNode);
+                let childPlaceholder = Outlet.from(childPlaceholderCommentNode);
                 if (childPlaceholder.content instanceof Template) {
                     childPlaceholder.content.destroy();
                 } else {
@@ -192,17 +206,17 @@
                 delete this.instance[key];
             });
 
-            this.placeholder = null;
+            this.outlet = null;
             this.instance = null;
             this.template = null;
         }
     }
 
     class HtmlTemplateInstance extends Template {
-        constructor(template, placeholder) {
+        constructor(template, outlet) {
             super();
             this.template = template;
-            this.placeholder = placeholder;
+            this.outlet = outlet;
             this.instance = [];
             this.nodeValueIndexArray = null;
         }
@@ -212,7 +226,7 @@
                 HtmlTemplate.applyValues(newHtmlTemplate, this.template.nodeValueIndexArray);
                 let documentFragment = this.template.documentFragment;
                 let cloneNode = cloneNodeDeep(documentFragment);
-                let commentNode = this.placeholder.commentNode;
+                let commentNode = this.outlet.commentNode;
                 let cloneChildNode = cloneNode.childNodes[0];
                 let nextSibling = null;
                 do {
@@ -228,7 +242,7 @@
         destroy() {
             this.instance.forEach(i => i.parentNode.removeChild(i));
             this.nodeValueIndexArray = null;
-            this.placeholder = null;
+            this.outlet = null;
             this.template = null;
         }
 
@@ -406,7 +420,7 @@
                 }
                 if (node.nodeType === Node.COMMENT_NODE) {
                     let nodeValue = node.nodeValue;
-                    node.nodeValue = 'placeholder';
+                    node.nodeValue = 'outlet';
                     nodeValueIndexArray.push({node: node, valueIndexes: parseInt(nodeValue)});
                 }
             } while (node = node.nextSibling);
@@ -503,53 +517,28 @@
                     let nodeValue = node.nodeValue;
                     let valueIndex = valueIndexes;
                     let value = newValues[valueIndex];
-                    renderTemplate(value, node);
+                    Outlet.from(node).setContent(value);
                 }
                 nodeValueIndex.values = newActualValues;
             });
         }
     }
 
-    function renderText(text, node) {
-        let placeholder = Placeholder.from(node);
-        placeholder.setTextContent(text);
-    }
-
-    function renderHtmlTemplate(htmlTemplate, node) {
-        let placeholder = Placeholder.from(node);
-        placeholder.setHtmlTemplateContent(htmlTemplate);
-    }
-
-    function renderHtmlTemplateCollection(htmlTemplateCollection, node) {
-        let placeholder = Placeholder.from(node);
-        placeholder.setHtmlTemplateCollectionContent(htmlTemplateCollection);
-    }
-
-    function renderTemplate(template, node) {
-        if (template instanceof HtmlTemplate) {
-            renderHtmlTemplate(template, node);
-        } else if (template instanceof HtmlTemplateCollection) {
-            renderHtmlTemplateCollection(template, node);
-        } else {
-            renderText(template, node);
-        }
-    }
-
     function syncNode(template, node) {
-        let placeholder = Placeholder.from(node);
+        let outlet = Outlet.from(node);
         let templateValues = template.values;
-        if (placeholder.content && placeholder.content instanceof HtmlTemplateInstance) {
-            let htmlTemplateInstance = placeholder.content;
+        if (outlet.content && outlet.content instanceof HtmlTemplateInstance) {
+            let htmlTemplateInstance = outlet.content;
             let template = htmlTemplateInstance.template;
             let docFragment = {childNodes: htmlTemplateInstance.instance};
 
             if (template.nodeValueIndexArray) {
                 let actualNodeValueIndexArray = template.nodeValueIndexArray.map(nodeValueIndex => {
+
                     let {nodeValue, valueIndexes} = nodeValueIndex;
                     let path = getPath(nodeValueIndex.node);
                     let actualNode = getNode(path, docFragment);
                     let values = Array.isArray(valueIndexes) ? valueIndexes.map(index => templateValues[index]) : templateValues[valueIndexes];
-
                     let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === 'STYLE';
                     if (isStyleNode) {
                         return {node: actualNode, valueIndexes, nodeValue, values}
@@ -574,40 +563,41 @@
                         }
                         return {node: actualNode, valueIndexes, nodeValue, values}
                     } else {
-                        let placeholder = Placeholder.from(actualNode);
+                        let outlet = Outlet.from(actualNode);
                         let value = templateValues[valueIndexes];
                         if (value instanceof HtmlTemplate) {
-                            placeholder.constructHtmlTemplateContent(value);
-                            syncNode(value, placeholder.commentNode);
+                            outlet.constructHtmlTemplateContent(value);
+                            syncNode(value, outlet.commentNode);
                         }
                         else if (value instanceof HtmlTemplateCollection) {
-                            placeholder.constructHtmlTemplateCollectionContent(value);
-                            syncNode(value, placeholder.commentNode);
+                            outlet.constructHtmlTemplateCollectionContent(value);
+                            syncNode(value, outlet.commentNode);
                         }
                         else {
-                            placeholder.constructTextContent();
+                            outlet.constructTextContent();
                         }
+
                         return {node: actualNode, valueIndexes, values}
                     }
                 });
                 htmlTemplateInstance.nodeValueIndexArray = actualNodeValueIndexArray;
             }
         }
-        if (placeholder.content && placeholder.content instanceof HtmlTemplateCollectionInstance) {
-            let htmlTemplateCollectionInstance = placeholder.content;
+        if (outlet.content && outlet.content instanceof HtmlTemplateCollectionInstance) {
+            let htmlTemplateCollectionInstance = outlet.content;
             let templates = htmlTemplateCollectionInstance.template.templates;
             let keys = htmlTemplateCollectionInstance.template.keys;
             keys.forEach(key => {
                 let template = templates[key];
                 let commentNode = htmlTemplateCollectionInstance.instance[key];
-                let placeholder = Placeholder.from(commentNode);
-                if (placeholder.content === null) {
+                let outlet = Outlet.from(commentNode);
+                if (outlet.content === null) {
                     if (template instanceof HtmlTemplate) {
-                        placeholder.constructHtmlTemplateContent(template.context.cache(template.key));
+                        outlet.constructHtmlTemplateContent(template.context.cache(template.key));
                         syncNode(template, commentNode);
                     }
                 } else {
-                    if (placeholder.content instanceof HtmlTemplateInstance) {
+                    if (outlet.content instanceof HtmlTemplateInstance) {
                         syncNode(template, commentNode);
                     }
                 }
@@ -616,7 +606,7 @@
     }
 
     function render(templateValue, node) {
-        renderTemplate(templateValue, node);
+        Outlet.from(node).setContent(templateValue);
         if (!node.$synced) {
             syncNode(templateValue, node);
             node.$synced = true;
@@ -652,7 +642,7 @@
         }
     }
 
-    class Placeholder {
+    class Outlet {
         constructor(commentNode) {
             this.commentNode = commentNode;
             this.content = null;
@@ -669,7 +659,7 @@
             htmlTemplateCollection.iterateRight((item, key, template, index) => {
                 do {
                     pointer = pointer.previousSibling
-                } while (pointer.nodeType != Node.COMMENT_NODE && pointer.nodeValue !== 'placeholder-child');
+                } while (pointer.nodeType != Node.COMMENT_NODE && pointer.nodeValue !== 'outlet-child');
                 this.content.instance[key] = pointer;
             });
         }
@@ -683,6 +673,25 @@
                 this.content.instance.push(sibling)
             }
             this.content.instance.reverse();
+        }
+
+        setContent(template){
+            if(isPromise(template)){
+                let guid = Math.round(Math.random()*10000000000);
+                template.then((result) => {
+                    let templateContent = document.getElementById(guid);
+                    Outlet.from(templateContent.nextSibling).setContent(result);
+                });
+                this.setHtmlTemplateContent(html`<span id="${guid}" style="display: none"></span>`)
+            }else if(template instanceof Plug){
+                template.factory.apply(null,[this]);
+            }else if (template instanceof HtmlTemplate) {
+                this.setHtmlTemplateContent(template);
+            } else if (template instanceof HtmlTemplateCollection) {
+                this.setHtmlTemplateCollectionContent(template);
+            } else {
+                this.setTextContent(template);
+            }
         }
 
         setTextContent(text) {
@@ -728,6 +737,15 @@
             }
         }
 
+        getPreviousValue(){
+            if(this.content == Text){
+                return this.content.nodeValue;
+            }else if(this.content instanceof HtmlTemplateInstance){
+                return this.template.values;
+            }
+            return 'shit';
+        }
+
         clearContent() {
             if (this.content !== null) {
                 if (this.content instanceof Template) {
@@ -745,14 +763,14 @@
 
         static from(node) {
             if (node instanceof Comment) {
-                node.$data = node.$data || new Placeholder(node);
+                node.$data = node.$data || new Outlet(node);
                 return node.$data
             } else {
-                if (!node.$placeholder) {
-                    node.$placeholder = document.createComment('placeholder');
-                    node.appendChild(node.$placeholder);
+                if (!node.$outlet) {
+                    node.$outlet = document.createComment('outlet');
+                    node.appendChild(node.$outlet);
                 }
-                return Placeholder.from(node.$placeholder);
+                return Outlet.from(node.$outlet);
             }
         }
 
@@ -761,8 +779,8 @@
                 return this.content.instance[0];
             } else if (this.content instanceof HtmlTemplateCollectionInstance) {
                 let firstKey = this.content.template.keys[0];
-                let placeholder = Placeholder.from(this.content.instance[firstKey]);
-                return placeholder.firstChildNode();
+                let outlet = Outlet.from(this.content.instance[firstKey]);
+                return outlet.firstChildNode();
             } else {
                 return this.content;
             }
@@ -785,5 +803,15 @@
             }
         }
     }
-    return {Context,render};
+
+    class Plug{
+        constructor(factory){
+            this.factory = factory;
+        }
+    }
+
+    function plug(callback){
+        return new Plug(callback);
+    }
+    return {Context,render,plug};
 }));
