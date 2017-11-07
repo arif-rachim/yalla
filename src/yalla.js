@@ -642,6 +642,8 @@
         }
     }
 
+    const {html} = new Context();
+
     class Outlet {
         constructor(commentNode) {
             this.commentNode = commentNode;

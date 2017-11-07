@@ -1,26 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+<html>
+    <head></head>
+    <body>
+    </body>
+    <script src="src/yalla.js"></script>
+    <script type="module">
+        let {html} = new Context();
 
-</body>
-<script src="src/yalla.js"></script>
-<script>
+        function update(){
+            render(html`
+                <div>Hello This async sample
+                ${new Promise(resolve => {
+                            setTimeout(()=>{
+                                resolve(html`
+                                  <div>This is printed after 1s</div>
+                                  <button onclick="${e => update()}">Try again</button>
+                                  `);
+                            },1000);
+                        })}
+                </div>
+              `,document.body);
+        }
 
-    let {html,htmlCollection} = new Context();
-    function update(){
-        render(html`<div>Hello
-            ${Promise.resolve().then(function(){
-                    return html`World`
-                })}
-            </div>`,document.body);
-    }
-
-    update();
-
-
-</script>
+        update();
+    </script>
 </html>
