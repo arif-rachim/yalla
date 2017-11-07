@@ -679,12 +679,18 @@
 
         setContent(template){
             if(isPromise(template)){
-                let guid = Math.round(Math.random()*10000000000);
-                template.then((result) => {
-                    let templateContent = document.getElementById(guid);
-                    Outlet.from(templateContent.nextSibling).setContent(result);
-                });
-                this.setHtmlTemplateContent(html`<span id="${guid}" style="display: none"></span>`)
+                if(this.content == null){
+                    let guid = Math.round(Math.random()*10000000000);
+                    this.setHtmlTemplateContent(html`<span id="${guid}" style="display: none"></span>`);
+                    template.then((result) => {
+                        let templateContent = document.getElementById(guid);
+                        Outlet.from(templateContent.nextSibling).setContent(result);
+                    });
+                }else{
+                    template.then((result) => {
+                        this.setContent(result);
+                    });
+                }
             }else if(template instanceof Plug){
                 template.factory.apply(null,[this]);
             }else if (template instanceof HtmlTemplate) {
