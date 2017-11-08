@@ -701,7 +701,7 @@
                 if(this.content == null){
                     let self = this;
                     let guid = Math.round(Math.random()*10000000000);
-                    this.setHtmlTemplateContent(html`<span id="${guid}" style="color : #dddddd;border : 1px solid #dddddd;border-radius: 5px;padding: 2px;">outlet</span>`);
+                    this.setHtmlTemplateContent(html`<span id="${guid}" style="color : #bbbbbb;border : 1px solid #bbbbbb;border-radius: 5px;padding: 2px;">outlet</span>`);
                     template.then((result) => {
                         let templateContent = document.getElementById(guid);
                         let newCommentNode = templateContent.nextSibling;
