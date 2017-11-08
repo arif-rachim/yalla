@@ -101,6 +101,13 @@
         }
     }
 
+    const attributeChangesReflectToProperties = (attributeName,nodeName) => {
+        if(attributeName.toUpperCase() === 'VALUE' && nodeName.toUpperCase() === 'INPUT'){
+            return true;
+        }
+        return false;
+    }
+
     const TEMPLATE_ROOT = {
         'col': 'colgroup',
         'td': 'tr',
@@ -124,7 +131,7 @@
 
     const isMinimizationAttribute = node => {
         return ['checked', 'compact', 'declare', 'defer', 'disabled', 'ismap',
-                'noresize', 'noshade', 'nowrap', 'selected'].indexOf(node.nodeName) >= 0;
+            'noresize', 'noshade', 'nowrap', 'selected'].indexOf(node.nodeName) >= 0;
     };
 
     class HtmlTemplateCollectionInstance extends Template {
@@ -470,6 +477,9 @@
             if (!nodeValueIndexArray) {
                 return;
             }
+
+
+
             nodeValueIndexArray.forEach((nodeValueIndex, index)=> {
                 let {node, valueIndexes, values} = nodeValueIndex;
                 let newActualValues = Array.isArray(valueIndexes) ? valueIndexes.map(valueIndex => newValues[(valueIndex)]) : newValues[valueIndexes];
@@ -485,6 +495,7 @@
                     let nodeValue = nodeValueIndex.nodeValue;
                     if (isEvent) {
                         let valueIndex = valueIndexes[0];
+                        node.ownerElement[nodeName] = newValues[valueIndex];
                         marker.attributes[nodeName] = newValues[valueIndex];
                     } else {
                         let actualAttributeValue = nodeValue;
@@ -497,6 +508,9 @@
                             node.ownerElement.setAttribute(nodeName, '');
                         } else {
                             node.ownerElement.setAttribute(nodeName, actualAttributeValue);
+                            if(attributeChangesReflectToProperties(nodeName,node.ownerElement.nodeName)){
+                                node.ownerElement[nodeName] = actualAttributeValue;
+                            }
                         }
                         if (nodeName.indexOf('.bind') >= 0) {
                             let attributeName = nodeName.substring(0, nodeName.indexOf('.bind'));
@@ -521,6 +535,11 @@
                 }
                 nodeValueIndex.values = newActualValues;
             });
+
+            if(nextHtmlTemplate.context.hasCache(nextHtmlTemplate.key)){
+                let cacheTemplate = nextHtmlTemplate.context.cache(nextHtmlTemplate.key);
+                cacheTemplate.values = newValues;
+            }
         }
     }
 
@@ -534,7 +553,6 @@
 
             if (template.nodeValueIndexArray) {
                 let actualNodeValueIndexArray = template.nodeValueIndexArray.map(nodeValueIndex => {
-
                     let {nodeValue, valueIndexes} = nodeValueIndex;
                     let path = getPath(nodeValueIndex.node);
                     let actualNode = getNode(path, docFragment);
@@ -551,14 +569,13 @@
                             marker.attributes[nodeName] = templateValues[valueIndex];
                             let eventName = nodeName.substring(2, nodeName.length);
                             actualNode.ownerElement.setAttribute(nodeName, 'return false;');
-                            actualNode.ownerElement.addEventListener(eventName, templateValues[valueIndex]);
+                            actualNode.ownerElement[nodeName] = templateValues[valueIndex];
                         } else {
                             let actualAttributeValue = nodeValue;
                             let valFiltered = valueIndexes.map(valueIndex => templateValues[(valueIndex)]);
                             valueIndexes.forEach((valueIndex, index) => {
                                 actualAttributeValue = actualAttributeValue.replace(`<!--${valueIndex}-->`, valFiltered[index]);
                             });
-
                             marker.attributes[nodeName] = actualAttributeValue;
                         }
                         return {node: actualNode, valueIndexes, nodeValue, values}
@@ -667,24 +684,29 @@
         }
 
         constructHtmlTemplateContent(htmlTemplate) {
-            let childNodesLength = htmlTemplate.documentFragment.childNodes.length;
-            this.content = new HtmlTemplateInstance(htmlTemplate, this);
-            let sibling = this.commentNode;
-            while (childNodesLength--) {
-                sibling = sibling.previousSibling;
-                this.content.instance.push(sibling)
+            if(htmlTemplate.documentFragment){
+                let childNodesLength = htmlTemplate.documentFragment.childNodes.length;
+                this.content = new HtmlTemplateInstance(htmlTemplate, this);
+                let sibling = this.commentNode;
+                while (childNodesLength--) {
+                    sibling = sibling.previousSibling;
+                    this.content.instance.push(sibling)
+                }
+                this.content.instance.reverse();
             }
-            this.content.instance.reverse();
         }
 
         setContent(template){
             if(isPromise(template)){
                 if(this.content == null){
+                    let self = this;
                     let guid = Math.round(Math.random()*10000000000);
-                    this.setHtmlTemplateContent(html`<span id="${guid}" style="display: none"></span>`);
+                    this.setHtmlTemplateContent(html`<span id="${guid}" style="height: 100px;background-color: blue">outlet</span>`);
                     template.then((result) => {
                         let templateContent = document.getElementById(guid);
-                        Outlet.from(templateContent.nextSibling).setContent(result);
+                        let newCommentNode = templateContent.nextSibling;
+                        Outlet.from(newCommentNode).setContent(result);
+                        self.clearContent();
                     });
                 }else{
                     template.then((result) => {
