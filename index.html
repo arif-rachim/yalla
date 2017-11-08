@@ -8,15 +8,16 @@
         let {html} = new Context();
 
         function update(){
+            debugger;
             render(html`
                 <div>Hello This async sample
                 ${new Promise(resolve => {
                             setTimeout(()=>{
                                 resolve(html`
-                                  <div>This is printed after 1s</div>
+                                  <div>This is printed after ${new Date()}</div>
                                   <button onclick="${e => update()}">Try again</button>
                                   `);
-                            },1000);
+                            },100);
                         })}
                 </div>
               `,document.body);
