@@ -684,16 +684,15 @@
         }
 
         constructHtmlTemplateContent(htmlTemplate) {
-            if(htmlTemplate.documentFragment){
-                let childNodesLength = htmlTemplate.documentFragment.childNodes.length;
-                this.content = new HtmlTemplateInstance(htmlTemplate, this);
-                let sibling = this.commentNode;
-                while (childNodesLength--) {
-                    sibling = sibling.previousSibling;
-                    this.content.instance.push(sibling)
-                }
-                this.content.instance.reverse();
+            let childNodesLength = htmlTemplate.context.cache(htmlTemplate.key).documentFragment.childNodes.length;
+            this.content = new HtmlTemplateInstance(htmlTemplate, this);
+            let sibling = this.commentNode;
+            while (childNodesLength--) {
+                sibling = sibling.previousSibling;
+                this.content.instance.push(sibling)
             }
+            this.content.instance.reverse();
+
         }
 
         setContent(template){
