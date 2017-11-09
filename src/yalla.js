@@ -131,7 +131,7 @@
 
     const isMinimizationAttribute = node => {
         return ['checked', 'compact', 'declare', 'defer', 'disabled', 'ismap',
-            'noresize', 'noshade', 'nowrap', 'selected'].indexOf(node.nodeName) >= 0;
+                'noresize', 'noshade', 'nowrap', 'selected'].indexOf(node.nodeName) >= 0;
     };
 
     class HtmlTemplateCollectionInstance extends Template {
@@ -192,7 +192,7 @@
                         outletPointer = childPlaceholder.firstChildNode();
                         this.instance[key] = childPlaceholder.commentNode;
                         this.template.context.addSyncCallback(function () {
-                            syncNode(template, childPlaceholder.commentNode);
+                            syncNode(childPlaceholder.commentNode);
                         });
                     }
                 });
@@ -543,12 +543,12 @@
         }
     }
 
-    function syncNode(template, node) {
+    function syncNode(node) {
         let outlet = Outlet.from(node);
-        let templateValues = template.values;
         if (outlet.content && outlet.content instanceof HtmlTemplateInstance) {
             let htmlTemplateInstance = outlet.content;
             let template = htmlTemplateInstance.template;
+            let templateValues = template.values;
             let docFragment = {childNodes: htmlTemplateInstance.instance};
 
             if (template.nodeValueIndexArray) {
@@ -584,11 +584,11 @@
                         let value = templateValues[valueIndexes];
                         if (value instanceof HtmlTemplate) {
                             outlet.constructHtmlTemplateContent(value);
-                            syncNode(value, outlet.commentNode);
+                            syncNode(outlet.commentNode);
                         }
                         else if (value instanceof HtmlTemplateCollection) {
                             outlet.constructHtmlTemplateCollectionContent(value);
-                            syncNode(value, outlet.commentNode);
+                            syncNode(outlet.commentNode);
                         }
                         else {
                             outlet.constructTextContent();
@@ -611,11 +611,11 @@
                 if (outlet.content === null) {
                     if (template instanceof HtmlTemplate) {
                         outlet.constructHtmlTemplateContent(template.context.cache(template.key));
-                        syncNode(template, commentNode);
+                        syncNode(commentNode);
                     }
                 } else {
                     if (outlet.content instanceof HtmlTemplateInstance) {
-                        syncNode(template, commentNode);
+                        syncNode(commentNode);
                     }
                 }
             });
@@ -625,7 +625,7 @@
     function render(templateValue, node) {
         Outlet.from(node).setContent(templateValue);
         if (!node.$synced) {
-            syncNode(templateValue, node);
+            syncNode(node);
             node.$synced = true;
         }
         if ('Promise' in window) {
@@ -746,7 +746,7 @@
             }
             this.content.applyValues(htmlTemplateCollection);
             if (clearContentWasCalled) {
-                syncNode(this.content.template, this.commentNode);
+                syncNode(this.commentNode);
             }
         }
 
@@ -763,17 +763,8 @@
             }
             this.content.applyValues(htmlTemplate);
             if (clearContentWasCalled) {
-                syncNode(this.content.template, this.commentNode);
+                syncNode(this.commentNode);
             }
-        }
-
-        getPreviousValue(){
-            if(this.content == Text){
-                return this.content.nodeValue;
-            }else if(this.content instanceof HtmlTemplateInstance){
-                return this.template.values;
-            }
-            return 'shit';
         }
 
         clearContent() {
@@ -785,10 +776,6 @@
                 }
                 this.content = null;
             }
-        }
-
-        hasEmptyContent() {
-            return this.content === null;
         }
 
         static from(node) {

@@ -6,19 +6,15 @@
     <script src="src/yalla.js"></script>
     <script type="module">
         let {html} = new Context();
-
+        let toggle = true;
+        let valueOne = 'value one';
+        let valueTwo = 'value two';
         function update(){
-            debugger;
             render(html`
                 <div>Hello This async sample
-                ${new Promise(resolve => {
-                            setTimeout(()=>{
-                                resolve(html`
-                                  <div>This is printed after ${new Date()}</div>
-                                  <button onclick="${e => update()}">Try again</button>
-                                  `);
-                            },100);
-                        })}
+                <button onclick="${e => {toggle = !toggle;update()} }">Toggle</button>
+                ${html`<button onclick="${e => {toggle ? alert('One') : alert('Two')}}">${toggle ? valueOne : valueTwo}</button>`}
+                ${html`<button onclick="${e => {toggle ? alert('Two') : alert('One')}}">${toggle ? valueTwo : valueOne}</button>`}
                 </div>
               `,document.body);
         }

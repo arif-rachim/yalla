@@ -193,31 +193,31 @@ describe('yalla.js',function(){
             expect(dom.innerHTML).to.equal('Hello World<!--outlet-->');
             done();
         });
-        // TODO
-        /*
-         it('Should render Component in component',function(done){
-         let dom = document.createElement('div');
-         render(html`<div>Hello ${html`Yalla`} World</div>`,dom).then(function(){
-         render(html`Hello ${html`Amazing`} World`,dom);
-         expect(dom.innerHTML).to.equal('<div>Hello Amazing<!--outlet--> World</div><!--outlet-->');
-         done();
-         });
-         expect(dom.innerHTML).to.equal('<div>Hello Yalla<!--outlet--> World</div><!--outlet-->');
-         });
 
-         it('Should Promote the component and depromote them',function(done){
-         let dom = document.createElement('div');
-         render(html`<div>Hello ${html`Yalla`} World</div>`,dom).then(function(){
-         render(html`Hello World`,dom).then(function(){
-         render(html`<div>Hello ${true} World</div>`,dom);
-         expect(dom.innerHTML).to.equal('<div>Hello true<!--outlet--> World</div><!--outlet-->');
-         done();
-         });
-         expect(dom.innerHTML).to.equal('<div>Hello <!--outlet--> World</div><!--outlet-->');
-         });
-         expect(dom.innerHTML).to.equal('<div>Hello Yalla<!--outlet--> World</div><!--outlet-->');
-         });
-         */
+        it('Should render Component in component',function(done){
+            let dom = document.createElement('div');
+            render(html`<div>Hello ${html`Yalla`} World</div>`,dom).then(function(){
+                render(html`Hello ${html`Amazing`} World`,dom).then(function(){
+                    done();
+                });
+                expect(dom.innerHTML).to.equal('<div>Hello Amazing<!--outlet--> World</div><!--outlet-->');
+            });
+            expect(dom.innerHTML).to.equal('<div>Hello Yalla<!--outlet--> World</div><!--outlet-->');
+        });
+
+        it('Should Promote the component and depromote them',function(done){
+            let dom = document.createElement('div');
+            render(html`<div>Hello ${html`Yalla`} World</div>`,dom).then(function(){
+                render(html`Hello World`,dom).then(function(){
+                    render(html`<div>Hello ${true} World</div>`,dom);
+                    expect(dom.innerHTML).to.equal('<div>Hello true<!--outlet--> World</div><!--outlet-->');
+                    done();
+                });
+                expect(dom.innerHTML).to.equal('<div>Hello <!--outlet--> World</div><!--outlet-->');
+            });
+            expect(dom.innerHTML).to.equal('<div>Hello Yalla<!--outlet--> World</div><!--outlet-->');
+        });
+
 
         it('Should render an array',function(done){
             let dom = document.createElement('div');
@@ -268,12 +268,9 @@ describe('yalla.js',function(){
         function toggleDone(e){
             let index = Math.round(Math.random() * (todos.length - 1));
             let id = todos[index].id;
-            console.log(id);
             let styleBefore = document.getElementById(id).getAttribute('style').toString();
             let selectedTodo = todos.filter(t => t.id == id)[0];
-            console.log('done before ',selectedTodo.done);
             selectedTodo.done = !selectedTodo.done;
-            console.log('done after ',selectedTodo.done);
             return update();
         }
 

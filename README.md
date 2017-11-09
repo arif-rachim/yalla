@@ -69,19 +69,19 @@ Template literals are enclosed by the back-tick (\` \`) character instead of dou
 
 **`render` HtmlTemplate rendering**
 ----
-`render()` takes a `HtmlTemplate` or `HtmlTemplateCollection` or `Text`, and renders it to a DOM Container. The process of rendering is describe in following orders :
+`render()` takes a `HtmlTemplate`, `HtmlTemplateCollection`, `Text` or `Promise`, and renders it to a DOM Container. The process of rendering is describe in following orders :
 
-1. `yallajs` take the static strings in `HtmlTemplate` and join the strings with `<!--placeholder-->` to mark the position of dynamic parts.
+1. `yallajs` take the static strings in `HtmlTemplate` and join the strings with `<!--outlet-->` to mark the position of dynamic parts.
 2. `yallajs` passes joined strings to innerHTML to create `DOMTemplate`.
-3. It walks through the `DOMTemplate` and identify the comment tag `placeholder`.
-4. On initial rendering `yallajs` update the `placeholder` with actual values.
+3. It walks through the `DOMTemplate` and identify the comment tag `outlet`.
+4. On initial rendering `yallajs` update the `outlet` with actual values.
 5. After that `yallajs` store the updated `DOMTemplate` into `Context` object.
 6. Lastly `yallajs` clone the `DOMTemplate` to create `HtmlTemplateInstance` and append it to DOM Container.
 
 By keeping the template DOM in the cache, next DOM creation will be done in two steps only :
 
-1. Pull and Update the template DOM placeholder with actual value the template DOM from Cache,
-2. Append the cloned DOM to DOM Container.
+1. look the template DOM, and update the outlet with next value,
+2. clone the template DOM and append it to DOM Container.
 
 In this way we can also perform the DOM update process very efficiently because we already know the location of the placeholder. So if there is a new value that changes, we simply update the placeholder without having to touch other DOM
 
@@ -188,7 +188,7 @@ render(html`
 3. <a href="https://codepen.io/yallajs/pen/wPKdJo">Color Picker</a> : Simple color picker
 4. <a href="https://codepen.io/yallajs/pen/XzKqBb">Async</a> : Example using Promise for async
 5. <a href="https://codepen.io/yallajs/pen/BmzxvO">Html Collection</a> : Using HtmlCollection to render arrays
-6. <a href="https://codepen.io/yallajs/project/editor/AxKoNY#0">Hero Editor</a> : Hero Editor from Angular JS
+6. <a href="https://codepen.io/yallajs/project/editor/AxKoNY#0">Hero Editor</a> : Hero Editor tutorial from Angular JS rewritten in Yallajs
 
 YallaJS Project is supported by :
 
