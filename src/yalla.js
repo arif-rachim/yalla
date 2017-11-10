@@ -95,6 +95,11 @@
         return false;
     }
 
+    const guid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+        return v.toString(16);
+    });
+
     class Template {
         destroy() {
             console.log('WARNING NOT IMPLEMENTED YET ');
@@ -192,7 +197,7 @@
                         outletPointer = childPlaceholder.firstChildNode();
                         this.instance[key] = childPlaceholder.commentNode;
                         this.template.context.addSyncCallback(function () {
-                            syncNode(childPlaceholder.commentNode);
+                            syncNode(template,childPlaceholder.commentNode);
                         });
                     }
                 });
@@ -375,11 +380,11 @@
 
         buildTemplate(templateString) {
             this.documentFragment = this.getProperTemplateTag(templateString);
-            this.nodeValueIndexArray = this.buildNodeValueIndex(this.documentFragment, []);
+            this.nodeValueIndexArray = this.buildNodeValueIndex(this.documentFragment,this.documentFragment.nodeName);
             HtmlTemplate.applyValues(this, this.nodeValueIndexArray);
         }
 
-        buildNodeValueIndex(documentFragment) {
+        buildNodeValueIndex(documentFragment,documentFragmentNodeName) {
 
             let childNodes = documentFragment.childNodes;
             let nodeValueIndexArray = [];
@@ -408,9 +413,9 @@
                             });
                         }
                     }
-                    nodeValueIndexArray = nodeValueIndexArray.concat(this.buildNodeValueIndex(node));
+                    nodeValueIndexArray = nodeValueIndexArray.concat(this.buildNodeValueIndex(node,node.nodeName));
                 }
-                if (node.nodeType === Node.TEXT_NODE && documentFragment.nodeName.toUpperCase() === 'STYLE') {
+                if (node.nodeType === Node.TEXT_NODE && documentFragmentNodeName.toUpperCase() === 'STYLE') {
                     let nodeValue = node.nodeValue;
                     let nodeValueIndexMap = this.lookNodeValueArray(nodeValue);
                     if (nodeValueIndexMap.length == 0) {
@@ -536,23 +541,32 @@
                 nodeValueIndex.values = newActualValues;
             });
 
-            if(nextHtmlTemplate.context.hasCache(nextHtmlTemplate.key)){
-                let cacheTemplate = nextHtmlTemplate.context.cache(nextHtmlTemplate.key);
-                cacheTemplate.values = newValues;
-            }
         }
     }
 
-    function syncNode(node) {
+    function syncNode(nextTemplate,node) {
         let outlet = Outlet.from(node);
         if (outlet.content && outlet.content instanceof HtmlTemplateInstance) {
             let htmlTemplateInstance = outlet.content;
-            let template = htmlTemplateInstance.template;
-            let templateValues = template.values;
+            let originalTemplate = htmlTemplateInstance.template;
+            let templateValues = nextTemplate.values;
             let docFragment = {childNodes: htmlTemplateInstance.instance};
-
-            if (template.nodeValueIndexArray) {
-                let actualNodeValueIndexArray = template.nodeValueIndexArray.map(nodeValueIndex => {
+            if(originalTemplate.nodeValueIndexArray == null){
+                let cacheTemplate = originalTemplate.context.cache(originalTemplate.key);
+                let documentFragment = {childNodes:outlet.content.instance};
+                htmlTemplateInstance.nodeValueIndexArray = cacheTemplate.nodeValueIndexArray.map(nodeValueIndex => {
+                    let {node,valueIndexes} = nodeValueIndex;
+                    let newNode = getNode(getPath(node),documentFragment);
+                    let values = Array.isArray(valueIndexes) ? valueIndexes.map(index => templateValues[index]) : templateValues[valueIndexes];
+                    let newNodeValueIndex = {node : newNode,valueIndexes,values};
+                    if(nodeValueIndex.nodeValue){
+                        newNodeValueIndex.nodeValue = nodeValueIndex.nodeValue;
+                    }
+                    return newNodeValueIndex;
+                });
+                debugger;
+            }else{
+                let actualNodeValueIndexArray = originalTemplate.nodeValueIndexArray.map(nodeValueIndex => {
                     let {nodeValue, valueIndexes} = nodeValueIndex;
                     let path = getPath(nodeValueIndex.node);
                     let actualNode = getNode(path, docFragment);
@@ -584,11 +598,11 @@
                         let value = templateValues[valueIndexes];
                         if (value instanceof HtmlTemplate) {
                             outlet.constructHtmlTemplateContent(value);
-                            syncNode(outlet.commentNode);
+                            syncNode(value,outlet.commentNode);
                         }
                         else if (value instanceof HtmlTemplateCollection) {
                             outlet.constructHtmlTemplateCollectionContent(value);
-                            syncNode(outlet.commentNode);
+                            syncNode(value,outlet.commentNode);
                         }
                         else {
                             outlet.constructTextContent();
@@ -611,11 +625,11 @@
                 if (outlet.content === null) {
                     if (template instanceof HtmlTemplate) {
                         outlet.constructHtmlTemplateContent(template.context.cache(template.key));
-                        syncNode(commentNode);
+                        syncNode(template,commentNode);
                     }
                 } else {
                     if (outlet.content instanceof HtmlTemplateInstance) {
-                        syncNode(commentNode);
+                        syncNode(template,commentNode);
                     }
                 }
             });
@@ -625,7 +639,7 @@
     function render(templateValue, node) {
         Outlet.from(node).setContent(templateValue);
         if (!node.$synced) {
-            syncNode(node);
+            syncNode(templateValue,node);
             node.$synced = true;
         }
         if ('Promise' in window) {
@@ -697,12 +711,12 @@
 
         setContent(template){
             if(isPromise(template)){
-                if(this.content == null){
+                if(this.content === null){
                     let self = this;
-                    let guid = Math.round(Math.random()*10000000000);
-                    this.setHtmlTemplateContent(html`<span id="${guid}" style="color : #bbbbbb;border : 1px solid #bbbbbb;border-radius: 5px;padding: 2px;">outlet</span>`);
+                    let id = guid();
+                    this.setHtmlTemplateContent(html`<span id="${id}" style="color : #bbbbbb;border : 1px solid #bbbbbb;border-radius: 5px;padding: 2px;">outlet</span>`);
                     template.then((result) => {
-                        let templateContent = document.getElementById(guid);
+                        let templateContent = document.getElementById(id);
                         let newCommentNode = templateContent.nextSibling;
                         Outlet.from(newCommentNode).setContent(result);
                         self.clearContent();
@@ -745,7 +759,7 @@
             }
             this.content.applyValues(htmlTemplateCollection);
             if (clearContentWasCalled) {
-                syncNode(this.commentNode);
+                syncNode(htmlTemplateCollection,this.commentNode);
             }
         }
 
@@ -762,7 +776,7 @@
             }
             this.content.applyValues(htmlTemplate);
             if (clearContentWasCalled) {
-                syncNode(this.commentNode);
+                syncNode(htmlTemplate,this.commentNode);
             }
         }
 
