@@ -553,16 +553,61 @@
             let docFragment = {childNodes: htmlTemplateInstance.instance};
             if(originalTemplate.nodeValueIndexArray == null){
                 let cacheTemplate = originalTemplate.context.cache(originalTemplate.key);
+
                 let documentFragment = {childNodes:outlet.content.instance};
                 htmlTemplateInstance.nodeValueIndexArray = cacheTemplate.nodeValueIndexArray.map(nodeValueIndex => {
-                    let {node,valueIndexes} = nodeValueIndex;
-                    let newNode = getNode(getPath(node),documentFragment);
+                    let {node,nodeValue,valueIndexes} = nodeValueIndex;
+                    let actualNode = getNode(getPath(node),documentFragment);
                     let values = Array.isArray(valueIndexes) ? valueIndexes.map(index => templateValues[index]) : templateValues[valueIndexes];
-                    let newNodeValueIndex = {node : newNode,valueIndexes,values};
-                    if(nodeValueIndex.nodeValue){
-                        newNodeValueIndex.nodeValue = nodeValueIndex.nodeValue;
+                    let newNodeValueIndex = {node : actualNode,valueIndexes,values};
+                    /*
+                    Start of shit
+                     */
+                    let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === 'STYLE';
+                    if (isStyleNode) {
+                        return {node: actualNode, valueIndexes, nodeValue, values}
+                    } else if (actualNode.nodeType === Node.ATTRIBUTE_NODE) {
+                        let marker = Marker.from(actualNode);
+                        let nodeName = actualNode.nodeName;
+                        let isEvent = nodeName.indexOf('on') === 0;
+                        if (isEvent) {
+                            let valueIndex = valueIndexes[0];
+                            marker.attributes[nodeName] = templateValues[valueIndex];
+                            let eventName = nodeName.substring(2, nodeName.length);
+                            actualNode.ownerElement.setAttribute(nodeName, 'return false;');
+                            actualNode.ownerElement[nodeName] = templateValues[valueIndex];
+                        } else {
+                            let actualAttributeValue = nodeValue;
+                            let valFiltered = valueIndexes.map(valueIndex => templateValues[(valueIndex)]);
+                            valueIndexes.forEach((valueIndex, index) => {
+                                actualAttributeValue = actualAttributeValue.replace(`<!--${valueIndex}-->`, valFiltered[index]);
+                            });
+                            marker.attributes[nodeName] = actualAttributeValue;
+                        }
+                        return {node: actualNode, valueIndexes, nodeValue, values}
+                    } else {
+                        let outlet = Outlet.from(actualNode);
+                        let value = templateValues[valueIndexes];
+                        if (value instanceof HtmlTemplate) {
+                            outlet.constructHtmlTemplateContent(value);
+                            syncNode(value,outlet.commentNode);
+                        }
+                        else if (value instanceof HtmlTemplateCollection) {
+                            outlet.constructHtmlTemplateCollectionContent(value);
+                            syncNode(value,outlet.commentNode);
+                        }
+                        else {
+                            outlet.constructTextContent();
+                        }
+
+                        return {node: actualNode, valueIndexes, values}
                     }
-                    return newNodeValueIndex;
+
+                    /*
+                    End of shit
+                     */
+
+
                 });
                 debugger;
             }else{

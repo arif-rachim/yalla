@@ -114,7 +114,7 @@ describe('yalla.js',function(){
          }
          validateDom();
          done();
-         })
+         });
          */
 
         it('Should render collection Addition',function(done){
