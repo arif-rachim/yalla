@@ -483,8 +483,6 @@
                 return;
             }
 
-
-
             nodeValueIndexArray.forEach((nodeValueIndex, index)=> {
                 let {node, valueIndexes, values} = nodeValueIndex;
                 let newActualValues = Array.isArray(valueIndexes) ? valueIndexes.map(valueIndex => newValues[(valueIndex)]) : newValues[valueIndexes];
@@ -560,9 +558,6 @@
                     let actualNode = getNode(getPath(node),documentFragment);
                     let values = Array.isArray(valueIndexes) ? valueIndexes.map(index => templateValues[index]) : templateValues[valueIndexes];
                     let newNodeValueIndex = {node : actualNode,valueIndexes,values};
-                    /*
-                    Start of shit
-                     */
                     let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === 'STYLE';
                     if (isStyleNode) {
                         return {node: actualNode, valueIndexes, nodeValue, values}
@@ -602,12 +597,6 @@
 
                         return {node: actualNode, valueIndexes, values}
                     }
-
-                    /*
-                    End of shit
-                     */
-
-
                 });
                 debugger;
             }else{
