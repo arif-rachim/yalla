@@ -89,11 +89,9 @@
     };
 
     const isPromise = (object) =>{
-        if(typeof object === 'object' && 'constructor' in object && object.constructor.name === 'Promise'){
-            return true;
-        }
-        return false;
-    }
+        return !!(typeof object === 'object' && 'constructor' in object && object.constructor.name === 'Promise');
+
+    };
 
     const guid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
         var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
@@ -107,11 +105,9 @@
     }
 
     const attributeChangesReflectToProperties = (attributeName,nodeName) => {
-        if(attributeName.toUpperCase() === 'VALUE' && nodeName.toUpperCase() === 'INPUT'){
-            return true;
-        }
-        return false;
-    }
+        return !!(attributeName.toUpperCase() === 'VALUE' && nodeName.toUpperCase() === 'INPUT');
+
+    };
 
     const TEMPLATE_ROOT = {
         'col': 'colgroup',
@@ -206,7 +202,7 @@
         }
 
         destroy() {
-            this.template.getKeys().forEach(key => {
+            this.template.keys.forEach(key => {
                 let childPlaceholderCommentNode = this.instance[key];
                 let childPlaceholder = Outlet.from(childPlaceholderCommentNode);
                 if (childPlaceholder.content instanceof Template) {
@@ -282,15 +278,14 @@
 
 
     function getNode(path, documentFragment) {
-        let node = path.reduce(function (content, path) {
+        return path.reduce(function (content, path) {
             if (typeof path == 'number') {
                 return content.childNodes[path];
             } else {
-                let attribute = content.attributes[path.name];
-                return attribute;
+                return content.attributes[path.name];
             }
         }, documentFragment);
-        return node;
+
     }
 
     class HtmlTemplateCollection extends Template {
@@ -336,19 +331,6 @@
             }
         }
 
-        getKeys() {
-            if (!this.initialzed) {
-                throw new Error('Yikes its not initialized yet');
-            }
-            return this.keys;
-        }
-
-        getTemplates() {
-            if (!this.initialzed) {
-                throw new Error('Yikes its not initialized yet');
-            }
-            return this.templates;
-        }
 
     }
     function isMatch(newActualValues, values) {
@@ -379,7 +361,7 @@
         }
 
         buildTemplate(templateString) {
-            this.documentFragment = this.getProperTemplateTag(templateString);
+            this.documentFragment = HtmlTemplate.getProperTemplateTag(templateString);
             this.nodeValueIndexArray = this.buildNodeValueIndex(this.documentFragment,this.documentFragment.nodeName);
             HtmlTemplate.applyValues(this, this.nodeValueIndexArray);
         }
@@ -398,7 +380,7 @@
                     let k = attributes.length;
                     for (let attributeIndex = 0; attributeIndex < k; attributeIndex++) {
                         let nodeValue = attributes[attributeIndex].nodeValue;
-                        let nodeValueIndexMap = this.lookNodeValueArray(nodeValue);
+                        let nodeValueIndexMap = HtmlTemplate.lookNodeValueArray(nodeValue);
                         if (nodeValueIndexMap.length == 0) {
                             continue;
                         }
@@ -417,7 +399,7 @@
                 }
                 if (node.nodeType === Node.TEXT_NODE && documentFragmentNodeName.toUpperCase() === 'STYLE') {
                     let nodeValue = node.nodeValue;
-                    let nodeValueIndexMap = this.lookNodeValueArray(nodeValue);
+                    let nodeValueIndexMap = HtmlTemplate.lookNodeValueArray(nodeValue);
                     if (nodeValueIndexMap.length == 0) {
                         continue;
                     }
@@ -439,7 +421,7 @@
             return nodeValueIndexArray;
         }
 
-        lookNodeValueArray(nodeValue) {
+        static lookNodeValueArray(nodeValue) {
             let result = [];
             let pointerStart = nodeValue.indexOf('<!--');
             let pointerEnd = nodeValue.indexOf('-->', pointerStart);
@@ -452,7 +434,7 @@
             return result;
         }
 
-        getProperTemplateTag(contentText) {
+        static getProperTemplateTag(contentText) {
             let openTag = contentText.substring(1, contentText.indexOf('>'));
             openTag = (openTag.indexOf(' ') > 0 ? openTag.substring(0, openTag.indexOf(' ')) : openTag).toLowerCase();
             let rootTag = TEMPLATE_ROOT[openTag];
@@ -532,8 +514,7 @@
                 }
                 if (node.nodeType === Node.COMMENT_NODE) {
                     let nodeValue = node.nodeValue;
-                    let valueIndex = valueIndexes;
-                    let value = newValues[valueIndex];
+                    let value = newValues[valueIndexes];
                     Outlet.from(node).setContent(value);
                 }
                 nodeValueIndex.values = newActualValues;
@@ -600,7 +581,7 @@
                 });
                 debugger;
             }else{
-                let actualNodeValueIndexArray = originalTemplate.nodeValueIndexArray.map(nodeValueIndex => {
+                htmlTemplateInstance.nodeValueIndexArray = originalTemplate.nodeValueIndexArray.map(nodeValueIndex => {
                     let {nodeValue, valueIndexes} = nodeValueIndex;
                     let path = getPath(nodeValueIndex.node);
                     let actualNode = getNode(path, docFragment);
@@ -645,7 +626,6 @@
                         return {node: actualNode, valueIndexes, values}
                     }
                 });
-                htmlTemplateInstance.nodeValueIndexArray = actualNodeValueIndexArray;
             }
         }
         if (outlet.content && outlet.content instanceof HtmlTemplateCollectionInstance) {

@@ -184,6 +184,23 @@ describe('yalla.js',function(){
             validateDom();
         })
 
+        it('Should render promotion and depromotion',function(done){
+            let items = ['One','Two','Three'];
+            let dom = document.createElement('div');
+            render(html`<ul>${htmlCollection(items,i=>i,i => html`<li>${i}</li>`)}</ul>`,dom).then(function(){
+                expect(dom.innerHTML).to.equal('<ul><li>One<!--outlet--></li><!--outlet-child--><li>Two<!--outlet--></li><!--outlet-child--><li>Three<!--outlet--></li><!--outlet-child--><!--outlet--></ul><!--outlet-->');
+                render(html`<ul>${''}</ul>`,dom).then(function(){
+                    expect(dom.innerHTML).to.equal('<ul><!--outlet--></ul><!--outlet-->');
+                    render(html`<ul>${htmlCollection(items,i=>i,i => html`<li>${i}</li>`)}</ul>`,dom).then(function(){
+                        expect(dom.innerHTML).to.equal('<ul><li>One<!--outlet--></li><!--outlet-child--><li>Two<!--outlet--></li><!--outlet-child--><li>Three<!--outlet--></li><!--outlet-child--><!--outlet--></ul><!--outlet-->');
+                        done();
+                    });
+
+                });
+            });
+
+        })
+
     });
 
     describe("HtmlTemplate features",function(){
@@ -227,6 +244,32 @@ describe('yalla.js',function(){
             });
             expect(dom.innerHTML).to.equal('<div>Hello one,two,three<!--outlet--> World</div><!--outlet-->');
         });
+
+        it('should render duplicate node',function(done){
+            let dom = document.createElement('div');
+            render(html`<div>${html`<button style="font-size: ${'13px'};background-color: ${'red'}" onclick="${e => alert('one')}">${'buttonone'}</button>`}${html`<button style="font-size: ${'10px'};background-color: ${'blue'}" onclick="${e => alert('two')}">${'buttontwo'}</button>`}</div>`,dom).then(function(){
+                expect(dom.innerHTML).to.equal('<div><button style="font-size: 13px;background-color: red" onclick="return false;">buttonone<!--outlet--></button><!--outlet--><button style="font-size: 10px;background-color: blue" onclick="return false;">buttontwo<!--outlet--></button><!--outlet--></div><!--outlet-->');
+                done();
+            });
+        });
+
+        it('should render duplicate node',function(done){
+            let dom = document.createElement('div');
+            render(html`<div>${html`<button onclick="${e => alert('one')}">${'buttonone'}</button>`}${html`<button onclick="${e => alert('two')}">${'buttontwo'}</button>`}</div>`,dom).then(function(){
+                expect(dom.innerHTML).to.equal('<div><button onclick="return false;">buttonone<!--outlet--></button><!--outlet--><button onclick="return false;">buttontwo<!--outlet--></button><!--outlet--></div><!--outlet-->');
+                done();
+            });
+        });
+    });
+
+    describe("Promise and async",function(){
+        it('Should render HtmlTemplate',function(done){
+            let dom = document.createElement('div');
+            render(html`<div> ${new Promise(function (resolve){resolve(html`Hello World`)})} </div>`,dom).then(function(){
+                expect(true).to.equal(dom.innerHTML.toString().indexOf('<span')>0);
+                done();
+            });
+        });
     });
 
     describe("Element Attribute",function(){
@@ -252,6 +295,24 @@ describe('yalla.js',function(){
             validateDom();
         });
 
+    });
+
+    describe("Styling",function(){
+        it('Should render styling properly',function(done){
+            let dom = document.createElement('div');
+            let backgroundColor = 'blue';
+            let color = 'red';
+            let update = () => {
+                render(html`<style>.my-style{background-color:${backgroundColor};color:${color};}</style><div class="my-style"></div>`,dom);
+            };
+            update();
+            expect(dom.innerHTML).to.equal('<style>.my-style{background-color:blue;color:red;}</style><div class="my-style"></div><!--outlet-->');
+            backgroundColor = '#CCC';
+            color = '#ddd';
+            update();
+            expect(dom.innerHTML).to.equal('<style>.my-style{background-color:#CCC;color:#ddd;}</style><div class="my-style"></div><!--outlet-->');
+            done();
+        });
     });
 
     describe('Todo Application',function(){
