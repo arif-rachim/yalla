@@ -91,7 +91,7 @@ In this way we can also perform the DOM update process very efficiently because 
 The Benchmark result of yallajs 2.0 beta version is very promising. With very early stage of performance tuning, yallajs wins against angular, react and vue, both on rendering and memory allocation.
  Following benchmark result using <a href="https://github.com/krausest/js-framework-benchmark">Stefan Krause performance benchmark</a>.
 
-<img class="image" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRBa5mvSRr6DdMYSZAsLOFowM7P5Jlo1pVRp6BwfyoYtrte3bcvxhIHuJ0Meg8gGMilTsGoSxIqvq9f/pubchart?oid=1459873274&format=image" >
+<img class="image" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSjhBLod7UG28QeMS9I1WEmWW4o_RYO2a27GX4GhBW9cTBS_0i_N2FyGgaUsBavKq1KmnUMWRPhsPxm/pubchart?oid=106908939&format=image" >
 
 
 **Memory**
