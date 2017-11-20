@@ -1,5 +1,5 @@
 <p align="center">
-<img align="center" class="image" src="http://yallajs.io/images/yallajs.svg" width="150px" height="150px">
+<img align="center" class="image" src="http://yallajs.io/images/yallajs.svg" width="150px">
 </p>
 
 <p align="center">
@@ -10,7 +10,7 @@
 <a href="https://github.com/yallajs/yalla/tree/master/lib/yalla.min.js"><img src="https://img.shields.io/github/size/yallajs/yalla/lib/yalla.min.js.gzip.svg" alt="Build Status"></a>
 <a href="https://travis-ci.org/yallajs/yalla"><img src="https://img.shields.io/github/license/yallajs/yalla.svg" alt="License"></a>
 </p>
-   
+
 ----
 <p align="center">
 <img width='46px' src="http://browserbadge.com/ie/9">
@@ -111,8 +111,69 @@ Yalla uses ES 2015 String literal for html templating, yallajs API is very simpl
 
 Overview
 --------
+
+**hello world**
+---
+To render hello world we can write as follows :
+
+```javascript
+render(`Hello World`,document.body);
+```
+
+The above code means we want to render 'Hello World' string into the body tag.
+
+**`render`**
+---
+`render` is a function that accepts 2 parameters, the first parameter is 
+the object to be rendered and the second parameter is the container where the object will be rendered.
+
+The first parameter of `render` can be` string`, `boolean`,` date`, `number`,` Promise`, `HtmlTemplate` and` HtmlTemplateCollection`.
+The second parameter is the DOM node, we can use `document.body` or` document.getElementById` for the second parameter
+
+To render html we can pass it to the first parameter `HtmlTemplate` object by using tag `html` like the following example :
+
+```javascript
+render(html`<button>Hello World</button>`,document.body);
+```
+
+The above code means that we want to render the Hello World button to the document.body element.
+
+**`html`**
+---
+`html` tag behind the screen is an ES6 Template Tag.
+`html` generate HtmlTemplate object, which contains information about static strings, and dynamic values.
+`html` tag can be retrieved from ` yalla.Context` object.
+
+> `yalla.Context` is the object that stores the cache of `html` and` htmlCollection` Tags. 
+For hybrid application cases where we can have multiple sub-applications (not single page app),
+we can separate contexts from sub-applications by providing aliases of `html` and` htmlCollection` of each `Context`
+
+**Examples:**
+
+Rendering `div` :
+```javascript
+render(html`<div>This is Div</div>`,document.body);
+```
+
+Rendering `html in html` :
+```javascript
+render(html`<div>This is Div ${html`<div>This is Sub-Div</div>`} </div>,document.body);
+```
+
+Rendering with expression :
+```javascript
+let displayMe = false;
+render(html`<div>This is Div ${displayMe ? html`<div>This is Sub-Div</div>` : ''} </div>,document.body);
+```
+
+We can also listen to the DOM event by setting the value of `oneventname` with expression ` e => {} `
+
 **Events**
 ---
+
+Event in HtmlTemplate can be called by using callback expression `e => {}`.
+Here is an example to listen to the `onclick` event of a` button`.
+
 
 ```javascript
 
@@ -120,36 +181,65 @@ function buttonListener(){
     alert('hello');
 }
 
-render(html`<input type="button" onclick="${e => buttonListener()}">`,document.body);
+render(html`<input type="button" onclick="${e => buttonListener()}">Hello World</button>`,document.body);
 ```
 
+We can also mempassing parameters into our callback.
 
-**Attribute**
----
 ```javascript
+let alertSomething = (something) => {
+  alert(something);
+}
+
+render(html`<button onclick="${e => alertSomething(e.target.innerText)}">Hello World</button>`,document.body);
+```
+
+In addition to Event, HtmlTemplate can also set values of attributes & styles using Template Literal.
+
+
+**Attribute & Style**
+---
+
+Attribute in HtmlTemplate can be set its value by using $ {}. 
+Following is an example on how to set the value of the color and color attribute.
+
+```javascript
+
+let dynamicColor = '#CCCCCC';
+let fontSize = '32px';
 
 render(html`<div
         style="color : ${dynamicColor};
         font-size : ${fontSize};" >This is a Node</div>`,document.body);
 ```
 
+Attributes can only render primitive object types such as `text`,` number` and `boolean`.
 
-**HtmlTemplate in HtmlTemplate**
----
+If you need a style attribute that has a combination of values, it is recommended to use the `style` tag.
+
+Following an example on how to use yalla in `style`
 
 ```javascript
-
-render(html`<div>This is Parent Node
-        ${html`<div>This is Child Node</div>`}
-        </div>`,document.body);
+let fontColor = '#666666';
+let backgroundColor = '#CCCCCC';
+render(`
+<style>
+    .my-class {
+        color : ${fontColor};
+        background-color : ${backgroundColor};
+    }
+</style>
+<div class="my-class">Hello Class</div>
+`);
 ```
 
 
-**`htmlCollection` HtmlTemplateCollection**
+**`htmlCollection`**
 ---
-
-HtmlTemplateCollection is high performance Object that map array of items to HtmlTemplate Array.
+To render an Array, we can use `Html Template Collection`. HtmlTemplateCollection is high performance Object that map array of items to HtmlTemplate Array.
 HtmlTemplateCollection requires key of the item to update the collection effectively.
+
+htmlCollection memiliki 3 parameter :
 
 ```javascript
 htmlCollection(arrayItems,keyFunction,templateFunction);
@@ -173,7 +263,6 @@ render(html`
 `,document.body);
 ```
 
-
 **Sample Project**
 ---
 1. <a href="http://yallajs.io/todomvc.html">TodoMVC</a> : a simple todomvc application
@@ -189,6 +278,44 @@ render(html`
 4. <a href="https://codepen.io/yallajs/pen/XzKqBb">Async</a> : Example using Promise for async
 5. <a href="https://codepen.io/yallajs/pen/BmzxvO">Html Collection</a> : Using HtmlCollection to render arrays
 6. <a href="https://codepen.io/yallajs/project/editor/AxKoNY#0">Hero Editor</a> : Hero Editor tutorial from Angular JS rewritten in Yallajs
+7. <a href="https://codepen.io/yallajs/pen/wPpVNj">SAM Pattern Todo</a> : Example of how to use YallaJS with <a href="http://sam.js.org/">SAM Pattern</a>
+
+**Advance**
+---
+Following is an advanced topic that can be used to extend yallajs.
+
+1. Promise :
+
+We can call asynchronous process by using Promise. Promise by default is not supported by IE9, therefore
+to use this feature you should use a 3rd party libray like bluebird.js
+
+Example of how to use Promise :
+```javascript
+render(html`<div>
+${new Promise(resolve => {
+    setTimeout(()=>{
+        resolve(html`<div>This will be visible after 1s.</div>`);
+    },1000);
+})}
+</div>`,document.body);
+```
+
+2. Manual content decorator with `Plug`
+
+Plug is a special function that will receive a callback function that contains the `outlet` object as its parameter.
+With the object `outlet`, we can customize what content to be rendered to dom.
+
+Here is an example of using `plug`.
+
+```javascript
+render(html`<div>
+${plug(outlet => {
+    // here we can put some logic to intercept and set our own content.
+    outlet.setContent(html`<div>This is my custom content</div>`)
+})}
+</div>`,document.body);
+```
+
 
 YallaJS Project is supported by :
 
