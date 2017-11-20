@@ -48,6 +48,17 @@ render(hello('yallajs'),document.body);
 
 **Motivation**
 ---
+
+The original motivation of yallajs is perfectly described in this story :
+[How it feels to learn javascript in 2018](https://codeburst.io/how-it-feels-to-learn-javascript-in-2018-6b2cf7abb6aa)
+
+>YallaJS hopes one day we will no longer need yallajs after the browser incorporates ES6 Templating library. 
+
+
+>An example of a rewritten infamous angular Hero Editor tutorial using ES6 module and ES6 String Template
+<img class="progressiveMedia-image js-progressiveMedia-image" data-src="https://cdn-images-1.medium.com/max/800/1*1VizDFqW5wzHrPKzVarE6w.gif" src="https://cdn-images-1.medium.com/max/800/1*1VizDFqW5wzHrPKzVarE6w.gif">
+ES6 Native For building complex webapp, #usetheplatform
+
 `yallajs` has following main goals :
 
 1. Highly efficient in DOM creation, updates and deletion.
