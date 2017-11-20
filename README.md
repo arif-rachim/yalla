@@ -29,7 +29,7 @@ import {Context,render} from 'yallajs';
 let {html} = new Context();
 
 // create template function that produce HtmlTemplate "<div>Hello xxx </div>"
-let hello = (param) => html`<div>Hello ${name}</div>`;
+let hello = (name) => html`<div>Hello ${name}</div>`;
 
 // render <div>Hello world</div> to document.body.
 render(hello('world'),document.body);
