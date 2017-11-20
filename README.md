@@ -239,7 +239,7 @@ render(`
 To render an Array, we can use `Html Template Collection`. HtmlTemplateCollection is high performance Object that map array of items to HtmlTemplate Array.
 HtmlTemplateCollection requires key of the item to update the collection effectively.
 
-htmlCollection memiliki 3 parameter :
+htmlCollection has 3 parameters:
 
 ```javascript
 htmlCollection(arrayItems,keyFunction,templateFunction);
