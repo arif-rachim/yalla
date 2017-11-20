@@ -57,7 +57,9 @@ The original motivation of yallajs is perfectly described in this story :
 
 >An example of a rewritten infamous angular Hero Editor tutorial using ES6 module and ES6 String Template
 <img class="progressiveMedia-image js-progressiveMedia-image" data-src="https://cdn-images-1.medium.com/max/800/1*1VizDFqW5wzHrPKzVarE6w.gif" src="https://cdn-images-1.medium.com/max/800/1*1VizDFqW5wzHrPKzVarE6w.gif">
-ES6 Native For building complex webapp, #usetheplatform
+
+*No babel, no transpiler, just your hand written ES6 straight into the browser stomach*
+
 
 `yallajs` has following main goals :
 
