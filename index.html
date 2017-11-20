@@ -6,27 +6,17 @@
     <script src="src/yalla.js"></script>
     <script type="module">
         let {html} = new Context();
-        let toggle = true;
-        let valueOne = 'value one';
-        let valueTwo = 'value two';
         function update(){
-            render(html`
-                <div>Hello This async sample
-                <button onclick="${e => {toggle = !toggle;update()} }">Toggle</button>
-                ${html`<button onclick="${e => {toggle ? alert('One') : alert('Two')}}">${toggle ? valueOne : valueTwo}</button>`}
-                ${html`<button onclick="${e => {toggle ? alert('Two') : alert('One')}}">${toggle ? valueTwo : valueOne}</button>`}
-                </div>
+            render(html`<svg  xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                    ${html`<rect x="10" y="10" height="100" width="100"
+                          style="stroke:#ff0000; fill: #0000ff"/>`}
+
+                        <rect x="50" y="50" height="100" width="100"
+                          style="stroke:#ff0000; fill: #0000ff"/>
+                </svg>
               `,document.body);
         }
-        /*
-        function update(){
-            render(html`
-                <div>Hello This async sample
-                ${html`<button onclick="${e => {toggle ? alert('One') : alert('Two')}}">${toggle ? valueOne : valueTwo}</button>`}
-                ${html`<button onclick="${e => {toggle ? alert('Two') : alert('One')}}">${toggle ? valueTwo : valueOne}</button>`}
-                </div>
-              `,document.body);
-        }*/
+
 
         update();
     </script>

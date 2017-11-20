@@ -164,7 +164,7 @@
                     if (keyIsDeleted) {
                         let commentNode = this.instance[key];
                         Outlet.from(commentNode).clearContent();
-                        commentNode.parentNode.removeChild(commentNode);
+                        commentNode.remove();
                         delete this.instance[key];
                     }
                 });
@@ -208,9 +208,9 @@
                 if (childPlaceholder.content instanceof Template) {
                     childPlaceholder.content.destroy();
                 } else {
-                    childPlaceholder.content.parentNode.removeChild(childPlaceholder.content);
+                    childPlaceholder.content.remove();
                 }
-                childPlaceholderCommentNode.parentNode.removeChild(childPlaceholderCommentNode);
+                childPlaceholderCommentNode.remove();
                 delete this.instance[key];
             });
 
@@ -248,7 +248,7 @@
         }
 
         destroy() {
-            this.instance.forEach(i => i.parentNode.removeChild(i));
+            this.instance.forEach(i => i.remove());
             this.nodeValueIndexArray = null;
             this.outlet = null;
             this.template = null;
@@ -799,7 +799,7 @@
                 if (this.content instanceof Template) {
                     this.content.destroy();
                 } else {
-                    this.content.parentNode.removeChild(this.content);
+                    this.content.remove();
                 }
                 this.content = null;
             }
