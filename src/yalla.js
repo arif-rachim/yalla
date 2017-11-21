@@ -155,19 +155,25 @@
                     this.instance[key] = childPlaceholder.commentNode;
                 });
             } else {
-
                 newHtmlTemplateCollection.iterateRight();
-                let oldHtmlTemplateCollection = this.template;
-
-                oldHtmlTemplateCollection.keys.forEach(key => {
-                    let keyIsDeleted = newHtmlTemplateCollection.keys.indexOf(key) < 0;
-                    if (keyIsDeleted) {
-                        let commentNode = this.instance[key];
-                        Outlet.from(commentNode).clearContent();
-                        commentNode.remove();
-                        delete this.instance[key];
+                if(newHtmlTemplateCollection.items.length == 0){
+                    if(this.outlet.commentNode.parentNode.$htmlCollectionInstanceChild && this.outlet.commentNode.parentNode.$htmlCollectionInstanceChild.length == 1){
+                        let parentNode = this.outlet.commentNode.parentNode;
+                        parentNode.innerText = '';
+                        parentNode.appendChild(this.outlet.commentNode);
                     }
-                });
+                }else{
+                    let oldHtmlTemplateCollection = this.template;
+                    oldHtmlTemplateCollection.keys.forEach(key => {
+                        let keyIsDeleted = newHtmlTemplateCollection.keys.indexOf(key) < 0;
+                        if (keyIsDeleted) {
+                            let commentNode = this.instance[key];
+                            Outlet.from(commentNode).clearContent();
+                            commentNode.remove();
+                            delete this.instance[key];
+                        }
+                    });
+                }
 
                 let outletPointer = this.outlet.commentNode;
                 newHtmlTemplateCollection.iterateRight((item, key, template) => {
@@ -632,6 +638,8 @@
             let htmlTemplateCollectionInstance = outlet.content;
             let templates = htmlTemplateCollectionInstance.template.templates;
             let keys = htmlTemplateCollectionInstance.template.keys;
+            outlet.commentNode.parentNode.$htmlCollectionInstanceChild = outlet.commentNode.parentNode.$htmlCollectionInstanceChild || [];
+            outlet.commentNode.parentNode.$htmlCollectionInstanceChild.push(outlet.commentNode);
             keys.forEach(key => {
                 let template = templates[key];
                 let commentNode = htmlTemplateCollectionInstance.instance[key];

@@ -5,15 +5,27 @@
     </body>
     <script src="src/yalla.js"></script>
     <script type="module">
-        let {html} = new Context();
-        function update(){
-            render(html`<svg  xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-                    ${html`<rect x="10" y="10" height="100" width="100"
-                          style="stroke:#ff0000; fill: #0000ff"/>`}
+        let {html,htmlCollection} = new Context();
+        let items = [{id:'hello',name:'hello'},{id:'world',name:'world'}];
+        function deleteAll(){
+            items = [];
+            update();
+        }
+        function add(){
 
-                        <rect x="50" y="50" height="100" width="100"
-                          style="stroke:#ff0000; fill: #0000ff"/>
-                </svg>
+        }
+        function update(){
+            render(html`
+                <button onclick="${e => deleteAll()}">Delete</button>
+                <table>
+                    <tbody>
+                        ${htmlCollection(items,i => i.id , item => {
+                            return html`<tr>
+                                <td>${item.name}</td>
+                            </tr>`
+                        })}
+                    </tbody>
+                </table>
               `,document.body);
         }
 
