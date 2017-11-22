@@ -36,7 +36,6 @@
      THE SOFTWARE.
      */
 
-
     let isChrome = !!window.chrome && !!window.chrome.webstore;
 
 
@@ -71,9 +70,6 @@
         }
     }
 
-    /**
-     * Deep clone node is broken in IE, following for the fix
-     */
     const cloneNodeDeep = (node) => {
         if (isChrome) {
             return node.cloneNode(true);
@@ -161,6 +157,7 @@
                         let parentNode = this.outlet.commentNode.parentNode;
                         parentNode.innerText = '';
                         parentNode.appendChild(this.outlet.commentNode);
+                        this.instance = {};
                     }
                 }else{
                     let oldHtmlTemplateCollection = this.template;
@@ -174,7 +171,6 @@
                         }
                     });
                 }
-
                 let outletPointer = this.outlet.commentNode;
                 newHtmlTemplateCollection.iterateRight((item, key, template) => {
                     let commentNode = this.instance[key];
@@ -262,9 +258,6 @@
 
     }
 
-    /*
-     Function to take the path of a node up in documentFragment
-     */
     function getPath(node) {
         if (node.nodeType === Node.ATTRIBUTE_NODE) {
             return getPath(node.ownerElement).concat([{name: node.nodeName}]);

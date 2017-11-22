@@ -6,14 +6,13 @@
     <script src="src/yalla.js"></script>
     <script type="module">
         let {html,htmlCollection} = new Context();
-        let items = [{id:'hello',name:'hello'},{id:'world',name:'world'}];
+        let backupItems = [{id:'hello',name:'hello'},{id:'world',name:'world'}];
+        let items = backupItems;
         function deleteAll(){
-            items = [];
+            items = items.length == 0 ? backupItems : [];
             update();
         }
-        function add(){
 
-        }
         function update(){
             render(html`
                 <button onclick="${e => deleteAll()}">Delete</button>
