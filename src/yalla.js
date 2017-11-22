@@ -729,7 +729,7 @@
                 if(this.content === null){
                     let self = this;
                     let id = guid();
-                    this.setHtmlTemplateContent(html`<span id="${id}" style="color : #bbbbbb;border : 1px solid #bbbbbb;border-radius: 5px;padding: 2px;">outlet</span>`);
+                    this.setHtmlTemplateContent(html`<span id="${id}" style="display: none">outlet</span>`);
                     template.then((result) => {
                         let templateContent = document.getElementById(id);
                         let newCommentNode = templateContent.nextSibling;
