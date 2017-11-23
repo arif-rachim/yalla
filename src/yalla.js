@@ -652,11 +652,21 @@
     }
 
     function render(templateValue, node) {
-        Outlet.from(node).setContent(templateValue);
-        if (!node.$synced) {
-            syncNode(templateValue,node);
-            node.$synced = true;
+        let updateFunction = () => {
+            Outlet.from(node).setContent(templateValue);
+            if (!node.$synced) {
+                syncNode(templateValue,node);
+                node.$synced = true;
+            }
+        };
+        if(requestAnimationFrame in window){
+            requestAnimationFrame(()=>{
+                updateFunction();
+            });
+        }else{
+            updateFunction();
         }
+
         if ('Promise' in window) {
             return new Promise(function (resolve) {
                 setTimeout(() => {
