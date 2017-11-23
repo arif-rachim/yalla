@@ -468,14 +468,15 @@
                 let {node, valueIndexes, values} = nodeValueIndex;
                 let newActualValues = Array.isArray(valueIndexes) ? valueIndexes.map(valueIndex => newValues[(valueIndex)]) : newValues[valueIndexes];
 
-                if (isMatch(newActualValues, values)) {
+                let nodeName = node.nodeName;
+                let isEvent = node.nodeType === Node.ATTRIBUTE_NODE && nodeName.indexOf('on') === 0;
+
+                // if values are match, or ifts named eventListener then we dont need to perform update
+                if (isMatch(newActualValues, values) || (isEvent && newActualValues[0].name)) {
                     return;
                 }
-
-                let nodeName = node.nodeName;
                 if (node.nodeType === Node.ATTRIBUTE_NODE) {
                     let marker = Marker.from(node);
-                    let isEvent = nodeName.indexOf('on') === 0;
                     let nodeValue = nodeValueIndex.nodeValue;
                     if (isEvent) {
                         let valueIndex = valueIndexes[0];
@@ -578,7 +579,6 @@
                         return {node: actualNode, valueIndexes, values}
                     }
                 });
-                debugger;
             }else{
                 htmlTemplateInstance.nodeValueIndexArray = originalTemplate.nodeValueIndexArray.map(nodeValueIndex => {
                     let {nodeValue, valueIndexes} = nodeValueIndex;
@@ -850,7 +850,7 @@
                     return ctn;
                 }, this.commentNode);
             } else if (this.content instanceof HtmlTemplateCollectionInstance) {
-                // we need to investigate how to sort this
+                // not required since we already sync when rendering
             } else {
                 if (this.commentNode.previousSibling != this.content) {
                     this.commentNode.parentNode.insertBefore(this.content, this.commentNode);
