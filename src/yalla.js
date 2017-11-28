@@ -1,7 +1,7 @@
 (function (root, factory) {
-    if (typeof define === 'function' && define.amd) {
+    if (typeof define === "function" && define.amd) {
         define([], factory);
-    } else if (typeof module === 'object' && module.exports) {
+    } else if (typeof module === "object" && module.exports) {
         module.exports = factory();
     } else {
         root.yalla = factory();
@@ -9,7 +9,7 @@
         root.render = root.yalla.render;
         root.plug = root.yalla.plug;
     }
-}(typeof self !== 'undefined' ? self : eval('this'), function () {
+}(typeof self !== "undefined" ? self : eval("this"), function () {
 
 
     /*
@@ -36,35 +36,35 @@
      THE SOFTWARE.
      */
 
-    let isChrome = 'chrome' in window && 'webstore' in window.chrome;
+    let isChrome = "chrome" in window && "webstore" in window.chrome;
 
     class Context {
 
         constructor() {
-            this._cache = {};
-            this._synccallbacks = [];
+            this.cacheInstance = {};
+            this.syncCallbackStack = [];
             this.html = (strings, ...values) => new HtmlTemplate(strings, values, this);
             this.htmlCollection = (arrayItems, keyFn, templateFn) => new HtmlTemplateCollection(arrayItems, keyFn, templateFn, this);
         }
 
         hasCache(key) {
-            return key in this._cache;
+            return key in this.cacheInstance;
         }
 
         cache(key, data) {
             if (!this.hasCache(key)) {
-                this._cache[key] = data;
+                this.cacheInstance[key] = data;
             }
-            return this._cache[key];
+            return this.cacheInstance[key];
         }
 
         addSyncCallback(callback) {
-            this._synccallbacks.push(callback);
+            this.syncCallbackStack.push(callback);
         }
 
         clearSyncCallbacks() {
-            this._synccallbacks.forEach(callback => callback.apply());
-            this._synccallbacks = [];
+            this.syncCallbackStack.forEach(callback => callback.apply());
+            this.syncCallbackStack = [];
         }
     }
 
@@ -83,23 +83,23 @@
     };
 
     const isPromise = (object) => {
-        return (typeof object === 'object' && 'constructor' in object && object.constructor.name === 'Promise');
+        return (typeof object === "object" && "constructor" in object && object.constructor.name === "Promise");
 
     };
 
-    const guid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    const guid = () => "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
 
     class Template {
         destroy() {
-            throw new Error('Please implement template.destroy ');
+            throw new Error("Please implement template.destroy ");
         }
     }
 
     const attributeReflectToPropsMap = {
-        'INPUT' : ['VALUE']
+        "INPUT" : ["VALUE"]
     };
 
     const attributeChangesReflectToProperties = (attributeName, nodeName) => {
@@ -109,29 +109,29 @@
     };
 
     const parentTagMap = {
-        'col': 'colgroup',
-        'td': 'tr',
-        'area': 'map',
-        'tbody': 'table',
-        'tfoot': 'table',
-        'th': 'tr',
-        'thead': 'table',
-        'tr': 'tbody',
-        'caption': 'table',
-        'colgroup': 'table',
-        'li': 'ul',
-        'g': 'svg',
-        'circle': 'svg',
-        'rect': 'svg',
-        'polygon': 'svg',
-        'eclipse': 'svg',
-        'text': 'svg'
+        "col": "colgroup",
+        "td": "tr",
+        "area": "map",
+        "tbody": "table",
+        "tfoot": "table",
+        "th": "tr",
+        "thead": "table",
+        "tr": "tbody",
+        "caption": "table",
+        "colgroup": "table",
+        "li": "ul",
+        "g": "svg",
+        "circle": "svg",
+        "rect": "svg",
+        "polygon": "svg",
+        "eclipse": "svg",
+        "text": "svg"
     };
 
 
     const isMinimizationAttribute = node => {
-        return ['checked', 'compact', 'declare', 'defer', 'disabled', 'ismap',
-            'noresize', 'noshade', 'nowrap', 'selected'].indexOf(node.nodeName) >= 0;
+        return ["checked", "compact", "declare", "defer", "disabled", "ismap",
+            "noresize", "noshade", "nowrap", "selected"].indexOf(node.nodeName) >= 0;
     };
 
     class HtmlTemplateCollectionInstance extends Template {
@@ -147,7 +147,7 @@
                 this.instance = {};
                 let outletPointer = this.outlet.commentNode;
                 newHtmlTemplateCollection.iterateRight((item, key, template) => {
-                    let childPlaceholder = Outlet.from(document.createComment('outlet-child'));
+                    let childPlaceholder = Outlet.from(document.createComment("outlet-child"));
                     outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
                     Outlet.from(childPlaceholder.commentNode).setContent(template);
                     outletPointer = childPlaceholder.firstChildNode();
@@ -158,7 +158,7 @@
                 if (newHtmlTemplateCollection.items.length === 0) {
                     if (this.outlet.commentNode.parentNode.$htmlCollectionInstanceChild && this.outlet.commentNode.parentNode.$htmlCollectionInstanceChild.length === 1) {
                         let parentNode = this.outlet.commentNode.parentNode;
-                        parentNode.innerText = '';
+                        parentNode.innerText = "";
                         parentNode.appendChild(this.outlet.commentNode);
                         this.instance = {};
                     }
@@ -192,7 +192,7 @@
                         }
                         outletPointer = childPlaceholder.firstChildNode();
                     } else {
-                        let childPlaceholder = Outlet.from(document.createComment('outlet-child'));
+                        let childPlaceholder = Outlet.from(document.createComment("outlet-child"));
                         outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
                         Outlet.from(childPlaceholder.commentNode).setContent(template);
                         outletPointer = childPlaceholder.firstChildNode();
@@ -207,12 +207,7 @@
         destroy() {
             this.template.keys.forEach(key => {
                 let childPlaceholderCommentNode = this.instance[key];
-                let childPlaceholder = Outlet.from(childPlaceholderCommentNode);
-                if (childPlaceholder.content instanceof Template) {
-                    childPlaceholder.content.destroy();
-                } else {
-                    childPlaceholder.content.remove();
-                }
+                Outlet.from(childPlaceholderCommentNode).clearContent();
                 childPlaceholderCommentNode.remove();
                 delete this.instance[key];
             });
@@ -279,7 +274,7 @@
 
     const getNode = (path, documentFragment) => {
         return path.reduce((content, path) => {
-            if (typeof path === 'number') {
+            if (typeof path === "number") {
                 return content.childNodes[path];
             } else {
                 return content.attributes[path.name];
@@ -292,7 +287,7 @@
         constructor(items, keyFn, templateFn, context) {
             super();
             this.items = items;
-            this.keyFn = typeof keyFn === 'string' ? (item => item[keyFn]) : keyFn;
+            this.keyFn = typeof keyFn === "string" ? (item => item[keyFn]) : keyFn;
             this.templateFn = templateFn;
             this.context = context;
             this.keys = [];
@@ -353,29 +348,29 @@
             this.strings = strings;
             this.values = values;
             this.context = context;
-            this.key = this.strings.join('').trim();
+            this.key = this.strings.join("").trim();
             this.nodeValueIndexArray = null;
             this.documentFragment = null;
         }
 
         static lookNodeValueArray(nodeValue) {
             let result = [];
-            let pointerStart = nodeValue.indexOf('<!--');
-            let pointerEnd = nodeValue.indexOf('-->', pointerStart);
+            let pointerStart = nodeValue.indexOf("<!--");
+            let pointerEnd = nodeValue.indexOf("-->", pointerStart);
 
             while (pointerEnd < nodeValue.length && pointerEnd >= 0 && pointerStart >= 0) {
                 result.push(nodeValue.substring((pointerStart + 4), pointerEnd));
-                pointerStart = nodeValue.indexOf('<!--', (pointerEnd + 3));
-                pointerEnd = nodeValue.indexOf('-->', pointerStart);
+                pointerStart = nodeValue.indexOf("<!--", (pointerEnd + 3));
+                pointerEnd = nodeValue.indexOf("-->", pointerStart);
             }
             return result;
         }
 
         static getProperTemplateTag(contentText) {
-            let openTag = contentText.substring(1, contentText.indexOf('>'));
-            openTag = (openTag.indexOf(' ') > 0 ? openTag.substring(0, openTag.indexOf(' ')) : openTag).toLowerCase();
+            let openTag = contentText.substring(1, contentText.indexOf(">"));
+            openTag = (openTag.indexOf(" ") > 0 ? openTag.substring(0, openTag.indexOf(" ")) : openTag).toLowerCase();
             let rootTag = parentTagMap[openTag];
-            rootTag = rootTag || 'div';
+            rootTag = rootTag || "div";
             let template = document.createElement(rootTag);
             template.innerHTML = contentText;
             return template;
@@ -392,7 +387,7 @@
                 let newActualValues = Array.isArray(valueIndexes) ? valueIndexes.map(valueIndex => newValues[(valueIndex)]) : newValues[valueIndexes];
 
                 let nodeName = node.nodeName;
-                let isEvent = node.nodeType === Node.ATTRIBUTE_NODE && nodeName.indexOf('on') === 0;
+                let isEvent = node.nodeType === Node.ATTRIBUTE_NODE && nodeName.indexOf("on") === 0;
 
                 // if values are match, or ifts named eventListener then we dont need to perform update
                 if (isMatch(newActualValues, values) || (isEvent && newActualValues[0].name)) {
@@ -408,16 +403,16 @@
                     } else {
                         let actualAttributeValue = buildActualAttributeValue(nodeValue, valueIndexes, newValues);
                         if (isMinimizationAttribute(node)) {
-                            node.ownerElement[nodeName] = actualAttributeValue.trim() === 'true';
-                            node.ownerElement.setAttribute(nodeName, '');
+                            node.ownerElement[nodeName] = actualAttributeValue.trim() === "true";
+                            node.ownerElement.setAttribute(nodeName, "");
                         } else {
                             node.ownerElement.setAttribute(nodeName, actualAttributeValue);
                             if (attributeChangesReflectToProperties(nodeName, node.ownerElement.nodeName)) {
                                 node.ownerElement[nodeName] = actualAttributeValue;
                             }
                         }
-                        if (nodeName.indexOf('.bind') >= 0) {
-                            let attributeName = nodeName.substring(0, nodeName.indexOf('.bind'));
+                        if (nodeName.indexOf(".bind") >= 0) {
+                            let attributeName = nodeName.substring(0, nodeName.indexOf(".bind"));
                             node.ownerElement.setAttribute(attributeName, actualAttributeValue);
                         }
                         marker.attributes[nodeName] = actualAttributeValue;
@@ -461,7 +456,7 @@
                     }
                     nodeValueIndexArray = nodeValueIndexArray.concat(this.buildNodeValueIndex(node, node.nodeName));
                 }
-                if (node.nodeType === Node.TEXT_NODE && documentFragmentNodeName.toUpperCase() === 'STYLE') {
+                if (node.nodeType === Node.TEXT_NODE && documentFragmentNodeName.toUpperCase() === "STYLE") {
                     let nodeValue = node.nodeValue;
                     let nodeValueIndexMap = HtmlTemplate.lookNodeValueArray(nodeValue);
                     let valueIndexes = nodeValueIndexMap.map(x => x.match(/[\w\.]+/)[0]).map(i => parseInt(i));
@@ -471,7 +466,7 @@
                 }
                 if (node.nodeType === Node.COMMENT_NODE) {
                     let nodeValue = node.nodeValue;
-                    node.nodeValue = 'outlet';
+                    node.nodeValue = "outlet";
                     nodeValueIndexArray.push({node: node, valueIndexes: parseInt(nodeValue)});
                 }
             } while (node = node.nextSibling);
@@ -490,7 +485,7 @@
         buildStringSequence() {
             return this.strings.reduce((result, string, index) => {
                 return index === 0 ? string : `${result}<!--${(index - 1)}-->${string}`;
-            }, '').trim();
+            }, "").trim();
         }
     }
 
@@ -506,11 +501,11 @@
     const applyAttributeValue = (actualNode, valueIndexes, templateValues, nodeValue) => {
         let marker = Marker.from(actualNode);
         let nodeName = actualNode.nodeName;
-        let isEvent = nodeName.indexOf('on') === 0;
+        let isEvent = nodeName.indexOf("on") === 0;
         if (isEvent) {
             let valueIndex = valueIndexes[0];
             marker.attributes[nodeName] = templateValues[valueIndex];
-            actualNode.ownerElement.setAttribute(nodeName, 'return false;');
+            actualNode.ownerElement.setAttribute(nodeName, "return false;");
             actualNode.ownerElement[nodeName] = templateValues[valueIndex];
         } else {
             marker.attributes[nodeName] = buildActualAttributeValue(nodeValue, valueIndexes, templateValues);
@@ -538,7 +533,7 @@
         let path = getPath(nodeValueIndex.node);
         let actualNode = getNode(path, docFragment);
         let values = Array.isArray(valueIndexes) ? valueIndexes.map(index => templateValues[index]) : templateValues[valueIndexes];
-        let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === 'STYLE';
+        let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === "STYLE";
         if (isStyleNode) {
             return {node: actualNode, valueIndexes, nodeValue, values}
         } else if (actualNode.nodeType === Node.ATTRIBUTE_NODE) {
@@ -645,7 +640,7 @@
                 return node.$data
             } else {
                 if (!node.$outlet) {
-                    node.$outlet = document.createComment('outlet');
+                    node.$outlet = document.createComment("outlet");
                     node.appendChild(node.$outlet);
                 }
                 return Outlet.from(node.$outlet);
@@ -663,7 +658,7 @@
             htmlTemplateCollection.iterateRight((item, key) => {
                 do {
                     pointer = pointer.previousSibling
-                } while (pointer.nodeType !== Node.COMMENT_NODE && pointer.nodeValue !== 'outlet-child');
+                } while (pointer.nodeType !== Node.COMMENT_NODE && pointer.nodeValue !== "outlet-child");
                 this.content.instance[key] = pointer;
             });
         }
