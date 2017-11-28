@@ -368,7 +368,6 @@
     }
 
     class Context {
-
         constructor() {
             this.cacheInstance = {};
             this.syncCallbackStack = [];
