@@ -359,7 +359,8 @@
                     node.nodeValue = "outlet";
                     nodeValueIndexArray.push({node: node, valueIndexes: parseInt(nodeValue)});
                 }
-            } while (node = node.nextSibling);
+                node = node.nextSibling;
+            } while (node);
             return nodeValueIndexArray;
         }
 
@@ -379,255 +380,6 @@
         }
     }
 
-    class HtmlTemplateCollectionInstance extends Template {
-        constructor(templateCollection, outlet) {
-            super();
-            this.template = templateCollection;
-            this.outlet = outlet;
-            this.instance = null;
-        }
-
-        applyValues(newHtmlTemplateCollection) {
-            if (this.instance === null) {
-                this.instance = {};
-                let outletPointer = this.outlet.commentNode;
-                newHtmlTemplateCollection.iterateRight((item, key, template) => {
-                    let childPlaceholder = Outlet.from(document.createComment("outlet-child"));
-                    outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
-                    Outlet.from(childPlaceholder.commentNode).setContent(template);
-                    outletPointer = childPlaceholder.firstChildNode();
-                    this.instance[key] = childPlaceholder.commentNode;
-                });
-            } else {
-                newHtmlTemplateCollection.iterateRight();
-                if (newHtmlTemplateCollection.items.length === 0) {
-                    if (this.outlet.commentNode.parentNode.$htmlCollectionInstanceChild && this.outlet.commentNode.parentNode.$htmlCollectionInstanceChild.length === 1) {
-                        let parentNode = this.outlet.commentNode.parentNode;
-                        parentNode.innerText = "";
-                        parentNode.appendChild(this.outlet.commentNode);
-                        this.instance = {};
-                    }
-                } else {
-                    let oldHtmlTemplateCollection = this.template;
-                    oldHtmlTemplateCollection.keys.forEach(key => {
-                        let keyIsDeleted = newHtmlTemplateCollection.keys.indexOf(key) < 0;
-                        if (keyIsDeleted) {
-                            let commentNode = this.instance[key];
-                            Outlet.from(commentNode).clearContent();
-                            commentNode.remove();
-                            delete this.instance[key];
-                        }
-                    });
-                }
-                let outletPointer = this.outlet.commentNode;
-                newHtmlTemplateCollection.iterateRight((item, key, template) => {
-                    let commentNode = this.instance[key];
-                    if (commentNode) {
-                        let childPlaceholder = Outlet.from(commentNode);
-                        if (childPlaceholder.content instanceof HtmlTemplateInstance) {
-                            childPlaceholder.setHtmlTemplateContent(template);
-                        } else if (childPlaceholder.content instanceof HtmlTemplateCollectionInstance) {
-                            childPlaceholder.setHtmlTemplateCollectionContent(template);
-                        } else {
-                            childPlaceholder.setTextContent(template);
-                        }
-                        if (outletPointer.previousSibling !== commentNode) {
-                            outletPointer.parentNode.insertBefore(commentNode, outletPointer);
-                            childPlaceholder.validateInstancePosition();
-                        }
-                        outletPointer = childPlaceholder.firstChildNode();
-                    } else {
-                        let childPlaceholder = Outlet.from(document.createComment("outlet-child"));
-                        outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
-                        Outlet.from(childPlaceholder.commentNode).setContent(template);
-                        outletPointer = childPlaceholder.firstChildNode();
-                        this.instance[key] = childPlaceholder.commentNode;
-                        this.template.context.addSyncCallback(() => syncNode(template, childPlaceholder.commentNode));
-                    }
-                });
-                this.template = newHtmlTemplateCollection;
-            }
-        }
-
-        destroy() {
-            this.template.keys.forEach(key => {
-                let childPlaceholderCommentNode = this.instance[key];
-                Outlet.from(childPlaceholderCommentNode).clearContent();
-                childPlaceholderCommentNode.remove();
-                delete this.instance[key];
-            });
-
-            this.outlet = null;
-            this.instance = null;
-            this.template = null;
-        }
-    }
-
-    class HtmlTemplateInstance extends Template {
-        constructor(template, outlet) {
-            super();
-            this.template = template;
-            this.outlet = outlet;
-            this.instance = [];
-            this.nodeValueIndexArray = null;
-        }
-
-        applyValues(newHtmlTemplate) {
-            if (this.instance === null || this.instance.length === 0) {
-                HtmlTemplate.applyValues(newHtmlTemplate, this.template.nodeValueIndexArray);
-                let documentFragment = this.template.documentFragment;
-                let cloneNode = cloneNodeTree(documentFragment);
-                let commentNode = this.outlet.commentNode;
-                let cloneChildNode = cloneNode.childNodes[0];
-                let nextSibling = null;
-                do {
-                    this.instance.push(cloneChildNode);
-                    nextSibling = cloneChildNode.nextSibling;
-                    commentNode.parentNode.insertBefore(cloneChildNode, commentNode);
-                } while (cloneChildNode = nextSibling);
-            } else if (this.nodeValueIndexArray) {
-                HtmlTemplate.applyValues(newHtmlTemplate, this.nodeValueIndexArray);
-            }
-        }
-
-        destroy() {
-            this.instance.forEach(i => i.remove());
-            this.nodeValueIndexArray = null;
-            this.outlet = null;
-            this.template = null;
-        }
-
-    }
-
-
-    const applyAttributeValue = (actualNode, valueIndexes, templateValues, nodeValue) => {
-        let marker = Marker.from(actualNode);
-        let nodeName = actualNode.nodeName;
-        let isEvent = nodeName.indexOf("on") === 0;
-        if (isEvent) {
-            let valueIndex = valueIndexes[0];
-            marker.attributes[nodeName] = templateValues[valueIndex];
-            actualNode.ownerElement.setAttribute(nodeName, "return false;");
-            actualNode.ownerElement[nodeName] = templateValues[valueIndex];
-        } else {
-            marker.attributes[nodeName] = buildActualAttributeValue(nodeValue, valueIndexes, templateValues);
-        }
-    };
-
-    const applyOutletValue = (actualNode, templateValues, valueIndexes) => {
-        let outlet = Outlet.from(actualNode);
-        let value = templateValues[valueIndexes];
-        if (value instanceof HtmlTemplate) {
-            outlet.constructHtmlTemplateContent(value);
-            syncNode(value, outlet.commentNode);
-        }
-        else if (value instanceof HtmlTemplateCollection) {
-            outlet.constructHtmlTemplateCollectionContent(value);
-            syncNode(value, outlet.commentNode);
-        }
-        else {
-            outlet.constructTextContent();
-        }
-    };
-
-    const mapNodeValueIndexArray = (nodeValueIndex,docFragment,templateValues) => {
-        let {nodeValue, valueIndexes} = nodeValueIndex;
-        let path = getPath(nodeValueIndex.node);
-        let actualNode = getNode(path, docFragment);
-        let values = Array.isArray(valueIndexes) ? valueIndexes.map(index => templateValues[index]) : templateValues[valueIndexes];
-        let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === "STYLE";
-        if (isStyleNode) {
-            return {node: actualNode, valueIndexes, nodeValue, values}
-        } else if (actualNode.nodeType === Node.ATTRIBUTE_NODE) {
-            applyAttributeValue(actualNode, valueIndexes, templateValues, nodeValue);
-            return {node: actualNode, valueIndexes, nodeValue, values}
-        } else {
-            applyOutletValue(actualNode, templateValues, valueIndexes);
-            return {node: actualNode, valueIndexes, values}
-        }
-    };
-
-    const syncNode = (nextTemplate, node) => {
-        let outlet = Outlet.from(node);
-        if (outlet.content && outlet.content instanceof HtmlTemplateInstance) {
-            let htmlTemplateInstance = outlet.content;
-            let originalTemplate = htmlTemplateInstance.template;
-            let templateValues = nextTemplate.values;
-            let docFragment = {childNodes: htmlTemplateInstance.instance};
-            if (originalTemplate.nodeValueIndexArray === null) {
-                let cacheTemplate = originalTemplate.context.cache(originalTemplate.key);
-                docFragment = {childNodes: outlet.content.instance};
-                htmlTemplateInstance.nodeValueIndexArray = cacheTemplate.nodeValueIndexArray.map(nodeValueIndex => mapNodeValueIndexArray(nodeValueIndex,docFragment,templateValues));
-            } else {
-                htmlTemplateInstance.nodeValueIndexArray = originalTemplate.nodeValueIndexArray.map(nodeValueIndex => mapNodeValueIndexArray(nodeValueIndex,docFragment,templateValues));
-            }
-        }
-        if (outlet.content && outlet.content instanceof HtmlTemplateCollectionInstance) {
-            let htmlTemplateCollectionInstance = outlet.content;
-            let templates = htmlTemplateCollectionInstance.template.templates;
-            let keys = htmlTemplateCollectionInstance.template.keys;
-            outlet.commentNode.parentNode.$htmlCollectionInstanceChild = outlet.commentNode.parentNode.$htmlCollectionInstanceChild || [];
-            outlet.commentNode.parentNode.$htmlCollectionInstanceChild.push(outlet.commentNode);
-            keys.forEach(key => {
-                let template = templates[key];
-                let commentNode = htmlTemplateCollectionInstance.instance[key];
-                let outlet = Outlet.from(commentNode);
-                if (outlet.content === null) {
-                    if (template instanceof HtmlTemplate) {
-                        outlet.constructHtmlTemplateContent(template.context.cache(template.key));
-                        syncNode(template, commentNode);
-                    }
-                } else {
-                    if (outlet.content instanceof HtmlTemplateInstance) {
-                        syncNode(template, commentNode);
-                    }
-                }
-            });
-        }
-    };
-
-    const render = (templateValue, node) => {
-        let setContent = () => {
-            Outlet.from(node).setContent(templateValue);
-            if (!node.$synced) {
-                syncNode(templateValue, node);
-                node.$synced = true;
-            }
-        };
-        if (requestAnimationFrame in window) {
-            requestAnimationFrame(setContent);
-        } else {
-            setContent();
-        }
-
-        if (window.Promise) {
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    templateValue.context.clearSyncCallbacks();
-                    resolve();
-                }, 300);
-            });
-        } else {
-            setTimeout(templateValue.context.clearSyncCallbacks,300);
-        }
-    };
-
-    class Marker {
-        constructor(node) {
-            this.node = node;
-            this.attributes = {};
-        }
-
-        static from(node) {
-            let element = node;
-            if (node.nodeType === Node.ATTRIBUTE_NODE) {
-                element = node.ownerElement;
-            }
-            element.$data = element.$data || new Marker(element);
-            return element.$data;
-        }
-    }
-
     const {html} = new Context();
 
     class Outlet {
@@ -639,7 +391,7 @@
         static from(node) {
             if (node instanceof Comment) {
                 node.$data = node.$data || new Outlet(node);
-                return node.$data
+                return node.$data;
             } else {
                 if (!node.$outlet) {
                     node.$outlet = document.createComment("outlet");
@@ -659,7 +411,7 @@
             let pointer = this.commentNode;
             htmlTemplateCollection.iterateRight((item, key) => {
                 do {
-                    pointer = pointer.previousSibling
+                    pointer = pointer.previousSibling;
                 } while (pointer.nodeType !== Node.COMMENT_NODE && pointer.nodeValue !== "outlet-child");
                 this.content.instance[key] = pointer;
             });
@@ -671,7 +423,7 @@
             let sibling = this.commentNode;
             while (childNodesLength--) {
                 sibling = sibling.previousSibling;
-                this.content.instance.push(sibling)
+                this.content.instance.push(sibling);
             }
             this.content.instance.reverse();
 
@@ -785,6 +537,258 @@
             }
         }
     }
+
+    class HtmlTemplateCollectionInstance extends Template {
+        constructor(templateCollection, outlet) {
+            super();
+            this.template = templateCollection;
+            this.outlet = outlet;
+            this.instance = null;
+        }
+
+        applyValues(newHtmlTemplateCollection) {
+            if (this.instance === null) {
+                this.instance = {};
+                let outletPointer = this.outlet.commentNode;
+                newHtmlTemplateCollection.iterateRight((item, key, template) => {
+                    let childPlaceholder = Outlet.from(document.createComment("outlet-child"));
+                    outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
+                    Outlet.from(childPlaceholder.commentNode).setContent(template);
+                    outletPointer = childPlaceholder.firstChildNode();
+                    this.instance[key] = childPlaceholder.commentNode;
+                });
+            } else {
+                newHtmlTemplateCollection.iterateRight();
+                if (newHtmlTemplateCollection.items.length === 0) {
+                    if (this.outlet.commentNode.parentNode.$htmlCollectionInstanceChild && this.outlet.commentNode.parentNode.$htmlCollectionInstanceChild.length === 1) {
+                        let parentNode = this.outlet.commentNode.parentNode;
+                        parentNode.innerText = "";
+                        parentNode.appendChild(this.outlet.commentNode);
+                        this.instance = {};
+                    }
+                } else {
+                    let oldHtmlTemplateCollection = this.template;
+                    oldHtmlTemplateCollection.keys.forEach(key => {
+                        let keyIsDeleted = newHtmlTemplateCollection.keys.indexOf(key) < 0;
+                        if (keyIsDeleted) {
+                            let commentNode = this.instance[key];
+                            Outlet.from(commentNode).clearContent();
+                            commentNode.remove();
+                            delete this.instance[key];
+                        }
+                    });
+                }
+                let outletPointer = this.outlet.commentNode;
+                newHtmlTemplateCollection.iterateRight((item, key, template) => {
+                    let commentNode = this.instance[key];
+                    if (commentNode) {
+                        let childPlaceholder = Outlet.from(commentNode);
+                        if (childPlaceholder.content instanceof HtmlTemplateInstance) {
+                            childPlaceholder.setHtmlTemplateContent(template);
+                        } else if (childPlaceholder.content instanceof HtmlTemplateCollectionInstance) {
+                            childPlaceholder.setHtmlTemplateCollectionContent(template);
+                        } else {
+                            childPlaceholder.setTextContent(template);
+                        }
+                        if (outletPointer.previousSibling !== commentNode) {
+                            outletPointer.parentNode.insertBefore(commentNode, outletPointer);
+                            childPlaceholder.validateInstancePosition();
+                        }
+                        outletPointer = childPlaceholder.firstChildNode();
+                    } else {
+                        let childPlaceholder = Outlet.from(document.createComment("outlet-child"));
+                        outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
+                        Outlet.from(childPlaceholder.commentNode).setContent(template);
+                        outletPointer = childPlaceholder.firstChildNode();
+                        this.instance[key] = childPlaceholder.commentNode;
+                        this.template.context.addSyncCallback(() => syncNode(template, childPlaceholder.commentNode));
+                    }
+                });
+                this.template = newHtmlTemplateCollection;
+            }
+        }
+
+        destroy() {
+            this.template.keys.forEach(key => {
+                let childPlaceholderCommentNode = this.instance[key];
+                Outlet.from(childPlaceholderCommentNode).clearContent();
+                childPlaceholderCommentNode.remove();
+                delete this.instance[key];
+            });
+
+            this.outlet = null;
+            this.instance = null;
+            this.template = null;
+        }
+    }
+
+    class HtmlTemplateInstance extends Template {
+        constructor(template, outlet) {
+            super();
+            this.template = template;
+            this.outlet = outlet;
+            this.instance = [];
+            this.nodeValueIndexArray = null;
+        }
+
+        applyValues(newHtmlTemplate) {
+            if (this.instance === null || this.instance.length === 0) {
+                HtmlTemplate.applyValues(newHtmlTemplate, this.template.nodeValueIndexArray);
+                let documentFragment = this.template.documentFragment;
+                let cloneNode = cloneNodeTree(documentFragment);
+                let commentNode = this.outlet.commentNode;
+                let cloneChildNode = cloneNode.childNodes[0];
+                let nextSibling = null;
+                do {
+                    this.instance.push(cloneChildNode);
+                    nextSibling = cloneChildNode.nextSibling;
+                    commentNode.parentNode.insertBefore(cloneChildNode, commentNode);
+                    cloneChildNode = nextSibling;
+                } while (cloneChildNode);
+            } else if (this.nodeValueIndexArray) {
+                HtmlTemplate.applyValues(newHtmlTemplate, this.nodeValueIndexArray);
+            }
+        }
+
+        destroy() {
+            this.instance.forEach(i => i.remove());
+            this.nodeValueIndexArray = null;
+            this.outlet = null;
+            this.template = null;
+        }
+
+    }
+
+
+    const applyAttributeValue = (actualNode, valueIndexes, templateValues, nodeValue) => {
+        let marker = Marker.from(actualNode);
+        let nodeName = actualNode.nodeName;
+        let isEvent = nodeName.indexOf("on") === 0;
+        if (isEvent) {
+            let valueIndex = valueIndexes[0];
+            marker.attributes[nodeName] = templateValues[valueIndex];
+            actualNode.ownerElement.setAttribute(nodeName, "return false;");
+            actualNode.ownerElement[nodeName] = templateValues[valueIndex];
+        } else {
+            marker.attributes[nodeName] = buildActualAttributeValue(nodeValue, valueIndexes, templateValues);
+        }
+    };
+
+    const applyOutletValue = (actualNode, templateValues, valueIndexes) => {
+        let outlet = Outlet.from(actualNode);
+        let value = templateValues[valueIndexes];
+        if (value instanceof HtmlTemplate) {
+            outlet.constructHtmlTemplateContent(value);
+            syncNode(value, outlet.commentNode);
+        }
+        else if (value instanceof HtmlTemplateCollection) {
+            outlet.constructHtmlTemplateCollectionContent(value);
+            syncNode(value, outlet.commentNode);
+        }
+        else {
+            outlet.constructTextContent();
+        }
+    };
+
+    const mapNodeValueIndexArray = (nodeValueIndex,docFragment,templateValues) => {
+        let {nodeValue, valueIndexes} = nodeValueIndex;
+        let path = getPath(nodeValueIndex.node);
+        let actualNode = getNode(path, docFragment);
+        let values = Array.isArray(valueIndexes) ? valueIndexes.map(index => templateValues[index]) : templateValues[valueIndexes];
+        let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === "STYLE";
+        if (isStyleNode) {
+            return {node: actualNode, valueIndexes, nodeValue, values};
+        } else if (actualNode.nodeType === Node.ATTRIBUTE_NODE) {
+            applyAttributeValue(actualNode, valueIndexes, templateValues, nodeValue);
+            return {node: actualNode, valueIndexes, nodeValue, values};
+        } else {
+            applyOutletValue(actualNode, templateValues, valueIndexes);
+            return {node: actualNode, valueIndexes, values};
+        }
+    };
+
+    const syncNode = (nextTemplate, node) => {
+        let outlet = Outlet.from(node);
+        if (outlet.content && outlet.content instanceof HtmlTemplateInstance) {
+            let htmlTemplateInstance = outlet.content;
+            let originalTemplate = htmlTemplateInstance.template;
+            let templateValues = nextTemplate.values;
+            let docFragment = {childNodes: htmlTemplateInstance.instance};
+            if (originalTemplate.nodeValueIndexArray === null) {
+                let cacheTemplate = originalTemplate.context.cache(originalTemplate.key);
+                docFragment = {childNodes: outlet.content.instance};
+                htmlTemplateInstance.nodeValueIndexArray = cacheTemplate.nodeValueIndexArray.map(nodeValueIndex => mapNodeValueIndexArray(nodeValueIndex,docFragment,templateValues));
+            } else {
+                htmlTemplateInstance.nodeValueIndexArray = originalTemplate.nodeValueIndexArray.map(nodeValueIndex => mapNodeValueIndexArray(nodeValueIndex,docFragment,templateValues));
+            }
+        }
+        if (outlet.content && outlet.content instanceof HtmlTemplateCollectionInstance) {
+            let htmlTemplateCollectionInstance = outlet.content;
+            let templates = htmlTemplateCollectionInstance.template.templates;
+            let keys = htmlTemplateCollectionInstance.template.keys;
+            outlet.commentNode.parentNode.$htmlCollectionInstanceChild = outlet.commentNode.parentNode.$htmlCollectionInstanceChild || [];
+            outlet.commentNode.parentNode.$htmlCollectionInstanceChild.push(outlet.commentNode);
+            keys.forEach(key => {
+                let template = templates[key];
+                let commentNode = htmlTemplateCollectionInstance.instance[key];
+                let outlet = Outlet.from(commentNode);
+                if (outlet.content === null) {
+                    if (template instanceof HtmlTemplate) {
+                        outlet.constructHtmlTemplateContent(template.context.cache(template.key));
+                        syncNode(template, commentNode);
+                    }
+                } else {
+                    if (outlet.content instanceof HtmlTemplateInstance) {
+                        syncNode(template, commentNode);
+                    }
+                }
+            });
+        }
+    };
+
+    const render = (templateValue, node) => {
+        let setContent = () => {
+            Outlet.from(node).setContent(templateValue);
+            if (!node.$synced) {
+                syncNode(templateValue, node);
+                node.$synced = true;
+            }
+        };
+        if (requestAnimationFrame in window) {
+            requestAnimationFrame(setContent);
+        } else {
+            setContent();
+        }
+
+        if (window.Promise) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    templateValue.context.clearSyncCallbacks();
+                    resolve();
+                }, 300);
+            });
+        } else {
+            setTimeout(templateValue.context.clearSyncCallbacks,300);
+        }
+    };
+
+    class Marker {
+        constructor(node) {
+            this.node = node;
+            this.attributes = {};
+        }
+
+        static from(node) {
+            let element = node;
+            if (node.nodeType === Node.ATTRIBUTE_NODE) {
+                element = node.ownerElement;
+            }
+            element.$data = element.$data || new Marker(element);
+            return element.$data;
+        }
+    }
+
+
 
     class Plug {
         constructor(factory) {
