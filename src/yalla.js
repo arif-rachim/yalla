@@ -38,35 +38,7 @@
 
     let isChrome = "chrome" in window && "webstore" in window.chrome;
 
-    class Context {
 
-        constructor() {
-            this.cacheInstance = {};
-            this.syncCallbackStack = [];
-            this.html = (strings, ...values) => new HtmlTemplate(strings, values, this);
-            this.htmlCollection = (arrayItems, keyFn, templateFn) => new HtmlTemplateCollection(arrayItems, keyFn, templateFn, this);
-        }
-
-        hasCache(key) {
-            return key in this.cacheInstance;
-        }
-
-        cache(key, data) {
-            if (!this.hasCache(key)) {
-                this.cacheInstance[key] = data;
-            }
-            return this.cacheInstance[key];
-        }
-
-        addSyncCallback(callback) {
-            this.syncCallbackStack.push(callback);
-        }
-
-        clearSyncCallbacks() {
-            this.syncCallbackStack.forEach(callback => callback.apply());
-            this.syncCallbackStack = [];
-        }
-    }
 
     const cloneNodeTree = (node) => {
         if (isChrome) {
@@ -87,7 +59,7 @@
 
     };
 
-    const guid = () => "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const guid = () => "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
         const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
@@ -129,7 +101,7 @@
     };
 
 
-    const isMinimizationAttribute = node => {
+    const isMinimizationAttribute = (node) => {
         return ["checked", "compact", "declare", "defer", "disabled", "ismap",
             "noresize", "noshade", "nowrap", "selected"].indexOf(node.nodeName) >= 0;
     };
@@ -177,7 +149,7 @@
         constructor(items, keyFn, templateFn, context) {
             super();
             this.items = items;
-            this.keyFn = typeof keyFn === "string" ? (item => item[keyFn]) : keyFn;
+            this.keyFn = typeof keyFn === "string" ? ((item) => item[keyFn]) : keyFn;
             this.templateFn = templateFn;
             this.context = context;
             this.keys = [];
@@ -232,6 +204,22 @@
         return false;
     };
 
+    class Marker {
+        constructor(node) {
+            this.node = node;
+            this.attributes = {};
+        }
+
+        static from(node) {
+            let element = node;
+            if (node.nodeType === Node.ATTRIBUTE_NODE) {
+                element = node.ownerElement;
+            }
+            element.$data = element.$data || new Marker(element);
+            return element.$data;
+        }
+    }
+
     class HtmlTemplate extends Template {
         constructor(strings, values, context) {
             super();
@@ -274,7 +262,7 @@
 
             nodeValueIndexArray.forEach((nodeValueIndex) => {
                 let {node, valueIndexes, values} = nodeValueIndex;
-                let newActualValues = Array.isArray(valueIndexes) ? valueIndexes.map(valueIndex => newValues[(valueIndex)]) : newValues[valueIndexes];
+                let newActualValues = Array.isArray(valueIndexes) ? valueIndexes.map((valueIndex) => newValues[(valueIndex)]) : newValues[valueIndexes];
 
                 let nodeName = node.nodeName;
                 let isEvent = node.nodeType === Node.ATTRIBUTE_NODE && nodeName.indexOf("on") === 0;
@@ -377,6 +365,36 @@
             return this.strings.reduce((result, string, index) => {
                 return index === 0 ? string : `${result}<!--${(index - 1)}-->${string}`;
             }, "").trim();
+        }
+    }
+
+    class Context {
+
+        constructor() {
+            this.cacheInstance = {};
+            this.syncCallbackStack = [];
+            this.html = (strings, ...values) => new HtmlTemplate(strings, values, this);
+            this.htmlCollection = (arrayItems, keyFn, templateFn) => new HtmlTemplateCollection(arrayItems, keyFn, templateFn, this);
+        }
+
+        hasCache(key) {
+            return key in this.cacheInstance;
+        }
+
+        cache(key, data) {
+            if (!this.hasCache(key)) {
+                this.cacheInstance[key] = data;
+            }
+            return this.cacheInstance[key];
+        }
+
+        addSyncCallback(callback) {
+            this.syncCallbackStack.push(callback);
+        }
+
+        clearSyncCallbacks() {
+            this.syncCallbackStack.forEach((callback) => callback.apply());
+            this.syncCallbackStack = [];
         }
     }
 
@@ -568,7 +586,7 @@
                     }
                 } else {
                     let oldHtmlTemplateCollection = this.template;
-                    oldHtmlTemplateCollection.keys.forEach(key => {
+                    oldHtmlTemplateCollection.keys.forEach((key) => {
                         let keyIsDeleted = newHtmlTemplateCollection.keys.indexOf(key) < 0;
                         if (keyIsDeleted) {
                             let commentNode = this.instance[key];
@@ -609,7 +627,7 @@
         }
 
         destroy() {
-            this.template.keys.forEach(key => {
+            this.template.keys.forEach((key) => {
                 let childPlaceholderCommentNode = this.instance[key];
                 Outlet.from(childPlaceholderCommentNode).clearContent();
                 childPlaceholderCommentNode.remove();
@@ -651,7 +669,7 @@
         }
 
         destroy() {
-            this.instance.forEach(i => i.remove());
+            this.instance.forEach((instance) => instance.remove());
             this.nodeValueIndexArray = null;
             this.outlet = null;
             this.template = null;
@@ -771,23 +789,6 @@
             setTimeout(templateValue.context.clearSyncCallbacks,300);
         }
     };
-
-    class Marker {
-        constructor(node) {
-            this.node = node;
-            this.attributes = {};
-        }
-
-        static from(node) {
-            let element = node;
-            if (node.nodeType === Node.ATTRIBUTE_NODE) {
-                element = node.ownerElement;
-            }
-            element.$data = element.$data || new Marker(element);
-            return element.$data;
-        }
-    }
-
 
 
     class Plug {
