@@ -204,7 +204,7 @@
     };
 
     class Marker {
-        
+
         constructor(node) {
             this.node = node;
             this.attributes = {};
@@ -218,6 +218,7 @@
             element.$data = element.$data || new Marker(element);
             return element.$data;
         }
+        
     }
 
     class HtmlTemplate extends Template {
