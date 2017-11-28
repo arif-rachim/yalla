@@ -5,7 +5,7 @@
   "scripts": {
     "commit": "git-cz",
     "build": "babel src -d lib",
-    "zip" : "node gzip",
+    "zip": "node gzip",
     "report-coverage": "cat ./coverage/report-lcov/lcov.info | codecov",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
     "compress": "uglifyjs lib/yalla.js -o lib/yalla.min.js -c -m",

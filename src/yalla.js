@@ -204,6 +204,7 @@
     };
 
     class Marker {
+        
         constructor(node) {
             this.node = node;
             this.attributes = {};
