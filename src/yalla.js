@@ -39,7 +39,6 @@
     let isChrome = "chrome" in window && "webstore" in window.chrome;
 
 
-
     const cloneNodeTree = (node) => {
         if (isChrome) {
             return node.cloneNode(true);
@@ -71,7 +70,7 @@
     }
 
     const attributeReflectToPropsMap = {
-        "INPUT" : ["VALUE"]
+        "INPUT": ["VALUE"]
     };
 
     const attributeChangesReflectToProperties = (attributeName, nodeName) => {
@@ -103,7 +102,7 @@
 
     const isMinimizationAttribute = (node) => {
         return ["checked", "compact", "declare", "defer", "disabled", "ismap",
-            "noresize", "noshade", "nowrap", "selected"].indexOf(node.nodeName) >= 0;
+                "noresize", "noshade", "nowrap", "selected"].indexOf(node.nodeName) >= 0;
     };
 
     const getPath = (node) => {
@@ -327,7 +326,7 @@
                     for (let attributeIndex = 0; attributeIndex < k; attributeIndex++) {
                         let nodeValue = attributes[attributeIndex].nodeValue;
                         let nodeValueIndexMap = HtmlTemplate.lookNodeValueArray(nodeValue);
-                        let valueIndexes = nodeValueIndexMap.map(x => x.match(/[\w\.]+/)[0] ).map(i => parseInt(i));
+                        let valueIndexes = nodeValueIndexMap.map(x => x.match(/[\w\.]+/)[0]).map(i => parseInt(i));
                         if (valueIndexes && valueIndexes.length > 0) {
                             nodeValueIndexArray.push({node: attributes[attributeIndex], valueIndexes, nodeValue});
                         }
@@ -339,7 +338,7 @@
                     let nodeValueIndexMap = HtmlTemplate.lookNodeValueArray(nodeValue);
                     let valueIndexes = nodeValueIndexMap.map(x => x.match(/[\w\.]+/)[0]).map(i => parseInt(i));
                     if (valueIndexes && valueIndexes.length > 0) {
-                        nodeValueIndexArray.push({node,valueIndexes,nodeValue});
+                        nodeValueIndexArray.push({node, valueIndexes, nodeValue});
                     }
                 }
                 if (node.nodeType === Node.COMMENT_NODE) {
@@ -708,7 +707,7 @@
         }
     };
 
-    const mapNodeValueIndexArray = (nodeValueIndex,docFragment,templateValues) => {
+    const mapNodeValueIndexArray = (nodeValueIndex, docFragment, templateValues) => {
         let {nodeValue, valueIndexes} = nodeValueIndex;
         let path = getPath(nodeValueIndex.node);
         let actualNode = getNode(path, docFragment);
@@ -735,9 +734,9 @@
             if (originalTemplate.nodeValueIndexArray === null) {
                 let cacheTemplate = originalTemplate.context.cache(originalTemplate.key);
                 docFragment = {childNodes: outlet.content.instance};
-                htmlTemplateInstance.nodeValueIndexArray = cacheTemplate.nodeValueIndexArray.map(nodeValueIndex => mapNodeValueIndexArray(nodeValueIndex,docFragment,templateValues));
+                htmlTemplateInstance.nodeValueIndexArray = cacheTemplate.nodeValueIndexArray.map(nodeValueIndex => mapNodeValueIndexArray(nodeValueIndex, docFragment, templateValues));
             } else {
-                htmlTemplateInstance.nodeValueIndexArray = originalTemplate.nodeValueIndexArray.map(nodeValueIndex => mapNodeValueIndexArray(nodeValueIndex,docFragment,templateValues));
+                htmlTemplateInstance.nodeValueIndexArray = originalTemplate.nodeValueIndexArray.map(nodeValueIndex => mapNodeValueIndexArray(nodeValueIndex, docFragment, templateValues));
             }
         }
         if (outlet.content && outlet.content instanceof HtmlTemplateCollectionInstance) {
@@ -786,7 +785,7 @@
                 }, 300);
             });
         } else {
-            setTimeout(templateValue.context.clearSyncCallbacks,300);
+            setTimeout(templateValue.context.clearSyncCallbacks, 300);
         }
     };
 
