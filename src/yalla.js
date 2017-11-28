@@ -36,10 +36,10 @@
      THE SOFTWARE.
      */
 
-    let isChrome = !!window.chrome && !!window.chrome.webstore;
-
+    let isChrome = 'chrome' in window && 'webstore' in window.chrome;
 
     class Context {
+
         constructor() {
             this._cache = {};
             this._synccallbacks = [];
@@ -329,8 +329,6 @@
                 }
             }
         }
-
-
     }
 
     const isMatch = (newActualValues, values) => {
@@ -722,14 +720,11 @@
 
         setHtmlTemplateCollectionContent(htmlTemplateCollection) {
             let clearContentWasCalled = false;
-            let contentHasSameStructure = this.content && this.content instanceof HtmlTemplateCollectionInstance;
-            if (this.content !== null && !contentHasSameStructure) {
+            if (this.content && !(this.content instanceof HtmlTemplateCollectionInstance)) {
                 clearContentWasCalled = true;
                 this.clearContent();
             }
-            if (!this.content) {
-                this.content = new HtmlTemplateCollectionInstance(htmlTemplateCollection, this);
-            }
+            this.content = this.content || new HtmlTemplateCollectionInstance(htmlTemplateCollection, this);
             this.content.applyValues(htmlTemplateCollection);
             if (clearContentWasCalled) {
                 syncNode(htmlTemplateCollection, this.commentNode);
