@@ -14,7 +14,6 @@
 
 ----
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/38475b57f7a043dbac929c67fb87f024)](https://www.codacy.com/app/yallajs/yalla?utm_source=github.com&utm_medium=referral&utm_content=yallajs/yalla&utm_campaign=badger)
 
 <p align="center">
 <img width='46px' src="http://browserbadge.com/ie/9">
