@@ -215,7 +215,7 @@
             element.$data = element.$data || new Marker(element);
             return element.$data;
         }
-        
+
     }
 
     class HtmlTemplate extends Template {
