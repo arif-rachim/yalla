@@ -5,9 +5,10 @@
         module.exports = factory();
     } else {
         root.yalla = factory();
-        root.Context = root.yalla.Context;
-        root.render = root.yalla.render;
-        root.plug = root.yalla.plug;
+        root.Context = root.Context || root.yalla.Context;
+        root.render = root.render || root.yalla.render;
+        root.plug = root.plug || root.yalla.plug;
+        root.uuidv4 = root.uuidv4 || root.yalla.uuidv4;
     }
 }(typeof self !== "undefined" ? self : eval("this"), function () {
     /*
@@ -52,10 +53,9 @@
 
     const isPromise = (object) => {
         return (typeof object === "object" && "constructor" in object && object.constructor.name === "Promise");
-
     };
 
-    const guid = () => "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const uuidv4 = () => "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
         const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
@@ -215,7 +215,6 @@
             element.$data = element.$data || new Marker(element);
             return element.$data;
         }
-
     }
 
     class HtmlTemplate extends Template {
@@ -254,6 +253,7 @@
 
         static applyValues(nextHtmlTemplate, nodeValueIndexArray) {
             let newValues = nextHtmlTemplate.values;
+
             if (!nodeValueIndexArray) {
                 return;
             }
@@ -350,13 +350,18 @@
             return nodeValueIndexArray;
         }
 
-        constructTemplate() {
-            if (!this.context.hasCache(this.key)) {
-                let templateString = this.buildStringSequence();
-                this.buildTemplate(templateString);
-                return this.context.cache(this.key, this);
+        constructTemplate(useCache = true) {
+            if(useCache){
+                if (!this.context.hasCache(this.key)) {
+                    let templateString = this.buildStringSequence();
+                    this.buildTemplate(templateString);
+                    return this.context.cache(this.key, this);
+                }
+                return this.context.cache(this.key);
             }
-            return this.context.cache(this.key);
+            let templateString = this.buildStringSequence();
+            this.buildTemplate(templateString);
+            return this;
         }
 
         buildStringSequence() {
@@ -433,6 +438,9 @@
         }
 
         constructHtmlTemplateContent(htmlTemplate) {
+            if(htmlTemplate === undefined){
+                return;
+            }
             let childNodesLength = htmlTemplate.context.cache(htmlTemplate.key).documentFragment.childNodes.length;
             this.content = new HtmlTemplateInstance(htmlTemplate, this);
             let sibling = this.commentNode;
@@ -448,7 +456,7 @@
             if (isPromise(template)) {
                 if (this.content === null) {
                     let self = this;
-                    let id = guid();
+                    let id = uuidv4();
                     this.setHtmlTemplateContent(html`<span id="${id}" style="display: none">outlet</span>`);
                     template.then((result) => {
                         let templateContent = document.getElementById(id);
@@ -503,7 +511,8 @@
                 clearContentWasCalled = true;
             }
             if (!this.content) {
-                let template = htmlTemplate.constructTemplate();
+                let valueIsPromise = isPromise(htmlTemplate.values[0]);
+                let template = htmlTemplate.constructTemplate(!valueIsPromise);
                 this.content = new HtmlTemplateInstance(template, this);
             }
             this.content.applyValues(htmlTemplate);
@@ -671,9 +680,7 @@
             this.outlet = null;
             this.template = null;
         }
-
     }
-
 
     const applyAttributeValue = (actualNode, valueIndexes, templateValues, nodeValue) => {
         let marker = Marker.from(actualNode);
@@ -798,5 +805,5 @@
         return new Plug(callback);
     };
 
-    return {Context, render, plug};
+    return {Context, render, plug, uuidv4};
 }));
