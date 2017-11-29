@@ -294,6 +294,7 @@ render(html`
 6. <a href="https://codepen.io/yallajs/project/editor/AxKoNY#0">Hero Editor</a> : Hero Editor tutorial from Angular JS rewritten in Yallajs
 7. <a href="https://codepen.io/yallajs/pen/wPpVNj">SAM Pattern Todo</a> : Example of how to use YallaJS with <a href="http://sam.js.org/">SAM Pattern</a>
 8. <a href="https://codepen.io/yallajs/pen/vWjdqe">React Fiber Demo</a> : React Fiber Triangle rewritten with YallaJS
+9. <a href="https://codepen.io/yallajs/pen/gXQrgE">Async List</a> : HtmlCollection with Promise
 
 **Advance**
 ---
