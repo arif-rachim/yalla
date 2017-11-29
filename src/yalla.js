@@ -10,8 +10,6 @@
         root.plug = root.yalla.plug;
     }
 }(typeof self !== "undefined" ? self : eval("this"), function () {
-
-
     /*
      The MIT License (MIT)
 
@@ -37,7 +35,6 @@
      */
 
     let isChrome = "chrome" in window && "webstore" in window.chrome;
-
 
     const cloneNodeTree = (node) => {
         if (isChrome) {
