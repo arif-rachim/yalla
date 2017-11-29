@@ -9,6 +9,7 @@
 <a href="https://github.com/yallajs/yalla/blob/master/package.json"><img src="https://img.shields.io/david/expressjs/express.svg" alt="Build Status"></a>
 <a href="https://github.com/yallajs/yalla/tree/master/lib/yalla.min.js"><img src="https://img.shields.io/github/size/yallajs/yalla/lib/yalla.min.js.gzip.svg" alt="Build Status"></a>
 <a href="https://travis-ci.org/yallajs/yalla"><img src="https://img.shields.io/github/license/yallajs/yalla.svg" alt="License"></a>
+<a href="https://www.codacy.com/app/yallajs/yalla?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=yallajs/yalla&amp;utm_campaign=Badge_Grade"><img src="https://api.codacy.com/project/badge/Grade/38475b57f7a043dbac929c67fb87f024" alt="Codacy"></a>
 </p>
 
 ----
