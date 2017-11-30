@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="src/yalla.js"></script>
+</head>
+<body>
+
+</body>
+<script>
+    let {html,htmlCollection} = new Context();
+    let items = [];
+
+    let generateRandomImage = (total) => {
+        for(let i = 0;i<total;i++){
+            items.push({id:uuidv4(),label:uuidv4()})
+        }
+    }
+
+    const repaint = () => {
+        generateRandomImage(10);
+        paint();
+    }
+
+    const reset = () => {
+        items = [];
+        paint();
+    }
+
+    const swap = () => {
+        items.forEach(item => item.label = uuidv4());
+        generateRandomImage(10);
+        paint();
+    }
+
+    const paintItems = () => {
+        return htmlCollection(items,'id',(item,idx) => {
+            return html`<li>${new Promise(resolve => {
+                let randomTime = Math.round(Math.random() * 1000);
+                setTimeout(() => {
+                    resolve(html`<li>item index ${idx+1} was showing on : ${new Date()} </li>`);
+                },randomTime);
+
+            })}</li>`;
+
+
+//            return html`<li>item index ${idx+1} was showing on : ${new Date()} </li>`;
+
+
+        })
+    }
+
+    const paint = () => {
+        render(html`<ul>${paintItems()}</ul>
+<button onclick="${e => repaint()}"> Add</button>
+<button onclick="${e => swap()}"> Swap</button>
+<button onclick="${e => reset()}"> Reset</button>
+`,document.body);
+    }
+
+    generateRandomImage(10);
+    paint();
+
+</script>
+
+</html>

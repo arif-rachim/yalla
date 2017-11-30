@@ -350,18 +350,23 @@
             return nodeValueIndexArray;
         }
 
-        constructTemplate(useCache = true) {
-            if(useCache){
-                if (!this.context.hasCache(this.key)) {
-                    let templateString = this.buildStringSequence();
-                    this.buildTemplate(templateString);
-                    return this.context.cache(this.key, this);
-                }
-                return this.context.cache(this.key);
+        constructTemplate() {
+            if (!this.context.hasCache(this.key)) {
+                let templateString = this.buildStringSequence();
+                this.buildTemplate(templateString);
+                return this.context.cache(this.key, this);
             }
-            let templateString = this.buildStringSequence();
-            this.buildTemplate(templateString);
-            return this;
+            let htmlTemplate = this.context.cache(this.key);
+            let promisesPlaceholder = htmlTemplate.documentFragment.querySelectorAll('span[data-async-outlet]');
+            let promisesPlaceHolderLength = promisesPlaceholder.length;
+            while(promisesPlaceHolderLength--){
+                let promisePlaceholder = promisesPlaceholder[promisesPlaceHolderLength];
+                if(promisePlaceholder.nextSibling){
+                    let outlet = Outlet.from(promisePlaceholder.nextSibling);
+                    outlet.clearContent();
+                }
+            }
+            return this.context.cache(this.key,htmlTemplate);
         }
 
         buildStringSequence() {
@@ -457,7 +462,7 @@
                 if (this.content === null) {
                     let self = this;
                     let id = uuidv4();
-                    this.setHtmlTemplateContent(html`<span id="${id}" style="display: none">outlet</span>`);
+                    this.setHtmlTemplateContent(html`<span id="${id}" style="display: none" data-async-outlet>outlet</span>`);
                     template.then((result) => {
                         let templateContent = document.getElementById(id);
                         let newCommentNode = templateContent.nextSibling;
@@ -513,8 +518,7 @@
                 clearContentWasCalled = true;
             }
             if (!this.content) {
-                let valueIsPromise = isPromise(htmlTemplate.values[0]);
-                let template = htmlTemplate.constructTemplate(!valueIsPromise);
+                let template = htmlTemplate.constructTemplate();
                 this.content = new HtmlTemplateInstance(template, this);
             }
             this.content.applyValues(htmlTemplate);
