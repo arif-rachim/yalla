@@ -462,7 +462,9 @@
                         let templateContent = document.getElementById(id);
                         let newCommentNode = templateContent.nextSibling;
                         Outlet.from(newCommentNode).setContent(result);
+                        syncNode(result, newCommentNode);
                         self.clearContent();
+                        templateContent.remove();
                     });
                 } else {
                     template.then((result) => {
@@ -606,19 +608,13 @@
                 newHtmlTemplateCollection.iterateRight((item, key, template) => {
                     let commentNode = this.instance[key];
                     if (commentNode) {
-                        let childPlaceholder = Outlet.from(commentNode);
-                        if (childPlaceholder.content instanceof HtmlTemplateInstance) {
-                            childPlaceholder.setHtmlTemplateContent(template);
-                        } else if (childPlaceholder.content instanceof HtmlTemplateCollectionInstance) {
-                            childPlaceholder.setHtmlTemplateCollectionContent(template);
-                        } else {
-                            childPlaceholder.setTextContent(template);
-                        }
+                        let childOutlet = Outlet.from(commentNode);
+                        childOutlet.setContent(template);
                         if (outletPointer.previousSibling !== commentNode) {
                             outletPointer.parentNode.insertBefore(commentNode, outletPointer);
-                            childPlaceholder.validateInstancePosition();
+                            childOutlet.validateInstancePosition();
                         }
-                        outletPointer = childPlaceholder.firstChildNode();
+                        outletPointer = childOutlet.firstChildNode();
                     } else {
                         let childPlaceholder = Outlet.from(document.createComment("outlet-child"));
                         outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);

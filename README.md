@@ -16,7 +16,7 @@
 
 <p align="center">
 <img width='46px' src="http://browserbadge.com/ie/9">
-<img width='46px' src="http://browserbadge.com/opera/20">
+<img width=g'46px' src="http://browserbadge.com/opera/20">
 <img width='46px' src="http://browserbadge.com/safari/6">
 <img width='46px' src="http://browserbadge.com/firefox/28">
 <img width='46px' src="http://browserbadge.com/chrome/39">
