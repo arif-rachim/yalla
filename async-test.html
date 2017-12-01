@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="src/yalla.js"></script>
+</head>
+<body>
+
+</body>
+<script>
+
+    let {html,htmlCollection} = new Context();
+    let items = [
+        {id : uuidv4(),label:uuidv4()}
+    ];
+
+    const deleteMe = (id) => {
+        items = items.filter(item => item.id != id);
+        paint();
+    };
+
+    const deleteMeEventListener = (e) => {
+        let id = e.target.getAttribute('data-id');
+        deleteMe(id);
+    }
+
+    const updateText = (id,text) => {
+        items.forEach(item => {if(item.id === id) item.label = text});
+        paint();
+    }
+
+    const renderList = () => {
+        return htmlCollection(items,'id',item => {
+             return html`<li>${
+                 new Promise(resolve => {resolve(html`<label>${item.label}
+                    ${new Promise(resolve => {
+                        setTimeout(()=>{
+                            resolve(html`<input type="text" value="${item.label}" style="width: 280px" onkeyup="${e => updateText(item.id,e.target.value)}">`);
+                        },1000);
+                 })}
+
+                <button onclick="${e => deleteMe(item.id)}">Delete</button>
+                <button onclick="${deleteMeEventListener}" data-id="${item.id}">Delete Event Listener</button>
+                </label>
+
+`)})
+                 }</li>`
+//            return new Promise(resolve => {resolve(html`<li>${item.label} <button onclick="${e => deleteMe(item.id)}">Delete</button>
+//            <button onclick="${deleteMeEventListener}" data-id="${item.id}">Delete Event Listener</button>
+//            </li>`)});
+        })
+    }
+
+    const add = (number) => {
+        items.forEach(item => item.label = uuidv4());
+        while(number--){
+            items.push({id:uuidv4(),label:uuidv4()});
+        }
+        paint();
+    }
+
+    const refresh = () => {
+        items.forEach(item => item.label = uuidv4());
+        paint();
+    }
+
+    const paint = () => {
+        render(html`
+        <button onclick="${e => add(1)}">Add</button>
+        <button onclick="${e => refresh()}">Refresh</button>
+        <ul>
+        ${renderList()}
+        </ul>
+        `,document.body);
+    }
+
+    paint();
+
+</script>
+</html>

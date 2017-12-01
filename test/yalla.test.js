@@ -91,31 +91,6 @@ describe('yalla.js',function(){
             expect(dom.innerHTML).to.equal('<ul><li>One<!--outlet--></li><!--outlet-child--><li>Two<!--outlet--></li><!--outlet-child--><li>Three<!--outlet--></li><!--outlet-child--><!--outlet--></ul><!--outlet-->');
             done();
         })
-        // TODO !!!
-        /*
-         it('Should render collection in collection',function(done){
-         let items = ['One','Two','Three'];
-         let itemsTwo = ['Four','Five','Six'];
-         let dom = document.createElement('div');
-         render(html`<ul>${htmlCollection(items,i=>i,i => {
-         return htmlCollection(itemsTwo,i=>i,i=> html`<li>${i}</li>`)
-         })}</ul>`,dom);
-
-         function validateDom(){
-         let expectedResult = items.map(i => {
-         let result = itemsTwo.map(i => `<li>${i}<!--outlet--></li><!--outlet-->`);
-         result.push('<!--outlet-->');
-         return result
-         }).reduce((a,b) => {
-         return a.concat(b);
-         });
-         expectedResult = ['<ul>',...expectedResult,'<!--outlet--></ul><!--outlet-->'];
-         expect(dom.innerHTML).to.equal(expectedResult.join(''));
-         }
-         validateDom();
-         done();
-         });
-         */
 
         it('Should render collection Addition',function(done){
             let items = ['One','Two','Three'];
@@ -262,16 +237,6 @@ describe('yalla.js',function(){
         });
     });
 
-    describe("Promise and async",function(){
-        it('Should render HtmlTemplate',function(done){
-            let dom = document.createElement('div');
-            render(html`<div> ${new Promise(function (resolve){resolve(html`Hello World`)})} </div>`,dom).then(function(){
-                expect(true).to.equal(dom.innerHTML.toString().indexOf('<span')>0);
-                done();
-            });
-        });
-    });
-
     describe("Element Attribute",function(){
         it('Should render attribute modification',function(done){
             let dom = document.createElement('div');
@@ -374,5 +339,29 @@ describe('yalla.js',function(){
                 addTodo();
             });
         });
+    });
+
+
+    describe("Promise and async",function(){
+        it('Should render HtmlTemplate',function(done){
+            let dom = document.createElement('div');
+            render(html`<div> ${new Promise(function (resolve){resolve(html`Hello World`)})} </div>`,dom).then(function(){
+                expect(true).to.equal(dom.innerHTML.toString().indexOf('<span')>0);
+                done();
+            });
+        });
+
+        it('Should render text in async',function(done){
+            let dom = document.createElement('div');
+            render(html`<div> ${new Promise(function (resolve){resolve(html`Hello World`)})} </div>`,dom).then(function(){
+                //expect(true).to.equal(dom.innerHTML.toString().indexOf('<span')>0);
+            });
+
+            setTimeout(function(){
+                console.log('Hello we got update', dom.innerHTML);
+                done();
+            },1000);
+        });
+
     });
 });

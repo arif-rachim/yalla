@@ -366,7 +366,7 @@
                     outlet.clearContent();
                 }
             }
-            return this.context.cache(this.key,htmlTemplate);
+            return htmlTemplate;
         }
 
         buildStringSequence() {
@@ -460,16 +460,17 @@
         setContent(template) {
             if (isPromise(template)) {
                 if (this.content === null) {
-                    let self = this;
                     let id = uuidv4();
                     this.setHtmlTemplateContent(html`<span id="${id}" style="display: none" data-async-outlet>outlet</span>`);
                     template.then((result) => {
+                        // we needd to change instead calling document.getElementById we should use context.root.getElementById !!
                         let templateContent = document.getElementById(id);
-                        let newCommentNode = templateContent.nextSibling;
-                        Outlet.from(newCommentNode).setContent(result);
-                        syncNode(result, newCommentNode);
-                        self.clearContent();
-                        templateContent.remove();
+                        if(templateContent){
+                            let newCommentNode = templateContent.nextSibling;
+                            templateContent.remove();
+                            Outlet.from(newCommentNode).setContent(result);
+                            syncNode(result, newCommentNode);
+                        }
                     });
                 } else {
                     template.then((result) => {
@@ -712,7 +713,7 @@
         }
     };
 
-    const mapNodeValueIndexArray = (nodeValueIndex, docFragment, templateValues) => {
+    const mapNodeValueIndexArray = (nodeValueIndex, docFragment, templateValues = []) => {
         let {nodeValue, valueIndexes} = nodeValueIndex;
         let path = getPath(nodeValueIndex.node);
         let actualNode = getNode(path, docFragment);
