@@ -350,18 +350,23 @@
             return nodeValueIndexArray;
         }
 
-        constructTemplate(useCache = true) {
-            if(useCache){
-                if (!this.context.hasCache(this.key)) {
-                    let templateString = this.buildStringSequence();
-                    this.buildTemplate(templateString);
-                    return this.context.cache(this.key, this);
-                }
-                return this.context.cache(this.key);
+        constructTemplate() {
+            if (!this.context.hasCache(this.key)) {
+                let templateString = this.buildStringSequence();
+                this.buildTemplate(templateString);
+                return this.context.cache(this.key, this);
             }
-            let templateString = this.buildStringSequence();
-            this.buildTemplate(templateString);
-            return this;
+            let htmlTemplate = this.context.cache(this.key);
+            let promisesPlaceholder = htmlTemplate.documentFragment.querySelectorAll('span[data-async-outlet]');
+            let promisesPlaceHolderLength = promisesPlaceholder.length;
+            while(promisesPlaceHolderLength--){
+                let promisePlaceholder = promisesPlaceholder[promisesPlaceHolderLength];
+                if(promisePlaceholder.nextSibling){
+                    let outlet = Outlet.from(promisePlaceholder.nextSibling);
+                    outlet.clearContent();
+                }
+            }
+            return this.context.cache(this.key,htmlTemplate);
         }
 
         buildStringSequence() {
@@ -457,12 +462,14 @@
                 if (this.content === null) {
                     let self = this;
                     let id = uuidv4();
-                    this.setHtmlTemplateContent(html`<span id="${id}" style="display: none">outlet</span>`);
+                    this.setHtmlTemplateContent(html`<span id="${id}" style="display: none" data-async-outlet>outlet</span>`);
                     template.then((result) => {
                         let templateContent = document.getElementById(id);
                         let newCommentNode = templateContent.nextSibling;
                         Outlet.from(newCommentNode).setContent(result);
+                        syncNode(result, newCommentNode);
                         self.clearContent();
+                        templateContent.remove();
                     });
                 } else {
                     template.then((result) => {
@@ -511,8 +518,7 @@
                 clearContentWasCalled = true;
             }
             if (!this.content) {
-                let valueIsPromise = isPromise(htmlTemplate.values[0]);
-                let template = htmlTemplate.constructTemplate(!valueIsPromise);
+                let template = htmlTemplate.constructTemplate();
                 this.content = new HtmlTemplateInstance(template, this);
             }
             this.content.applyValues(htmlTemplate);
@@ -606,19 +612,13 @@
                 newHtmlTemplateCollection.iterateRight((item, key, template) => {
                     let commentNode = this.instance[key];
                     if (commentNode) {
-                        let childPlaceholder = Outlet.from(commentNode);
-                        if (childPlaceholder.content instanceof HtmlTemplateInstance) {
-                            childPlaceholder.setHtmlTemplateContent(template);
-                        } else if (childPlaceholder.content instanceof HtmlTemplateCollectionInstance) {
-                            childPlaceholder.setHtmlTemplateCollectionContent(template);
-                        } else {
-                            childPlaceholder.setTextContent(template);
-                        }
+                        let childOutlet = Outlet.from(commentNode);
+                        childOutlet.setContent(template);
                         if (outletPointer.previousSibling !== commentNode) {
                             outletPointer.parentNode.insertBefore(commentNode, outletPointer);
-                            childPlaceholder.validateInstancePosition();
+                            childOutlet.validateInstancePosition();
                         }
-                        outletPointer = childPlaceholder.firstChildNode();
+                        outletPointer = childOutlet.firstChildNode();
                     } else {
                         let childPlaceholder = Outlet.from(document.createComment("outlet-child"));
                         outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
