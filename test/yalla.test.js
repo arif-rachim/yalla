@@ -343,24 +343,83 @@ describe('yalla.js',function(){
 
 
     describe("Promise and async",function(){
-        it('Should render HtmlTemplate',function(done){
+
+        it('Should render html in async',function(done){
+            let {html,htmlCollection} = new Context();
             let dom = document.createElement('div');
             render(html`<div> ${new Promise(function (resolve){resolve(html`Hello World`)})} </div>`,dom).then(function(){
-                expect(true).to.equal(dom.innerHTML.toString().indexOf('<span')>0);
+                expect(dom.innerHTML).to.equal(`<div> Hello World<!--outlet--> </div><!--outlet-->`);
                 done();
             });
         });
 
         it('Should render text in async',function(done){
+            let {html,htmlCollection} = new Context();
             let dom = document.createElement('div');
-            render(html`<div> ${new Promise(function (resolve){resolve(html`Hello World`)})} </div>`,dom).then(function(){
-                //expect(true).to.equal(dom.innerHTML.toString().indexOf('<span')>0);
+            render(html`<div> ${new Promise(function (resolve){resolve(`Hello World`)})} </div>`,dom).then(function(){
+                expect(dom.innerHTML).to.equal(`<div> Hello World<!--outlet--> </div><!--outlet-->`);
+                done();
+            });
+        });
+
+        it('Should render text in async',function(done){
+            let {html,htmlCollection} = new Context();
+            let dom = document.createElement('div');
+            render(html`<div> ${new Promise(function (resolve){resolve(html`<div>Hello World</div>`)})} </div>`,dom).then(function(){
+                expect(dom.innerHTML).to.equal(`<div> <div>Hello World</div><!--outlet--> </div><!--outlet-->`);
+                done();
+            });
+        });
+
+        it('Should render collection in async',function(done){
+            let {html,htmlCollection} = new Context();
+            let dom = document.createElement('div');
+            const asyncList = () =>{
+                return htmlCollection([{id:uuidv4(),label:'One'},{id:uuidv4(),label:'Two'},{id:uuidv4(),label:'Three'}],'id',data => {
+                    return new Promise(resolve => {
+                        resolve(html`<li>${data.label}</li>`)
+                    });
+                })
+            }
+            render(html`<ul> ${asyncList()} </ul>`,dom).then(function(){
+                expect(dom.innerHTML).to.equal(`<ul> <li>One<!--outlet--></li><!--outlet-child--><li>Two<!--outlet--></li><!--outlet-child--><li>Three<!--outlet--></li><!--outlet-child--><!--outlet--> </ul><!--outlet-->`);
+                done();
+            });
+        });
+
+        it('Should render collection in async',function(done){
+            let {html,htmlCollection} = new Context();
+            let dom = document.createElement('div');
+            const asyncList = () =>{
+                return htmlCollection([{id:uuidv4(),label:'One'},{id:uuidv4(),label:'Two'},{id:uuidv4(),label:'Three'}],'id',data => {
+                    return html`<li>${new Promise(resolve => resolve(data.label))}</li>`
+                })
+            }
+            render(html`<ul> ${asyncList()} </ul>`,dom).then(function(){
+                expect(dom.innerHTML).to.equal(`<ul> <li>One<!--outlet--></li><!--outlet-child--><li>Two<!--outlet--></li><!--outlet-child--><li>Three<!--outlet--></li><!--outlet-child--><!--outlet--> </ul><!--outlet-->`);
+                done();
+            });
+        });
+
+        it('Should render collection in async and removal',function(done){
+            let {html,htmlCollection} = new Context();
+            let dom = document.createElement('div');
+            let items = [{id:uuidv4(),label:'One'},{id:uuidv4(),label:'Two'},{id:uuidv4(),label:'Three'}];
+            const asyncList = () =>{
+                return htmlCollection(items,'id',data => {
+                    return html`<li>${new Promise(resolve => resolve(data.label))}</li>`
+                })
+            }
+
+            render(html`<ul> ${asyncList()} </ul>`,dom).then(function(){
+                expect(dom.innerHTML).to.equal(`<ul> <li>One<!--outlet--></li><!--outlet-child--><li>Two<!--outlet--></li><!--outlet-child--><li>Three<!--outlet--></li><!--outlet-child--><!--outlet--> </ul><!--outlet-->`);
+                items = [];
+                render(html`<ul> ${asyncList()} </ul>`,dom).then(function(){
+                    expect(dom.innerHTML).to.equal(`<ul><!--outlet--></ul><!--outlet-->`);
+                    done();
+                });
             });
 
-            setTimeout(function(){
-                console.log('Hello we got update', dom.innerHTML);
-                done();
-            },1000);
         });
 
     });

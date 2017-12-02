@@ -253,7 +253,7 @@
 
         static applyValues(nextHtmlTemplate, nodeValueIndexArray) {
             let newValues = nextHtmlTemplate.values;
-
+            let context = nextHtmlTemplate.context;
             if (!nodeValueIndexArray) {
                 return;
             }
@@ -299,7 +299,7 @@
                 }
                 if (node.nodeType === Node.COMMENT_NODE) {
                     let value = newValues[valueIndexes];
-                    Outlet.from(node).setContent(value);
+                    Outlet.from(node).setContent(value,context);
                 }
                 nodeValueIndex.values = newActualValues;
             });
@@ -405,8 +405,6 @@
         }
     }
 
-    const {html} = new Context();
-
     class Outlet {
         constructor(commentNode) {
             this.commentNode = commentNode;
@@ -457,14 +455,16 @@
 
         }
 
-        setContent(template) {
+        setContent(template,context) {
             if (isPromise(template)) {
                 if (this.content === null) {
                     let id = uuidv4();
-                    this.setHtmlTemplateContent(html`<span id="${id}" style="display: none" data-async-outlet>outlet</span>`);
+                    this.setHtmlTemplateContent(context.html`<span id="${id}" style="display: none" data-async-outlet>outlet</span>`);
                     template.then((result) => {
-                        // we needd to change instead calling document.getElementById we should use context.root.getElementById !!
                         let templateContent = document.getElementById(id);
+                        if(!templateContent){
+                            templateContent = context.root.getElementsByTagName("*")[id];
+                        }
                         if(templateContent){
                             let newCommentNode = templateContent.nextSibling;
                             templateContent.remove();
@@ -578,13 +578,14 @@
         }
 
         applyValues(newHtmlTemplateCollection) {
+            let context = newHtmlTemplateCollection.context;
             if (this.instance === null) {
                 this.instance = {};
                 let outletPointer = this.outlet.commentNode;
                 newHtmlTemplateCollection.iterateRight((item, key, template) => {
                     let childPlaceholder = Outlet.from(document.createComment("outlet-child"));
                     outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
-                    Outlet.from(childPlaceholder.commentNode).setContent(template);
+                    Outlet.from(childPlaceholder.commentNode).setContent(template,context);
                     outletPointer = childPlaceholder.firstChildNode();
                     this.instance[key] = childPlaceholder.commentNode;
                 });
@@ -623,7 +624,7 @@
                     } else {
                         let childPlaceholder = Outlet.from(document.createComment("outlet-child"));
                         outletPointer.parentNode.insertBefore(childPlaceholder.commentNode, outletPointer);
-                        Outlet.from(childPlaceholder.commentNode).setContent(template);
+                        Outlet.from(childPlaceholder.commentNode).setContent(template,context);
                         outletPointer = childPlaceholder.firstChildNode();
                         this.instance[key] = childPlaceholder.commentNode;
                         this.template.context.addSyncCallback(() => syncNode(template, childPlaceholder.commentNode));
@@ -771,6 +772,7 @@
 
     const render = (templateValue, node) => {
         let setContent = () => {
+            templateValue.context.root = templateValue.context.root || node;
             Outlet.from(node).setContent(templateValue);
             if (!node.$synced) {
                 syncNode(templateValue, node);
