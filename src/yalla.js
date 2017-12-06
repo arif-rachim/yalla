@@ -217,194 +217,6 @@
         }
     }
 
-    class HtmlTemplate extends Template {
-        constructor(strings, values, context) {
-            super();
-            this.strings = strings;
-            this.values = values;
-            this.context = context;
-            this.key = this.strings.join("").trim();
-            this.nodeValueIndexArray = null;
-            this.documentFragment = null;
-        }
-
-        static lookNodeValueArray(nodeValue) {
-            let result = [];
-            let pointerStart = nodeValue.indexOf("<!--");
-            let pointerEnd = nodeValue.indexOf("-->", pointerStart);
-
-            while (pointerEnd < nodeValue.length && pointerEnd >= 0 && pointerStart >= 0) {
-                result.push(nodeValue.substring((pointerStart + 4), pointerEnd));
-                pointerStart = nodeValue.indexOf("<!--", (pointerEnd + 3));
-                pointerEnd = nodeValue.indexOf("-->", pointerStart);
-            }
-            return result;
-        }
-
-        static getProperTemplateTag(contentText) {
-            let openTag = contentText.substring(1, contentText.indexOf(">"));
-            openTag = (openTag.indexOf(" ") > 0 ? openTag.substring(0, openTag.indexOf(" ")) : openTag).toLowerCase();
-            let rootTag = parentTagMap[openTag];
-            rootTag = rootTag || "div";
-            let template = rootTag === "svg" ? document.createElementNS("http://www.w3.org/2000/svg",'svg') : document.createElement(rootTag);
-            template.innerHTML = contentText;
-            return template;
-        }
-
-        static applyValues(nextHtmlTemplate, nodeValueIndexArray) {
-            let newValues = nextHtmlTemplate.values;
-            let context = nextHtmlTemplate.context;
-            if (!nodeValueIndexArray) {
-                return;
-            }
-
-            nodeValueIndexArray.forEach((nodeValueIndex) => {
-                let {node, valueIndexes, values} = nodeValueIndex;
-                let newActualValues = Array.isArray(valueIndexes) ? valueIndexes.map((valueIndex) => newValues[(valueIndex)]) : newValues[valueIndexes];
-
-                let nodeName = node.nodeName;
-                let isEvent = node.nodeType === Node.ATTRIBUTE_NODE && nodeName.indexOf("on") === 0;
-
-                // if values are match, or ifts named eventListener then we dont need to perform update
-                if (isMatch(newActualValues, values) || (isEvent && newActualValues[0].name)) {
-                    return;
-                }
-                if (node.nodeType === Node.ATTRIBUTE_NODE) {
-                    let marker = Marker.from(node);
-                    let nodeValue = nodeValueIndex.nodeValue;
-                    if (isEvent) {
-                        let valueIndex = valueIndexes[0];
-                        node.ownerElement[nodeName] = newValues[valueIndex];
-                        marker.attributes[nodeName] = newValues[valueIndex];
-                    } else {
-                        let actualAttributeValue = buildActualAttributeValue(nodeValue, valueIndexes, newValues);
-                        if (isMinimizationAttribute(node)) {
-                            node.ownerElement[nodeName] = actualAttributeValue.trim() === "true";
-                            node.ownerElement.setAttribute(nodeName, "");
-                        } else {
-                            node.ownerElement.setAttribute(nodeName, actualAttributeValue);
-                            if (attributeChangesReflectToProperties(nodeName, node.ownerElement.nodeName)) {
-                                node.ownerElement[nodeName] = actualAttributeValue;
-                            }
-                        }
-                        if (nodeName.indexOf(".bind") >= 0) {
-                            let attributeName = nodeName.substring(0, nodeName.indexOf(".bind"));
-                            node.ownerElement.setAttribute(attributeName, actualAttributeValue);
-                        }
-                        marker.attributes[nodeName] = actualAttributeValue;
-                    }
-                }
-                if (node.nodeType === Node.TEXT_NODE) {
-                    node.nodeValue = buildActualAttributeValue(nodeValueIndex.nodeValue, valueIndexes, newValues);
-                }
-                if (node.nodeType === Node.COMMENT_NODE) {
-                    let value = newValues[valueIndexes];
-                    Outlet.from(node).setContent(value,context);
-                }
-                nodeValueIndex.values = newActualValues;
-            });
-        }
-
-        buildTemplate(templateString) {
-            this.documentFragment = HtmlTemplate.getProperTemplateTag(templateString);
-            this.nodeValueIndexArray = this.buildNodeValueIndex(this.documentFragment, this.documentFragment.nodeName);
-            HtmlTemplate.applyValues(this, this.nodeValueIndexArray);
-        }
-
-        buildNodeValueIndex(documentFragment, documentFragmentNodeName) {
-            let childNodes = documentFragment.childNodes;
-            let nodeValueIndexArray = [];
-            let node = childNodes[0];
-            if (undefined === node) {
-                return nodeValueIndexArray;
-            }
-            do {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                    let attributes = node.attributes;
-                    let k = attributes.length;
-                    for (let attributeIndex = 0; attributeIndex < k; attributeIndex++) {
-                        let nodeValue = attributes[attributeIndex].nodeValue;
-                        let nodeValueIndexMap = HtmlTemplate.lookNodeValueArray(nodeValue);
-                        let valueIndexes = nodeValueIndexMap.map(x => x.match(/[\w\.]+/)[0]).map(i => parseInt(i));
-                        if (valueIndexes && valueIndexes.length > 0) {
-                            nodeValueIndexArray.push({node: attributes[attributeIndex], valueIndexes, nodeValue});
-                        }
-                    }
-                    nodeValueIndexArray = nodeValueIndexArray.concat(this.buildNodeValueIndex(node, node.nodeName));
-                }
-                if (node.nodeType === Node.TEXT_NODE && documentFragmentNodeName.toUpperCase() === "STYLE") {
-                    let nodeValue = node.nodeValue;
-                    let nodeValueIndexMap = HtmlTemplate.lookNodeValueArray(nodeValue);
-                    let valueIndexes = nodeValueIndexMap.map(x => x.match(/[\w\.]+/)[0]).map(i => parseInt(i));
-                    if (valueIndexes && valueIndexes.length > 0) {
-                        nodeValueIndexArray.push({node, valueIndexes, nodeValue});
-                    }
-                }
-                if (node.nodeType === Node.COMMENT_NODE) {
-                    let nodeValue = node.nodeValue;
-                    node.nodeValue = "outlet";
-                    nodeValueIndexArray.push({node: node, valueIndexes: parseInt(nodeValue)});
-                }
-                node = node.nextSibling;
-            } while (node);
-            return nodeValueIndexArray;
-        }
-
-        constructTemplate() {
-            if (!this.context.hasCache(this.key)) {
-                let templateString = this.buildStringSequence();
-                this.buildTemplate(templateString);
-                return this.context.cache(this.key, this);
-            }
-            let htmlTemplate = this.context.cache(this.key);
-            let promisesPlaceholder = htmlTemplate.documentFragment.querySelectorAll('span[data-async-outlet]');
-            let promisesPlaceHolderLength = promisesPlaceholder.length;
-            while(promisesPlaceHolderLength--){
-                let promisePlaceholder = promisesPlaceholder[promisesPlaceHolderLength];
-                if(promisePlaceholder.nextSibling){
-                    let outlet = Outlet.from(promisePlaceholder.nextSibling);
-                    outlet.clearContent();
-                }
-            }
-            return htmlTemplate;
-        }
-
-        buildStringSequence() {
-            return this.strings.reduce((result, string, index) => {
-                return index === 0 ? string : `${result}<!--${(index - 1)}-->${string}`;
-            }, "").trim();
-        }
-    }
-
-    class Context {
-        constructor() {
-            this.cacheInstance = {};
-            this.syncCallbackStack = [];
-            this.html = (strings, ...values) => new HtmlTemplate(strings, values, this);
-            this.htmlCollection = (arrayItems, keyFn, templateFn) => new HtmlTemplateCollection(arrayItems, keyFn, templateFn, this);
-        }
-
-        hasCache(key) {
-            return key in this.cacheInstance;
-        }
-
-        cache(key, data) {
-            if (!this.hasCache(key)) {
-                this.cacheInstance[key] = data;
-            }
-            return this.cacheInstance[key];
-        }
-
-        addSyncCallback(callback) {
-            this.syncCallbackStack.push(callback);
-        }
-
-        clearSyncCallbacks() {
-            this.syncCallbackStack.forEach((callback) => callback.apply());
-            this.syncCallbackStack = [];
-        }
-    }
-
     class Outlet {
         constructor(commentNode) {
             this.commentNode = commentNode;
@@ -568,6 +380,195 @@
             }
         }
     }
+
+    class HtmlTemplate extends Template {
+        constructor(strings, values, context) {
+            super();
+            this.strings = strings;
+            this.values = values;
+            this.context = context;
+            this.key = this.strings.join("").trim();
+            this.nodeValueIndexArray = null;
+            this.documentFragment = null;
+        }
+
+        static lookNodeValueArray(nodeValue) {
+            let result = [];
+            let pointerStart = nodeValue.indexOf("<!--");
+            let pointerEnd = nodeValue.indexOf("-->", pointerStart);
+
+            while (pointerEnd < nodeValue.length && pointerEnd >= 0 && pointerStart >= 0) {
+                result.push(nodeValue.substring((pointerStart + 4), pointerEnd));
+                pointerStart = nodeValue.indexOf("<!--", (pointerEnd + 3));
+                pointerEnd = nodeValue.indexOf("-->", pointerStart);
+            }
+            return result;
+        }
+
+        static getProperTemplateTag(contentText) {
+            let openTag = contentText.substring(1, contentText.indexOf(">"));
+            openTag = (openTag.indexOf(" ") > 0 ? openTag.substring(0, openTag.indexOf(" ")) : openTag).toLowerCase();
+            let rootTag = parentTagMap[openTag];
+            rootTag = rootTag || "div";
+            let template = rootTag === "svg" ? document.createElementNS("http://www.w3.org/2000/svg","svg") : document.createElement(rootTag);
+            template.innerHTML = contentText;
+            return template;
+        }
+
+        static applyValues(nextHtmlTemplate, nodeValueIndexArray) {
+            let newValues = nextHtmlTemplate.values;
+            let context = nextHtmlTemplate.context;
+            if (!nodeValueIndexArray) {
+                return;
+            }
+
+            nodeValueIndexArray.forEach((nodeValueIndex) => {
+                let {node, valueIndexes, values} = nodeValueIndex;
+                let newActualValues = Array.isArray(valueIndexes) ? valueIndexes.map((valueIndex) => newValues[(valueIndex)]) : newValues[valueIndexes];
+
+                let nodeName = node.nodeName;
+                let isEvent = node.nodeType === Node.ATTRIBUTE_NODE && nodeName.indexOf("on") === 0;
+
+                // if values are match, or ifts named eventListener then we dont need to perform update
+                if (isMatch(newActualValues, values) || (isEvent && newActualValues[0].name)) {
+                    return;
+                }
+                if (node.nodeType === Node.ATTRIBUTE_NODE) {
+                    let marker = Marker.from(node);
+                    let nodeValue = nodeValueIndex.nodeValue;
+                    if (isEvent) {
+                        let valueIndex = valueIndexes[0];
+                        node.ownerElement[nodeName] = newValues[valueIndex];
+                        marker.attributes[nodeName] = newValues[valueIndex];
+                    } else {
+                        let actualAttributeValue = buildActualAttributeValue(nodeValue, valueIndexes, newValues);
+                        if (isMinimizationAttribute(node)) {
+                            node.ownerElement[nodeName] = actualAttributeValue.trim() === "true";
+                            node.ownerElement.setAttribute(nodeName, "");
+                        } else {
+                            node.ownerElement.setAttribute(nodeName, actualAttributeValue);
+                            if (attributeChangesReflectToProperties(nodeName, node.ownerElement.nodeName)) {
+                                node.ownerElement[nodeName] = actualAttributeValue;
+                            }
+                        }
+                        if (nodeName.indexOf(".bind") >= 0) {
+                            let attributeName = nodeName.substring(0, nodeName.indexOf(".bind"));
+                            node.ownerElement.setAttribute(attributeName, actualAttributeValue);
+                        }
+                        marker.attributes[nodeName] = actualAttributeValue;
+                    }
+                }
+                if (node.nodeType === Node.TEXT_NODE) {
+                    node.nodeValue = buildActualAttributeValue(nodeValueIndex.nodeValue, valueIndexes, newValues);
+                }
+                if (node.nodeType === Node.COMMENT_NODE) {
+                    let value = newValues[valueIndexes];
+                    Outlet.from(node).setContent(value,context);
+                }
+                nodeValueIndex.values = newActualValues;
+            });
+        }
+
+        buildTemplate(templateString) {
+            this.documentFragment = HtmlTemplate.getProperTemplateTag(templateString);
+            this.nodeValueIndexArray = this.buildNodeValueIndex(this.documentFragment, this.documentFragment.nodeName);
+            HtmlTemplate.applyValues(this, this.nodeValueIndexArray);
+        }
+
+        buildNodeValueIndex(documentFragment, documentFragmentNodeName) {
+            let childNodes = documentFragment.childNodes;
+            let nodeValueIndexArray = [];
+            let node = childNodes[0];
+            if (undefined === node) {
+                return nodeValueIndexArray;
+            }
+            do {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    let attributes = node.attributes;
+                    let k = attributes.length;
+                    for (let attributeIndex = 0; attributeIndex < k; attributeIndex++) {
+                        let nodeValue = attributes[attributeIndex].nodeValue;
+                        let nodeValueIndexMap = HtmlTemplate.lookNodeValueArray(nodeValue);
+                        let valueIndexes = nodeValueIndexMap.map(x => x.match(/[\w\.]+/)[0]).map(i => parseInt(i));
+                        if (valueIndexes && valueIndexes.length > 0) {
+                            nodeValueIndexArray.push({node: attributes[attributeIndex], valueIndexes, nodeValue});
+                        }
+                    }
+                    nodeValueIndexArray = nodeValueIndexArray.concat(this.buildNodeValueIndex(node, node.nodeName));
+                }
+                if (node.nodeType === Node.TEXT_NODE && documentFragmentNodeName.toUpperCase() === "STYLE") {
+                    let nodeValue = node.nodeValue;
+                    let nodeValueIndexMap = HtmlTemplate.lookNodeValueArray(nodeValue);
+                    let valueIndexes = nodeValueIndexMap.map(x => x.match(/[\w\.]+/)[0]).map(i => parseInt(i));
+                    if (valueIndexes && valueIndexes.length > 0) {
+                        nodeValueIndexArray.push({node, valueIndexes, nodeValue});
+                    }
+                }
+                if (node.nodeType === Node.COMMENT_NODE) {
+                    let nodeValue = node.nodeValue;
+                    node.nodeValue = "outlet";
+                    nodeValueIndexArray.push({node: node, valueIndexes: parseInt(nodeValue)});
+                }
+                node = node.nextSibling;
+            } while (node);
+            return nodeValueIndexArray;
+        }
+
+        constructTemplate() {
+            if (!this.context.hasCache(this.key)) {
+                let templateString = this.buildStringSequence();
+                this.buildTemplate(templateString);
+                return this.context.cache(this.key, this);
+            }
+            let htmlTemplate = this.context.cache(this.key);
+            let promisesPlaceholder = htmlTemplate.documentFragment.querySelectorAll('span[data-async-outlet]');
+            let promisesPlaceHolderLength = promisesPlaceholder.length;
+            while(promisesPlaceHolderLength--){
+                let promisePlaceholder = promisesPlaceholder[promisesPlaceHolderLength];
+                if(promisePlaceholder.nextSibling){
+                    let outlet = Outlet.from(promisePlaceholder.nextSibling);
+                    outlet.clearContent();
+                }
+            }
+            return htmlTemplate;
+        }
+
+        buildStringSequence() {
+            return this.strings.reduce((result, string, index) => {
+                return index === 0 ? string : `${result}<!--${(index - 1)}-->${string}`;
+            }, "").trim();
+        }
+    }
+
+    class Context {
+        constructor() {
+            this.cacheInstance = {};
+            this.syncCallbackStack = [];
+            this.html = (strings, ...values) => new HtmlTemplate(strings, values, this);
+            this.htmlCollection = (arrayItems, keyFn, templateFn) => new HtmlTemplateCollection(arrayItems, keyFn, templateFn, this);
+        }
+
+        hasCache(key) {
+            return key in this.cacheInstance;
+        }
+
+        cache(key, data) {
+            if (!this.hasCache(key)) {
+                this.cacheInstance[key] = data;
+            }
+            return this.cacheInstance[key];
+        }
+
+        addSyncCallback(callback) {
+            this.syncCallbackStack.push(callback);
+        }
+
+        clearSyncCallbacks() {
+            this.syncCallbackStack.forEach((callback) => callback.apply());
+            this.syncCallbackStack = [];
+        }
+    }
+
 
     class HtmlTemplateCollectionInstance extends Template {
         constructor(templateCollection, outlet) {
