@@ -1,8 +1,8 @@
 (function (root, factory) {
-    if (typeof define === "function" && define.amd) {
-        define([], factory);
-    } else if (typeof module === "object" && module.exports) {
-        module.exports = factory();
+    if (typeof window.define === "function" && window.define.amd) {
+        window.define([], factory);
+    } else if (typeof window.module === "object" && window.module.exports) {
+        window.module.exports = factory();
     } else {
         root.yalla = factory();
         root.Context = root.Context || root.yalla.Context;
@@ -777,8 +777,8 @@
             if (!node.$synced) {
                 syncNode(templateValue, node);
                 node.$synced = true;
-            }
-        };
+				}
+				};
         if (requestAnimationFrame in window) {
             requestAnimationFrame(setContent);
         } else {
@@ -796,8 +796,8 @@
             setTimeout(templateValue.context.clearSyncCallbacks, 300);
         }
     };
-
-
+	
+	
     class Plug {
         constructor(factory) {
             this.factory = factory;
@@ -810,3 +810,5 @@
 
     return {Context, render, plug, uuidv4};
 }));
+
+
