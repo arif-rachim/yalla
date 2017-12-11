@@ -382,6 +382,7 @@
             this.syncCallbackStack = [];
             this.html = (strings, ...values) => new HtmlTemplate(strings, values, this);
             this.htmlCollection = (arrayItems, keyFn, templateFn) => new HtmlTemplateCollection(arrayItems, keyFn, templateFn, this);
+            this.listeners = {};
         }
 
         hasCache(key) {
@@ -399,11 +400,62 @@
             this.syncCallbackStack.push(callback);
         }
 
+        addEventListener(event,callback,calledOnce=false){
+            let token = `${event}:${uuidv4()}`;
+            this.listeners[event] = this.listeners[event] || [];
+            let listener = this.listeners[event];
+            listener.push({token,callback,calledOnce});
+            return token;
+        }
+
+        removeEventListener(token){
+            let [event,tokenId] = token.split(':');
+            let listener = this.listeners[event];
+            listener = listener.filter(callbackItem => callbackItem.token != tokenId);
+            this.listeners[event] = listener;
+        }
+
+        dispatchEvent(event,...payload){
+            if(!(event in this.listeners)){
+                return;
+            }
+            let listener = this.listeners[event];
+
+            let markForRemoval = [];
+            listener.forEach(callbackItem => {
+                callbackItem.callback.apply(null,payload);
+                if(callbackItem.calledOnce){
+                    let [event,tokenId] = callbackItem.token.split(':');
+                    markForRemoval.push(tokenId);
+                }
+            });
+            if(markForRemoval.length > 0){
+                listener = listener.filter(callbackItem => {
+                    return markForRemoval.indexOf(callbackItem.token) < 0
+                });
+            }
+            this.listeners[event] = listener;
+        }
+
         clearSyncCallbacks() {
             this.syncCallbackStack.forEach((callback) => callback.apply());
             this.syncCallbackStack = [];
+            this.dispatchEvent('syncingdone');
         }
     }
+
+    const getTemporaryOutlet = (id, context) => {
+        let templateContent = document.getElementById(id);
+        if (!templateContent) {
+            templateContent = context.root.getElementsByTagName("*")[id];
+        }
+        if(templateContent){
+            let commentNode = templateContent.nextSibling;
+            templateContent.remove();
+            return Outlet.from(commentNode);
+        }
+        throw new Error(`Unable to find outlet ${id}`);
+    };
 
     class Outlet {
         constructor(commentNode) {
@@ -455,22 +507,20 @@
 
         }
 
+        makeTemporaryOutlet(context){
+            let id = uuidv4();
+            this.setHtmlTemplateContent(context.html`<span id="${id}" style="display: none" data-async-outlet>outlet</span>`);
+            return id;
+        };
+
         setContent(template,context) {
             if (isPromise(template)) {
                 if (this.content === null) {
-                    let id = uuidv4();
-                    this.setHtmlTemplateContent(context.html`<span id="${id}" style="display: none" data-async-outlet>outlet</span>`);
+                    let id = this.makeTemporaryOutlet(context);
                     template.then((result) => {
-                        let templateContent = document.getElementById(id);
-                        if(!templateContent){
-                            templateContent = context.root.getElementsByTagName("*")[id];
-                        }
-                        if(templateContent){
-                            let newCommentNode = templateContent.nextSibling;
-                            templateContent.remove();
-                            Outlet.from(newCommentNode).setContent(result);
-                            syncNode(result, newCommentNode);
-                        }
+                        let outlet = getTemporaryOutlet(id, context);
+                        outlet.setContent(result);
+                        syncNode(result, outlet.commentNode);
                     });
                 } else {
                     template.then((result) => {
@@ -478,7 +528,15 @@
                     });
                 }
             } else if (template instanceof Plug) {
-                template.factory.apply(null, [this]);
+                if (this.content === null) {
+                    let id = this.makeTemporaryOutlet(context);
+                    context.addEventListener('syncingdone',() => {
+                        let outlet = getTemporaryOutlet(id, context);
+                        template.factory.apply(null, [outlet]);
+                    },true);
+                } else {
+                    template.factory.apply(null, [this]);
+                }
             } else if (template instanceof HtmlTemplate) {
                 this.setHtmlTemplateContent(template);
             } else if (template instanceof HtmlTemplateCollection) {
@@ -770,30 +828,47 @@
         }
     };
 
-    const render = (templateValue, node) => {
-        let setContent = () => {
-            templateValue.context.root = templateValue.context.root || node;
-            Outlet.from(node).setContent(templateValue);
-            if (!node.$synced) {
-                syncNode(templateValue, node);
-                node.$synced = true;
-            }
-        };
-        if (requestAnimationFrame in window) {
-            requestAnimationFrame(setContent);
-        } else {
-            setContent();
+    const setContent = (templateValue,node) => {
+        templateValue.context.root = templateValue.context.root || node;
+        Outlet.from(node).setContent(templateValue);
+        if (!node.$synced) {
+            syncNode(templateValue, node);
+            node.$synced = true;
         }
+    };
 
-        if (window.Promise) {
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    templateValue.context.clearSyncCallbacks();
-                    resolve();
-                }, 300);
-            });
+    const executeWithIdleCallback = (callback) => {
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(callback);
         } else {
-            setTimeout(templateValue.context.clearSyncCallbacks, 300);
+            callback();
+        }
+    }
+
+    const render = (templateValue, node) => {
+        if('Promise' in window){
+            return new Promise(resolve => {
+                executeWithIdleCallback(()=>{
+                    setContent.apply(null,[templateValue,node]);
+                    resolve();
+                });
+            }).then(() => {
+                return new Promise(resolve => {
+                    executeWithIdleCallback(() =>{
+                        templateValue.context.clearSyncCallbacks();
+                        resolve();
+                    });
+                });
+            });
+        }else{
+            let thencallback = {then:()=>{}};
+            setTimeout(()=>{
+                setContent(templateValue,node);
+                templateValue.context.clearSyncCallbacks();
+                thencallback.then.apply(null,[]);
+            },0);
+            return thencallback;
+
         }
     };
 
