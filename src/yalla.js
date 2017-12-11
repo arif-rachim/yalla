@@ -828,13 +828,15 @@
         }
     };
 
-    const setContent = (templateValue,node) => {
-        templateValue.context.root = templateValue.context.root || node;
-        Outlet.from(node).setContent(templateValue);
+    var syncContent = function (templateValue,node) {
         if (!node.$synced) {
             syncNode(templateValue, node);
             node.$synced = true;
         }
+    };
+    const setContent = (templateValue,node) => {
+        templateValue.context.root = templateValue.context.root || node;
+        Outlet.from(node).setContent(templateValue);
     };
 
     const executeWithIdleCallback = (callback) => {
@@ -852,6 +854,13 @@
                     setContent.apply(null,[templateValue,node]);
                     resolve();
                 });
+            }).then(()=>{
+                return new Promise(resolve => {
+                    executeWithIdleCallback(()=>{
+                        syncContent.apply(null,[templateValue,node]);
+                        resolve();
+                    });
+                });
             }).then(() => {
                 return new Promise(resolve => {
                     executeWithIdleCallback(() =>{
@@ -864,6 +873,7 @@
             let thencallback = {then:()=>{}};
             setTimeout(()=>{
                 setContent(templateValue,node);
+                syncContent(templateValue,node);
                 templateValue.context.clearSyncCallbacks();
                 thencallback.then.apply(null,[]);
             },0);
