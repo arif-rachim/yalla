@@ -297,6 +297,7 @@ render(html`
 7. <a href="https://codepen.io/yallajs/pen/wPpVNj">SAM Pattern Todo</a> : Example of how to use YallaJS with <a href="http://sam.js.org/">SAM Pattern</a>
 8. <a href="https://codepen.io/yallajs/pen/vWjdqe">React Fiber Demo</a> : React Fiber Triangle rewritten with YallaJS
 9. <a href="https://codepen.io/yallajs/pen/gXQrgE">Async List</a> : HtmlCollection with Promise
+10. <a href="https://codepen.io/yallajs/pen/zpxpaY">SVG - Sample</a> : Showcase on using SVG with yallajs
 
 **Advance**
 ---
