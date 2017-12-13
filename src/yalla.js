@@ -246,7 +246,7 @@
             openTag = (openTag.indexOf(" ") > 0 ? openTag.substring(0, openTag.indexOf(" ")) : openTag).toLowerCase();
             let rootTag = parentTagMap[openTag];
             rootTag = rootTag || "div";
-            let template = document.createElement(rootTag);
+            let template = rootTag === "svg" ? document.createElementNS("http://www.w3.org/2000/svg",'svg') : document.createElement(rootTag);
             template.innerHTML = contentText;
             return template;
         }
