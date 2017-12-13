@@ -425,7 +425,7 @@
             listener.forEach(callbackItem => {
                 callbackItem.callback.apply(null,payload);
                 if(callbackItem.calledOnce){
-                    let [event,tokenId] = callbackItem.token.split(':');
+                    let [event,tokenId] = callbackItem.token.split(":");
                     markForRemoval.push(tokenId);
                 }
             });
@@ -454,7 +454,7 @@
             templateContent.remove();
             return Outlet.from(commentNode);
         }
-        throw new Error(`Unable to find outlet ${id}`);
+        return false;
     };
 
     class Outlet {
@@ -519,8 +519,10 @@
                     let id = this.makeTemporaryOutlet(context);
                     template.then((result) => {
                         let outlet = getTemporaryOutlet(id, context);
-                        outlet.setContent(result);
-                        syncNode(result, outlet.commentNode);
+                        if(outlet){
+                            outlet.setContent(result);
+                            syncNode(result, outlet.commentNode);
+                        }
                     });
                 } else {
                     template.then((result) => {
@@ -532,7 +534,9 @@
                     let id = this.makeTemporaryOutlet(context);
                     context.addEventListener('syncingdone',() => {
                         let outlet = getTemporaryOutlet(id, context);
-                        template.factory.apply(null, [outlet]);
+                        if(outlet){
+                            template.factory.apply(null, [outlet]);
+                        }
                     },true);
                 } else {
                     template.factory.apply(null, [this]);
@@ -845,12 +849,19 @@
         } else {
             callback();
         }
-    }
+    };
+    const executeWithRequestAnimationFrame = (callback) => {
+        if ('requestAnimationFrame' in window) {
+            requestAnimationFrame(callback);
+        } else {
+            callback();
+        }
+    };
 
     const render = (templateValue, node) => {
         if('Promise' in window){
             return new Promise(resolve => {
-                executeWithIdleCallback(()=>{
+                executeWithRequestAnimationFrame(()=>{
                     setContent.apply(null,[templateValue,node]);
                     resolve();
                 });
