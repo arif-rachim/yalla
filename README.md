@@ -279,26 +279,6 @@ render(html`
 `,document.body);
 ```
 
-**Sample Project**
----
-1. <a href="http://yallajs.io/todomvc.html">TodoMVC</a> : a simple todomvc application
-2. <a href="http://yallajs.io/benchmark.html">Benchmark</a> : benchmark tools for measuring performance, fork of <a href="http://www.stefankrause.net/wp/">Stefan Krause</a> github project
-
-
-
-**Codepen sample**
----
-1. <a href="https://codepen.io/yallajs/pen/NwGpGZ">Hello world</a> : Basic hello world application
-2. <a href="https://codepen.io/yallajs/pen/POPppL/">Simple Calculator</a> : Simple calculator with yallajs
-3. <a href="https://codepen.io/yallajs/pen/wPKdJo">Color Picker</a> : Simple color picker
-4. <a href="https://codepen.io/yallajs/pen/XzKqBb">Async</a> : Example using Promise for async
-5. <a href="https://codepen.io/yallajs/pen/BmzxvO">Html Collection</a> : Using HtmlCollection to render arrays
-6. <a href="https://codepen.io/yallajs/project/editor/AxKoNY#0">Hero Editor</a> : Hero Editor tutorial from Angular JS rewritten in Yallajs
-7. <a href="https://codepen.io/yallajs/pen/wPpVNj">SAM Pattern Todo</a> : Example of how to use YallaJS with <a href="http://sam.js.org/">SAM Pattern</a>
-8. <a href="https://codepen.io/yallajs/pen/vWjdqe">React Fiber Demo</a> : React Fiber Triangle rewritten with YallaJS
-9. <a href="https://codepen.io/yallajs/pen/gXQrgE">Async List</a> : HtmlCollection with Promise
-10. <a href="https://codepen.io/yallajs/pen/zpxpaY">SVG - Sample</a> : Showcase on using SVG with yallajs
-
 **Advance**
 ---
 Following is an advanced topic that can be used to extend yallajs.
@@ -334,6 +314,40 @@ ${plug(outlet => {
 })}
 </div>`,document.body);
 ```
+
+
+Sample Project
+--------------
+1. <a href="http://yallajs.io/todomvc.html">TodoMVC</a> : a simple todomvc application
+2. <a href="https://codepen.io/yallajs/project/editor/AxKoNY#0">Hero Editor</a> : Hero Editor tutorial from Angular JS rewritten in Yallajs
+3. <a href="http://yallajs.io/benchmark.html">Benchmark</a> : benchmark tools for measuring performance, fork of <a href="http://www.stefankrause.net/wp/">Stefan Krause</a> github project
+4. <a href="https://codepen.io/yallajs/pen/vWjdqe">React Fiber Demo</a> : React Fiber Triangle rewritten with YallaJS
+5. <a href="https://codepen.io/yallajs/pen/wPpVNj">SAM Pattern Todo</a> : Example of how to use YallaJS with <a href="http://sam.js.org/">SAM Pattern</a>
+
+Basic Example
+-------------
+1. <a href="https://codepen.io/yallajs/pen/NwGpGZ">Hello world</a> : Basic hello world application
+2. <a href="https://codepen.io/yallajs/pen/POPppL/">Simple Calculator</a> : Simple calculator with yallajs
+3. <a href="https://codepen.io/yallajs/pen/zpxpaY">SVG - Sample</a> : Showcase on using SVG with yallajs
+
+Event Example
+------------
+1. <a href="https://codepen.io/yallajs/pen/wPKdJo">Color Picker</a> : Simple color picker
+
+Html Collection Example
+------------
+1. <a href="https://codepen.io/yallajs/pen/BmzxvO">Array with Html Collection</a> : Using HtmlCollection to render arrays
+2. <a href="https://codepen.io/yallajs/pen/gXQrgE">Html Collection with Promise</a> : HtmlCollection with Promise
+
+Async Example
+--------------------------
+1. <a href="https://codepen.io/yallajs/pen/XzKqBb">Node with Promise</a> : Example using Promise on Node
+2. <a href="https://codepen.io/yallajs/pen/eyNvNj">Attribute with Promise</a> : Example using Promise on Attribute
+
+Plug Example
+------------
+1. <a href="https://codepen.io/yallajs/pen/YYXZRp">Node With Plug</a> : Example using Plug on Node
+2. <a href="https://codepen.io/yallajs/pen/jYPBzK">Attribute With Plug</a> : Example using Plug on Attribute
 
 
 YallaJS Project is supported by :
