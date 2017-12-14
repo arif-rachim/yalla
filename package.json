@@ -1,7 +1,7 @@
 {
   "name": "yallajs",
-  "version": "2.0.0-beta.37",
-  "description": "Web Application with zero boiler plate",
+  "version": "2.0.0-beta.38",
+  "description": "Template Literals Engine",
   "scripts": {
     "commit": "git-cz",
     "build": "babel src -d lib",

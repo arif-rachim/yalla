@@ -37,6 +37,10 @@
 
     let isChrome = "chrome" in window && "webstore" in window.chrome;
 
+    const Event = {
+        SYNCING_DONE : "syncingdone"
+    };
+
     const cloneNodeTree = (node) => {
         if (isChrome) {
             return node.cloneNode(true);
@@ -246,7 +250,7 @@
             openTag = (openTag.indexOf(" ") > 0 ? openTag.substring(0, openTag.indexOf(" ")) : openTag).toLowerCase();
             let rootTag = parentTagMap[openTag];
             rootTag = rootTag || "div";
-            let template = rootTag === "svg" ? document.createElementNS("http://www.w3.org/2000/svg",'svg') : document.createElement(rootTag);
+            let template = rootTag === "svg" ? document.createElementNS("http://www.w3.org/2000/svg","svg") : document.createElement(rootTag);
             template.innerHTML = contentText;
             return template;
         }
@@ -357,7 +361,7 @@
                 return this.context.cache(this.key, this);
             }
             let htmlTemplate = this.context.cache(this.key);
-            let promisesPlaceholder = htmlTemplate.documentFragment.querySelectorAll('span[data-async-outlet]');
+            let promisesPlaceholder = htmlTemplate.documentFragment.querySelectorAll("span[data-async-outlet]");
             let promisesPlaceHolderLength = promisesPlaceholder.length;
             while(promisesPlaceHolderLength--){
                 let promisePlaceholder = promisesPlaceholder[promisesPlaceHolderLength];
@@ -409,7 +413,7 @@
         }
 
         removeEventListener(token){
-            let [event,tokenId] = token.split(':');
+            let [event,tokenId] = token.split(":");
             let listener = this.listeners[event];
             listener = listener.filter(callbackItem => callbackItem.token != tokenId);
             this.listeners[event] = listener;
@@ -440,7 +444,7 @@
         clearSyncCallbacks() {
             this.syncCallbackStack.forEach((callback) => callback.apply());
             this.syncCallbackStack = [];
-            this.dispatchEvent('syncingdone');
+            this.dispatchEvent(Event.SYNCING_DONE);
         }
     }
 
@@ -532,7 +536,7 @@
             } else if (template instanceof Plug) {
                 if (this.content === null) {
                     let id = this.makeTemporaryOutlet(context);
-                    context.addEventListener('syncingdone',() => {
+                    context.addEventListener(Event.SYNCING_DONE,() => {
                         let outlet = getTemporaryOutlet(id, context);
                         if(outlet){
                             template.factory.apply(null, [outlet]);
@@ -832,7 +836,7 @@
         }
     };
 
-    var syncContent = function (templateValue,node) {
+    const syncContent = function (templateValue,node) {
         if (!node.$synced) {
             syncNode(templateValue, node);
             node.$synced = true;
@@ -844,27 +848,33 @@
     };
 
     const executeWithIdleCallback = (callback) => {
-        if ('requestIdleCallback' in window) {
+        if ("requestIdleCallback" in window) {
             requestIdleCallback(callback);
         } else {
             callback();
         }
     };
     const executeWithRequestAnimationFrame = (callback) => {
-        if ('requestAnimationFrame' in window) {
+        if ("requestAnimationFrame" in window) {
             requestAnimationFrame(callback);
         } else {
             callback();
         }
     };
 
-    const render = (templateValue, node) => {
-        if('Promise' in window){
+    const render = (templateValue, node , immediateEffect = true) => {
+        if("Promise" in window){
             return new Promise(resolve => {
-                executeWithRequestAnimationFrame(()=>{
+                let update = ()=>{
                     setContent.apply(null,[templateValue,node]);
                     resolve();
-                });
+                };
+                if(immediateEffect){
+                    executeWithRequestAnimationFrame(update);
+                }else{
+                    executeWithIdleCallback(update);
+                }
+
             }).then(()=>{
                 return new Promise(resolve => {
                     executeWithIdleCallback(()=>{
@@ -893,7 +903,6 @@
         }
     };
 
-
     class Plug {
         constructor(factory) {
             this.factory = factory;
@@ -904,5 +913,5 @@
         return new Plug(callback);
     };
 
-    return {Context, render, plug, uuidv4};
+    return {Context, render, plug, uuidv4, Event};
 }));
