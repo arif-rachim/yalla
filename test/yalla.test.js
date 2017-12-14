@@ -446,16 +446,66 @@ describe('yalla.js',function(){
     });
 
     describe("Plug and async",function(){
-        it('Should Text in async',function(done){
+        it('Should render html in async',function(done){
             let {html,htmlCollection} = new Context();
             let dom = document.createElement('div');
             render(html`<div> ${plug(outlet => {
                 setTimeout(()=>{
                     outlet.setContent(html`<div>Hello World</div>`);
                     expect(dom.innerHTML).to.equal(`<div> <div>Hello World</div><!--outlet--> </div><!--outlet-->`);
-                    done();
+                    outlet.setContent(html`<div>YallaJS</div>`);
+                    expect(dom.innerHTML).to.equal(`<div> <div>YallaJS</div><!--outlet--> </div><!--outlet-->`);
                 },100);
-            })} </div>`,dom);
+            })} </div>`,dom).then(function(){
+                render(html`<div> ${plug(outlet => {
+                    setTimeout(()=>{
+                        outlet.setContent(html`<div>Hello World</div>`);
+                        expect(dom.innerHTML).to.equal(`<div> <div>Hello World</div><!--outlet--> </div><!--outlet-->`);
+                        outlet.setContent(html`<div>YallaJS</div>`);
+                        expect(dom.innerHTML).to.equal(`<div> <div>YallaJS</div><!--outlet--> </div><!--outlet-->`);
+                        done();
+                    },100);
+                })} </div>`,dom);
+            })
+        });
+
+        it('Should render Promise in async',function(done){
+            let context = new Context();
+            let {html,htmlCollection} = context;
+            let dom = document.createElement('div');
+            render(html`<div> ${new Promise(resolve => {resolve(html`<div>Hello World</div>`);})}</div>`,dom).then(function(){
+                expect(dom.innerHTML).to.equal(`<div> <div>Hello World</div><!--outlet--></div><!--outlet-->`);
+            }).then(function(){
+                render(html`<div> ${new Promise(resolve => {resolve(html`<div>Hello YallaJS</div>`);})}</div>`,dom).then(function(){
+                    expect(dom.innerHTML).to.equal(`<div> <div>Hello YallaJS</div><!--outlet--></div><!--outlet-->`);
+                    done();
+                });
+            });
+        });
+
+
+        it('Should render Promise in attribute',function(done){
+            let context = new Context();
+            let {html,htmlCollection} = context;
+            let dom = document.createElement('div');
+            render(html`<div style="background-color: ${new Promise(resolve => {resolve('blue')})};color: ${new Promise(resolve => {resolve('red')})}"> Hello World</div>`,dom).then(function(){
+                expect(dom.innerHTML.indexOf('background-color: blue')>0).to.equal(true);
+                expect(dom.innerHTML.indexOf('color: red')>0).to.equal(true);
+                done();
+            });
+        });
+
+        it('Should render Plug in attribute',function(done){
+            let context = new Context();
+            let {html,htmlCollection} = context;
+            let dom = document.createElement('div');
+            render(html`<div style="background-color: ${plug(outlet => outlet.setContent('blue'))};color: ${plug(outlet => outlet.setContent('red'))}"> Hello World</div>`,dom).then(function(){
+                expect(dom.innerHTML.indexOf('background-color: blue')>0).to.equal(true);
+                expect(dom.innerHTML.indexOf('color: red')>0).to.equal(true);
+                done();
+            });
         });
     });
+
+
 });

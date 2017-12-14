@@ -9,6 +9,7 @@
         root.render = root.render || root.yalla.render;
         root.plug = root.plug || root.yalla.plug;
         root.uuidv4 = root.uuidv4 || root.yalla.uuidv4;
+        root.Event = root.Event || root.yalla.Event;
     }
 }(typeof self !== "undefined" ? self : eval("this"), function () {
     /*
@@ -281,21 +282,53 @@
                         node.ownerElement[nodeName] = newValues[valueIndex];
                         marker.attributes[nodeName] = newValues[valueIndex];
                     } else {
-                        let actualAttributeValue = buildActualAttributeValue(nodeValue, valueIndexes, newValues);
-                        if (isMinimizationAttribute(node)) {
-                            node.ownerElement[nodeName] = actualAttributeValue.trim() === "true";
-                            node.ownerElement.setAttribute(nodeName, "");
-                        } else {
-                            node.ownerElement.setAttribute(nodeName, actualAttributeValue);
-                            if (attributeChangesReflectToProperties(nodeName, node.ownerElement.nodeName)) {
-                                node.ownerElement[nodeName] = actualAttributeValue;
+                        let plugOrPromiseValue = newValues.reduce((plugOrPromise,newValue,index) => {
+                            if(newValue instanceof Plug || isPromise(newValue)){
+                                plugOrPromise.push({index,value:newValue});
                             }
+                            return plugOrPromise;
+                        },[]);
+
+                        if(plugOrPromiseValue.length>0){
+                            node.ownerElement.id = node.ownerElement.id || uuidv4();
+                            let id = node.ownerElement.id;
+                            context.addEventListener(Event.SYNCING_DONE,()=>{
+                                let node = document.getElementById(id);
+                                if (!node) {
+                                    node = context.root.getElementsByTagName("*")[id];
+                                }
+                                plugOrPromiseValue.forEach(({index,value}) => {
+                                    let valueIndex = index;
+                                    let attributeNode = node.getAttributeNode(nodeName);
+
+                                    let setContent = (value) => {
+                                        let marker = Marker.from(node);
+                                        let {nodeValue:template,valueIndexes,newValues:templateValue} = marker.attributes[nodeName];
+                                        newValues[valueIndex] = value;
+                                        HtmlTemplate.updateAttributeValue(nodeValue, valueIndexes, newValues, attributeNode);
+                                    };
+
+                                    if(value instanceof Plug){
+                                        value.factory.apply(null,[{
+                                            node : attributeNode,
+                                            name : nodeName,
+                                            getContent : () => {
+                                                let marker = Marker.from(node);
+                                                let {newValues:templateValue} = marker.attributes[nodeName];
+                                                return newValues[valueIndex];
+                                            },
+                                            setContent
+                                        }]);
+                                    }
+                                    if(isPromise(value)){
+                                        value.then(setContent);
+                                    }
+                                });
+                            });
+                        }else{
+                            HtmlTemplate.updateAttributeValue(nodeValue, valueIndexes, newValues, node);
                         }
-                        if (nodeName.indexOf(".bind") >= 0) {
-                            let attributeName = nodeName.substring(0, nodeName.indexOf(".bind"));
-                            node.ownerElement.setAttribute(attributeName, actualAttributeValue);
-                        }
-                        marker.attributes[nodeName] = actualAttributeValue;
+                        marker.attributes[nodeName] = {template : nodeValue,valueIndexes,templateValue : newValues};
                     }
                 }
                 if (node.nodeType === Node.TEXT_NODE) {
@@ -307,6 +340,26 @@
                 }
                 nodeValueIndex.values = newActualValues;
             });
+        }
+
+        static updateAttributeValue(attributeValue, valueIndexes, newValues, attributeNode) {
+            let nodeName = attributeNode.nodeName;
+            let actualAttributeValue = buildActualAttributeValue(attributeValue, valueIndexes, newValues);
+            if (isMinimizationAttribute(attributeNode)) {
+                attributeNode.ownerElement[nodeName] = actualAttributeValue.trim() === "true";
+                attributeNode.ownerElement.setAttribute(nodeName, "");
+            } else {
+                attributeNode.ownerElement.setAttribute(nodeName, actualAttributeValue);
+                if (attributeChangesReflectToProperties(nodeName, attributeNode.ownerElement.nodeName)) {
+                    attributeNode.ownerElement[nodeName] = actualAttributeValue;
+                }
+            }
+            if (nodeName.indexOf(".bind") >= 0) {
+                let attributeName = nodeName.substring(0, nodeName.indexOf(".bind"));
+                attributeNode.ownerElement.setAttribute(attributeName, actualAttributeValue);
+                attributeNode.ownerElement.removeAttribute(nodeName);
+            }
+            return actualAttributeValue;
         }
 
         buildTemplate(templateString) {
@@ -539,11 +592,24 @@
                     context.addEventListener(Event.SYNCING_DONE,() => {
                         let outlet = getTemporaryOutlet(id, context);
                         if(outlet){
-                            template.factory.apply(null, [outlet]);
+                            template.factory.apply(null, [{
+                                getContent : () => outlet.currentContent,
+                                setContent : (value) =>{
+                                    outlet.setContent.apply(outlet,[value]);
+                                    outlet.currentContent = value;
+                                }
+                            }]);
                         }
                     },true);
                 } else {
-                    template.factory.apply(null, [this]);
+                    let self = this;
+                    template.factory.apply(null, [{
+                        getContent : () => self.currentContent,
+                        setContent : (value) => {
+                            self.setContent.apply(self,[value]);
+                            self.currentContent = value;
+                        }
+                    }]);
                 }
             } else if (template instanceof HtmlTemplate) {
                 this.setHtmlTemplateContent(template);
@@ -760,7 +826,11 @@
             actualNode.ownerElement.setAttribute(nodeName, "return false;");
             actualNode.ownerElement[nodeName] = templateValues[valueIndex];
         } else {
-            marker.attributes[nodeName] = buildActualAttributeValue(nodeValue, valueIndexes, templateValues);
+            marker.attributes[nodeName] = {
+                template : nodeValue,
+                valueIndexes,
+                templateValue : templateValues
+            };
         }
     };
 

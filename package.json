@@ -1,6 +1,6 @@
 {
   "name": "yallajs",
-  "version": "2.0.0-beta.38",
+  "version": "2.0.0-beta.39",
   "description": "Template Literals Engine",
   "scripts": {
     "commit": "git-cz",
