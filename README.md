@@ -1,5 +1,5 @@
 <p align="center">
-<img align="center" class="image" src="http://yallajs.io/images/yallajs.svg" width="150px">
+<img align="center" class="image" src="http://yallajs.io/images/yallajs-bird.svg" width="150px">
 </p>
 
 <p align="center">
