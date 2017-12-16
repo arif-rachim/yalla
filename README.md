@@ -349,6 +349,10 @@ Plug Example
 1. <a href="https://codepen.io/yallajs/pen/YYXZRp">Node With Plug</a> : Example using Plug on Node
 2. <a href="https://codepen.io/yallajs/pen/jYPBzK">Attribute With Plug</a> : Example using Plug on Attribute
 
+Aminate.CSS
+-----------
+1. <a href="https://codepen.io/yallajs/pen/VyvbVr">Animation.css</a> : Example with Animation.CSS
+
 
 YallaJS Project is supported by :
 
