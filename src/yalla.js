@@ -262,8 +262,10 @@
             if (!nodeValueIndexArray) {
                 return;
             }
-
             nodeValueIndexArray.forEach((nodeValueIndex) => {
+                if(nodeValueIndex == null){
+                    return;
+                }
                 let {node, valueIndexes, values} = nodeValueIndex;
                 let newActualValues = Array.isArray(valueIndexes) ? valueIndexes.map((valueIndex) => newValues[(valueIndex)]) : newValues[valueIndexes];
 
@@ -816,12 +818,20 @@
         }
     }
 
+    const validateIsFunction = (functionToCheck,error) => {
+        let isFunction = functionToCheck && typeof functionToCheck === 'function';
+        if(!isFunction){
+            throw new Error(error);
+        }
+    };
+
     const applyAttributeValue = (actualNode, valueIndexes, templateValues, nodeValue) => {
         let marker = Marker.from(actualNode);
         let nodeName = actualNode.nodeName;
         let isEvent = nodeName.indexOf("on") === 0;
         if (isEvent) {
             let valueIndex = valueIndexes[0];
+            validateIsFunction(templateValues[valueIndex],`Event listener ${actualNode.nodeName} should be a function (event) => {}'`);
             marker.attributes[nodeName] = templateValues[valueIndex];
             actualNode.ownerElement.setAttribute(nodeName, "return false;");
             actualNode.ownerElement[nodeName] = templateValues[valueIndex];
@@ -854,6 +864,9 @@
         let {nodeValue, valueIndexes} = nodeValueIndex;
         let path = getPath(nodeValueIndex.node);
         let actualNode = getNode(path, docFragment);
+        if(!actualNode){
+            return;
+        }
         let values = Array.isArray(valueIndexes) ? valueIndexes.map(index => templateValues[index]) : templateValues[valueIndexes];
         let isStyleNode = actualNode.parentNode && actualNode.parentNode.nodeName.toUpperCase() === "STYLE";
         if (isStyleNode) {
