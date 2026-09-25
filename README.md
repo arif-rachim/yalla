@@ -1,29 +1,33 @@
+# YallaJS
+
 <p align="center">
-<img align="center" class="image" src="http://yallajs.io/images/yallajs-bird.svg" width="150px">
+<img src="assets/yalla.png" width="150px" alt="YallaJS logo">
 </p>
 
 <p align="center">
-<a href="https://travis-ci.org/yallajs/yalla"><img src="https://travis-ci.org/yallajs/yalla.svg?branch=master" alt="Build Status"></a>
-<a href="https://codecov.io/gh/yallajs/yalla"><img src="https://img.shields.io/codecov/c/github/yallajs/yalla.svg" alt="Coverage"></a>
-<a href="http://yallajs.io"><img src="https://img.shields.io/website-up-down-green-red/http/yallajs.io.svg?label=yallajs.io" alt="Build Status"></a>
-<a href="https://github.com/yallajs/yalla/blob/master/package.json"><img src="https://img.shields.io/david/expressjs/express.svg" alt="Build Status"></a>
-<a href="https://github.com/yallajs/yalla/tree/master/lib/yalla.min.js"><img src="https://img.shields.io/github/size/yallajs/yalla/lib/yalla.min.js.gzip.svg" alt="Build Status"></a>
-<a href="https://travis-ci.org/yallajs/yalla"><img src="https://img.shields.io/github/license/yallajs/yalla.svg" alt="License"></a>
-<a href="https://www.codacy.com/app/yallajs/yalla?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=yallajs/yalla&amp;utm_campaign=Badge_Grade"><img src="https://api.codacy.com/project/badge/Grade/38475b57f7a043dbac929c67fb87f024" alt="Codacy"></a>
+<a href="https://www.npmjs.com/package/yallajs"><img src="https://img.shields.io/npm/v/yallajs.svg" alt="npm version"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
 </p>
 
-----
+YallaJS is a small JavaScript templating and rendering library that builds and updates DOM from ES2015 tagged template literals, without a virtual DOM, a compiler or any dependencies. You write markup as `` html`<div>Hello ${name}</div>` `` and call `render(template, container)`; YallaJS joins the static parts of the template with comment markers, turns them into a DOM template once, caches it in a `Context`, and on each later render only updates the dynamic parts it has already located, so repeated renders do not rebuild unchanged DOM. It supports event handlers, attribute and style values, keyed lists through `htmlCollection`, Promises as values, and `plug` for custom content and attribute logic. It was written for developers who want to use plain modern JavaScript in the browser instead of adopting a framework and build toolchain, and it targets ES5-era browsers such as IE 9 as well. The library is a single UMD file (`src/yalla.js`, about 1,000 lines), transpiled with Babel and tested with Karma, Mocha and Chai in headless Chrome. It reached version 2.0.0-beta.40 on npm, and development stopped at the end of 2017.
 
+> Status: 2.0.0 beta, last updated December 2017. Not actively maintained. The former project website, yallajs.io, now redirects to an unrelated site, so links to it have been removed.
 
-<p align="center">
-<img width='46px' src="http://browserbadge.com/ie/9">
-<img width='46px' src="http://browserbadge.com/opera/20">
-<img width='46px' src="http://browserbadge.com/safari/6">
-<img width='46px' src="http://browserbadge.com/firefox/28">
-<img width='46px' src="http://browserbadge.com/chrome/39">
-</p>
+Supported browsers (as listed by the project): Internet Explorer 9, Opera 20, Safari 6, Firefox 28, Chrome 39 and newer.
 
-**YallaJS** makes it easy to create HtmlTemplate and render it to DOM efficiently.
+## Installation
+
+```bash
+npm install yallajs
+```
+
+Or load the UMD build directly, which defines `yalla`, `Context`, `render`, `plug`, `uuidv4` and `Event` on the global object:
+
+```html
+<script src="lib/yalla.min.js"></script>
+```
+
+## Quick start
 
 ```javascript
 import {Context,render} from 'yallajs';
@@ -42,15 +46,17 @@ render(hello('yallajs'),document.body);
 ```
 
 
-`yallajs`  has 3 main API
+The main API:
 
- 1. `render` : Render is a function that renders an HtmlTemplate or HtmlTemplateCollection into node.
- 2. `html` : html is contextual Tagged Template Literal that generates HtmlTemplate object from Html strings
- 3. `htmlCollection` : htmlCollection is contextual Tagged Template Literals that generates HtmlTemplateCollection for rendering arrays of object.
- 4. `Context` : Context is an object that stores local information such as HtmlTemplate cache (in most cases you dont have to do anything with this object).
+ 1. `render`: renders an HtmlTemplate, HtmlTemplateCollection, text or Promise into a DOM node.
+ 2. `html`: a tagged template literal, taken from a `Context`, that creates an HtmlTemplate object from HTML strings.
+ 3. `htmlCollection`: a function, taken from a `Context`, that creates an HtmlTemplateCollection for rendering arrays of objects.
+ 4. `Context`: stores local information such as the HtmlTemplate cache. In most cases you only use it to get `html` and `htmlCollection`.
+ 5. `plug`: wraps a callback that receives an `outlet` and sets custom content (see [Advanced](#advanced)).
 
-**Motivation**
----
+The module also exports `uuidv4` and `Event` helpers.
+
+## Motivation
 
 The original motivation of yallajs is perfectly described in this story :
 [How it feels to learn javascript in 2018](https://codeburst.io/how-it-feels-to-learn-javascript-in-2018-6b2cf7abb6aa)
@@ -72,19 +78,17 @@ The original motivation of yallajs is perfectly described in this story :
 4. Very small size and no dependency.
 5. Support ES 5 browsers suchas IE 9, IOS 6 and Android 5.
 
-**How it works**
----
+## How it works
 
+### `html` tagged template literals
 
-**`html` Tagged Template Literals**
----
 `html` tag expression processed Template Literal, and generate HtmlTemplate object out of it.
 Template literals are string literals allowing embedded expressions. You can use multi-line strings and string interpolation features with them.
 
 Template literals are enclosed by the back-tick (\` \`) character instead of double or single quotes. Template literals can contain place holders. These are indicated by the Dollar sign and curly braces (${expression}). The expressions in the place holders and the text between them get passed to a `html` Tagged Template Literals.
 
-**`render` HtmlTemplate rendering**
-----
+### `render`: HtmlTemplate rendering
+
 `render()` takes a `HtmlTemplate`, `HtmlTemplateCollection`, `Text` or `Promise`, and renders it to a DOM Container. The process of rendering is describe in following orders :
 
 1. `yallajs` take the static strings in `HtmlTemplate` and join the strings with `<!--outlet-->` to mark the position of dynamic parts.
@@ -102,34 +106,18 @@ By keeping the template DOM in the cache, next DOM creation will be done in two 
 In this way we can also perform the DOM update process very efficiently because we already know the location of the placeholder. So if there is a new value that changes, we simply update the placeholder without having to touch other DOM
 
 
-**Performance**
----
-The Benchmark result of yallajs 2.0 beta version is very promising. With very early stage of performance tuning, yallajs wins against angular, react and vue, both on rendering and memory allocation.
- Following benchmark result using <a href="https://github.com/krausest/js-framework-benchmark">Stefan Krause performance benchmark</a>.
+## Performance
 
-<img class="image" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSjhBLod7UG28QeMS9I1WEmWW4o_RYO2a27GX4GhBW9cTBS_0i_N2FyGgaUsBavKq1KmnUMWRPhsPxm/pubchart?oid=106908939&format=image" >
+The author measured yallajs 2.0 beta with [Stefan Krause's js-framework-benchmark](https://github.com/krausest/js-framework-benchmark) and reported that, at an early stage of performance tuning, it beat Angular, React and Vue on both rendering and memory allocation. The benchmark implementation is in [arif-rachim/js-framework-benchmark](https://github.com/arif-rachim/js-framework-benchmark/tree/master/yallajs-v2.0.0-beta-keyed). The result charts that used to be embedded here are no longer available.
 
+## Features
 
-**Memory**
----
-On the other hand, yallajs memory usage is showing very promising result.
+YallaJS uses ES2015 template literals for HTML templating. The API is small, so it stays out of the way of your application code and needs no boilerplate.
 
-<img class="image" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRBa5mvSRr6DdMYSZAsLOFowM7P5Jlo1pVRp6BwfyoYtrte3bcvxhIHuJ0Meg8gGMilTsGoSxIqvq9f/pubchart?oid=1555194057&format=image" >
+## Usage
 
+### Hello world
 
-You can find the details <a href="http://yallajs.io/benchmark-result.html">here</a>, and the code that we use in this benchmark <a href="https://github.com/yallajs/js-framework-benchmark/tree/master/yallajs-v2.0.0-keyed">here</a>.
-
-
-**Features**
----
-
-Yalla uses ES 2015 String literal for html templating, yallajs API is very simple, making yalla js almost invisible in your code. This makes your application smells good and no boilerplate.
-
-Overview
---------
-
-**hello world**
----
 To render hello world we can write as follows :
 
 ```javascript
@@ -138,13 +126,13 @@ render(`Hello World`,document.body);
 
 The above code means we want to render 'Hello World' string into the body tag.
 
-**`render`**
----
+### `render`
+
 `render` is a function that accepts 2 parameters, the first parameter is 
 the object to be rendered and the second parameter is the container where the object will be rendered.
 
-The first parameter of `render` can be` string`, `boolean`,` date`, `number`,` Promise`, `HtmlTemplate` and` HtmlTemplateCollection`.
-The second parameter is the DOM node, we can use `document.body` or` document.getElementById` for the second parameter
+The first parameter of `render` can be a `string`, `boolean`, `date`, `number`, `Promise`, `HtmlTemplate` or `HtmlTemplateCollection`.
+The second parameter is the DOM node, for example `document.body` or the result of `document.getElementById`.
 
 To render html we can pass it to the first parameter `HtmlTemplate` object by using tag `html` like the following example :
 
@@ -154,15 +142,15 @@ render(html`<button>Hello World</button>`,document.body);
 
 The above code means that we want to render the Hello World button to the document.body element.
 
-**`html`**
----
+### `html`
+
 `html` tag behind the screen is an ES6 Template Tag.
 `html` generate HtmlTemplate object, which contains information about static strings, and dynamic values.
-`html` tag can be retrieved from ` yalla.Context` object.
+The `html` tag is retrieved from a `yalla.Context` object.
 
 > `yalla.Context` is the object that stores the cache of `html` and` htmlCollection` Tags. 
 For hybrid application cases where we can have multiple sub-applications (not single page app),
-we can separate contexts from sub-applications by providing aliases of `html` and` htmlCollection` of each `Context`
+we can separate contexts from sub-applications by providing aliases of `html` and `htmlCollection` of each `Context`.
 
 **Examples:**
 
@@ -173,19 +161,19 @@ render(html`<div>This is Div</div>`,document.body);
 
 Rendering `html in html` :
 ```javascript
-render(html`<div>This is Div ${html`<div>This is Sub-Div</div>`} </div>,document.body);
+render(html`<div>This is Div ${html`<div>This is Sub-Div</div>`} </div>`,document.body);
 ```
 
 Rendering with expression :
 ```javascript
 let displayMe = false;
-render(html`<div>This is Div ${displayMe ? html`<div>This is Sub-Div</div>` : ''} </div>,document.body);
+render(html`<div>This is Div ${displayMe ? html`<div>This is Sub-Div</div>` : ''} </div>`,document.body);
 ```
 
-We can also listen to the DOM event by setting the value of `oneventname` with expression ` e => {} `
+We can also listen to DOM events by setting the value of `oneventname` to an expression `e => {}`.
 
-**Events**
----
+### Events
+
 
 Event in HtmlTemplate can be called by using callback expression `e => {}`.
 Here is an example to listen to the `onclick` event of a` button`.
@@ -197,10 +185,10 @@ function buttonListener(){
     alert('hello');
 }
 
-render(html`<input type="button" onclick="${e => buttonListener()}">Hello World</button>`,document.body);
+render(html`<button onclick="${e => buttonListener()}">Hello World</button>`,document.body);
 ```
 
-We can also mempassing parameters into our callback.
+We can also pass parameters into our callback.
 
 ```javascript
 let alertSomething = (something) => {
@@ -213,11 +201,11 @@ render(html`<button onclick="${e => alertSomething(e.target.innerText)}">Hello W
 In addition to Event, HtmlTemplate can also set values of attributes & styles using Template Literal.
 
 
-**Attribute & Style**
----
+### Attributes and styles
 
-Attribute in HtmlTemplate can be set its value by using $ {}. 
-Following is an example on how to set the value of the color and color attribute.
+
+Attribute values in an HtmlTemplate can be set with `${}`.
+The following example sets the color and font size.
 
 ```javascript
 
@@ -229,16 +217,16 @@ render(html`<div
         font-size : ${fontSize};" >This is a Node</div>`,document.body);
 ```
 
-Attributes can only render primitive object types such as `text`,` number` and `boolean`.
+Attributes can only render primitive types such as `text`, `number` and `boolean`.
 
 If you need a style attribute that has a combination of values, it is recommended to use the `style` tag.
 
-Following an example on how to use yalla in `style`
+The following example uses yalla in a `style` tag:
 
 ```javascript
 let fontColor = '#666666';
 let backgroundColor = '#CCCCCC';
-render(`
+render(html`
 <style>
     .my-class {
         color : ${fontColor};
@@ -246,14 +234,14 @@ render(`
     }
 </style>
 <div class="my-class">Hello Class</div>
-`);
+`,document.body);
 ```
 
 
-**`htmlCollection`**
----
-To render an Array, we can use `Html Template Collection`. HtmlTemplateCollection is high performance Object that map array of items to HtmlTemplate Array.
-HtmlTemplateCollection requires key of the item to update the collection effectively.
+### `htmlCollection`
+
+To render an array, use `htmlCollection`, which maps an array of items to an array of HtmlTemplates.
+It requires a key for each item so it can update the collection efficiently.
 
 htmlCollection has 3 parameters:
 
@@ -266,7 +254,7 @@ htmlCollection(arrayItems,keyFunction,templateFunction);
 let marshalArtArtist = [
     {id:1,name:'Yip Man'},
     {id:2,name:'Bruce Lee'},
-    {id:3,label:'Jackie Chan'}]
+    {id:3,name:'Jackie Chan'}]
 
 render(html`
 <table>
@@ -274,19 +262,19 @@ render(html`
         ${htmlCollection(marshalArtArtist,(data) => data.id, (data,index) => html`
             <tr><td>${data.name}</td></tr>
         `)}
-    <tbody>
+    </tbody>
 </table>
 `,document.body);
 ```
 
-**Advance**
----
-Following is an advanced topic that can be used to extend yallajs.
+## Advanced
+
+The following features can be used to extend yallajs.
 
 1. Promise :
 
-We can call asynchronous process by using Promise. Promise by default is not supported by IE9, therefore
-to use this feature you should use a 3rd party libray like bluebird.js
+We can render the result of an asynchronous process by using a Promise. IE9 does not support Promise natively, so
+to use this feature there you need a third-party library such as bluebird.js.
 
 Example of how to use Promise :
 ```javascript
@@ -316,44 +304,60 @@ ${plug(outlet => {
 ```
 
 
-Sample Project
---------------
-1. <a href="http://yallajs.io/todomvc.html">TodoMVC</a> : a simple todomvc application
-2. <a href="https://codepen.io/yallajs/project/editor/AxKoNY#0">Hero Editor</a> : Hero Editor tutorial from Angular JS rewritten in Yallajs
-3. <a href="http://yallajs.io/benchmark.html">Benchmark</a> : benchmark tools for measuring performance, fork of <a href="http://www.stefankrause.net/wp/">Stefan Krause</a> github project
-4. <a href="https://codepen.io/yallajs/pen/vWjdqe">React Fiber Demo</a> : React Fiber Triangle rewritten with YallaJS
-5. <a href="https://codepen.io/yallajs/pen/wPpVNj">SAM Pattern Todo</a> : Example of how to use YallaJS with <a href="http://sam.js.org/">SAM Pattern</a>
+## Examples
 
-Basic Example
--------------
+The examples below are hosted on CodePen.
+
+### Sample projects
+1. <a href="https://codepen.io/yallajs/project/editor/AxKoNY#0">Hero Editor</a> : Hero Editor tutorial from Angular JS rewritten in Yallajs
+2. <a href="https://codepen.io/yallajs/pen/vWjdqe">React Fiber Demo</a> : React Fiber Triangle rewritten with YallaJS
+3. <a href="https://codepen.io/yallajs/pen/wPpVNj">SAM Pattern Todo</a> : Example of how to use YallaJS with <a href="http://sam.js.org/">SAM Pattern</a>
+4. [`yallajs-indexeddb.html`](yallajs-indexeddb.html) in this repository: an IndexedDB admin page built with yallajs
+
+### Basic Example
 1. <a href="https://codepen.io/yallajs/pen/NwGpGZ">Hello world</a> : Basic hello world application
 2. <a href="https://codepen.io/yallajs/pen/POPppL/">Simple Calculator</a> : Simple calculator with yallajs
 3. <a href="https://codepen.io/yallajs/pen/zpxpaY">SVG - Sample</a> : Showcase on using SVG with yallajs
 
-Event Example
-------------
+### Event Example
 1. <a href="https://codepen.io/yallajs/pen/wPKdJo">Color Picker</a> : Simple color picker
 
-Html Collection Example
-------------
+### Html Collection Example
 1. <a href="https://codepen.io/yallajs/pen/BmzxvO">Array with Html Collection</a> : Using HtmlCollection to render arrays
 2. <a href="https://codepen.io/yallajs/pen/gXQrgE">Html Collection with Promise</a> : HtmlCollection with Promise
 
-Async Example
---------------------------
+### Async Example
 1. <a href="https://codepen.io/yallajs/pen/XzKqBb">Node with Promise</a> : Example using Promise on Node
 2. <a href="https://codepen.io/yallajs/pen/eyNvNj">Attribute with Promise</a> : Example using Promise on Attribute
 
-Plug Example
-------------
+### Plug Example
 1. <a href="https://codepen.io/yallajs/pen/YYXZRp">Node With Plug</a> : Example using Plug on Node
 2. <a href="https://codepen.io/yallajs/pen/jYPBzK">Attribute With Plug</a> : Example using Plug on Attribute
 
-Aminate.CSS
------------
+### Animate.css
 1. <a href="https://codepen.io/yallajs/pen/VyvbVr">Animation.css</a> : Example with Animation.CSS
 
 
-YallaJS Project is supported by :
+## Documentation
 
-<img align="center" class="image" src="http://yallajs.io/images/browser-stack.svg" width="150px">
+The [docs](docs/README.md) folder contains a longer manual, indexed in [SUMMARY.md](SUMMARY.md): introduction, motivation, core concepts, the `render`, `html` and `htmlCollection` basics with a to-do list example, and advanced topics (async values, `plug` and custom elements).
+
+## Development
+
+```bash
+npm install
+npm run build      # Babel: src/ -> lib/
+npm run compress   # UglifyJS: lib/yalla.js -> lib/yalla.min.js
+npm run zip        # gzip lib/yalla.min.js -> lib/yalla.min.js.gzip
+npm test           # build, run Karma tests in headless Chrome, then compress and gzip
+```
+
+Tests are in `test/yalla.test.js` (Mocha and Chai via Karma). The Travis CI configuration in `.travis.yml` is from 2017 and no longer runs.
+
+## Acknowledgements
+
+The YallaJS project was supported by BrowserStack.
+
+## License
+
+[MIT](LICENSE)
